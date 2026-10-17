@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { addDays } from '@/lib/weather'
+import { addDays } from '@/lib/dates'
 import type { HourlyForecast } from '@/lib/weather'
 import { bnWeekday } from '@/lib/bn'
 import type { Risk } from '@/lib/data'

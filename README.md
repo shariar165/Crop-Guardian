@@ -27,6 +27,7 @@ npm run lint
 | `/unknown` | Can't identify: send to agriculture officer |
 | `/map` | Union-level risk map |
 | `/ledger` | Season savings |
+| `/planting` | Planting date, saved on the device (from Home and the Ledger header) |
 
 ## Late-blight risk
 
@@ -51,5 +52,11 @@ To find more replay dates, list every danger day in the last three Dec–Feb win
 ```bash
 npx tsx scripts/find-hutton-periods.ts
 ```
+
+### Season
+
+Risk is shown only while the crop is in the field (`src/lib/season.ts`): from planting + 15 days (emergence) to planting + 100 days (harvest). The planting date is set on `/planting` and kept on the device in localStorage. Without one, Home assumes the usual season, 15 Nov – 15 Mar, and asks "আলু কবে লাগিয়েছেন?". Outside the window Home shows "এখন ধসা রোগের মৌসুম নয়" and the date alerts start, instead of a risk. Replay and the `?risk=` demos ignore the season.
+
+The server can't read localStorage, so Home is rendered as if no planting date is set, and a saved date takes over right after the page loads.
 
 Everything else (diagnosis, map, ledger) is still static sample data in `src/lib/data.ts`.

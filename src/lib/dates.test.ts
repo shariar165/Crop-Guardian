@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { addDays, isIsoDate } from '@/lib/weather'
+import { addDays, daysBetween, isIsoDate } from '@/lib/dates'
 
 describe('isIsoDate', () => {
   it('accepts real calendar dates', () => {
@@ -18,5 +18,13 @@ describe('addDays', () => {
   it('crosses month and year ends', () => {
     assert.equal(addDays('2025-12-31', 1), '2026-01-01')
     assert.equal(addDays('2024-03-01', -1), '2024-02-29')
+  })
+})
+
+describe('daysBetween', () => {
+  it('counts calendar days across months and leap days', () => {
+    assert.equal(daysBetween('2026-01-14', '2026-01-14'), 0)
+    assert.equal(daysBetween('2024-02-28', '2024-03-01'), 2)
+    assert.equal(daysBetween('2026-01-01', '2025-12-31'), -1)
   })
 })

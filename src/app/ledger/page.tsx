@@ -2,8 +2,9 @@ import BottomNav from '@/components/BottomNav'
 import { SectionRule } from '@/components/Buttons'
 import { CameraIcon, CheckIcon, SprayBottleIcon, WarnIcon } from '@/components/icons'
 import ListenButton from '@/components/ListenButton'
+import PlantingDays from '@/components/PlantingDays'
 import { toBnDigits } from '@/lib/bn'
-import { formatTaka, LEDGER, type LedgerEntry, SAVED_COUNT, SAVED_TOTAL, SPRAY_COST, SPRAYED_COUNT } from '@/lib/data'
+import { formatTaka, LEDGER, type LedgerEntry, SAMPLE_DAYS_SINCE_PLANTING, SAVED_COUNT, SAVED_TOTAL, SPRAY_COST, SPRAYED_COUNT } from '@/lib/data'
 
 export const metadata = { title: 'মৌসুমের হিসাব — Crop Guardian' }
 
@@ -24,7 +25,9 @@ export default function LedgerPage() {
       <header className="flex shrink-0 items-center justify-between pt-4 pr-4 pl-[18px]">
         <div className="flex flex-col leading-[1.2]">
           <h1 className="m-0 font-display text-[25px] font-extrabold">মৌসুমের হিসাব</h1>
-          <span className="text-sm font-medium text-muted">আলু · ডায়মন্ড জাত · রোপণের ৫২ দিন</span>
+          <span className="text-sm font-medium text-muted">
+            আলু · ডায়মন্ড জাত · <PlantingDays sampleDays={SAMPLE_DAYS_SINCE_PLANTING} />
+          </span>
         </div>
         <ListenButton text={SPEECH} label="হিসাব পড়ে শোনান" />
       </header>

@@ -1,15 +1,17 @@
 import Link from 'next/link'
 import BottomNav from '@/components/BottomNav'
 import { outlineClass, PrimaryLink } from '@/components/Buttons'
-import { CameraIcon, CheckIcon, MicIcon, PinIcon, SprayIcon, WarnIcon } from '@/components/icons'
-import { DayGlyph, FieldStrip, LogoMark, SkyScene } from '@/components/illustrations'
-import ListenButton from '@/components/ListenButton'
+import HomeHeader from '@/components/HomeHeader'
+import { CameraIcon, CheckIcon, MicIcon, SprayIcon, WarnIcon } from '@/components/icons'
+import { DayGlyph } from '@/components/illustrations'
+import SeasonGate from '@/components/SeasonGate'
 import { DAY_STATE, FORECAST, formatTaka, parseReplay, parseRiskOverride, REPLAY_DEMO_DATE, RISK_VIEW, RISKS, SAVED_COUNT, SAVED_TOTAL } from '@/lib/data'
 import type { Risk } from '@/lib/data'
 import { bnDate, bnWeekday, toBnDigits } from '@/lib/bn'
 import { assessRisk, buildDecision, DECISION, summarizeDays } from '@/lib/risk'
 import type { StripDay } from '@/lib/risk'
-import { addDays, DEFAULT_LOCATION, FORECAST_DAYS, fetchHourlyArchive, fetchHourlyForecast, isIsoDate, todayIn } from '@/lib/weather'
+import { addDays, isIsoDate, todayIn } from '@/lib/dates'
+import { DEFAULT_LOCATION, FORECAST_DAYS, fetchHourlyArchive, fetchHourlyForecast } from '@/lib/weather'
 
 const STALE_NOTE = 'পুরনো তথ্য — নেট নেই'
 
@@ -113,8 +115,9 @@ function ReplayUnavailable({ date, message }: { date: string; message: string })
   )
 }
 
-// Live forecast by default. For demos, ?risk= forces a sample state and ?replay=YYYY-MM-DD
-// replays past weather; ?risk= wins if both are given.
+// Live forecast by default, shown only in season (see SeasonGate). For demos, ?risk= forces a
+// sample state and ?replay=YYYY-MM-DD replays past weather, both regardless of season;
+// ?risk= wins if both are given.
 export default async function Home({ searchParams }: PageProps<'/'>) {
   const params = await searchParams
   const override = parseRiskOverride(params.risk)
@@ -150,79 +153,65 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="relative h-[262px] shrink-0 overflow-hidden transition-colors duration-500" style={{ background: view.sky, color: view.ink }}>
-        <SkyScene view={view} />
-
-        <div className="relative flex items-center justify-between px-[18px] pt-4">
-          <div className="flex items-center gap-2.5">
-            <LogoMark />
-            <div className="flex flex-col leading-[1.1]">
-              <span className="font-display text-[19px] font-extrabold">Crop Guardian</span>
-              <span className="text-[13px] font-medium">মাঠের সৎ ডাক্তার</span>
-            </div>
-          </div>
-          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
-        </div>
-
-        <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5">
-          {/* Kept on one line; it may run past the column into empty sky rather than push the text down. */}
-          <div className="flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
-            <PinIcon size={16} />
-            বগুড়া, শিবগঞ্জ
-            {stale && (
-              <span className="ml-1 rounded-full border border-current px-1.5 text-[11px] leading-[18px]">
-                {STALE_NOTE}
-              </span>
-            )}
-          </div>
-          {replay ? (
-            <ReplayChip date={replay} bg={view.ink} ink={view.sky} />
-          ) : (
-            <span className="text-[15px] font-medium">আজকের ধসা রোগের ঝুঁকি</span>
-          )}
-          <div
-            className="flex items-center gap-2 self-start rounded-[14px] pt-1 pr-4 pb-0.5 pl-3"
-            style={{ background: view.badgeBg, color: view.badgeInk }}
+      <SeasonGate
+        today={todayIn()}
+        bypass={override !== undefined || replay !== undefined}
+        header={
+          <HomeHeader
+            view={view}
+            speech={speech}
+            locationNote={
+              stale && <span className="ml-1 rounded-full border border-current px-1.5 text-[11px] leading-[18px]">{STALE_NOTE}</span>
+            }
           >
-            <WarnIcon size={26} weight={2.4} />
-            <span className="font-display text-[34px] leading-[1.15] font-extrabold">{view.word}</span>
-          </div>
-          <span className="text-[15px] leading-[1.4] font-medium">{sub}</span>
-        </div>
-
-        <FieldStrip />
-      </header>
-
-      <section aria-label="৫ দিনের পূর্বাভাস" className="stitch mx-4 mt-3.5 grid shrink-0 grid-cols-5 gap-1 rounded-[18px] px-2.5 py-3">
-        {days.map((d) => (
-          <div key={d.date} className="flex flex-col items-center gap-[3px]">
-            <span className="text-[13px] font-semibold">{d.name}</span>
-            <DayGlyph risk={d.risk} />
-            <span className="text-xs font-bold" style={{ color: d.color }}>
-              {d.word}
-            </span>
-          </div>
-        ))}
-      </section>
-
-      <DemoNav current={replay !== undefined ? 'replay' : (override ?? 'live')} />
-
-      <section className="stitch-lg mx-4 mt-2 flex shrink-0 items-start gap-3.5 rounded-[20px] p-4">
-        <div
-          className="flex size-14 shrink-0 items-center justify-center rounded-full"
-          style={{ background: view.accentSoft, color: view.accent }}
-        >
-          <SprayIcon size={32} crossed={view.noSpray} />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-[13px] font-semibold text-muted">{replay ? 'সেদিনের সিদ্ধান্ত' : 'আজকের সিদ্ধান্ত'}</span>
-          <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{view.title}</h1>
-          <p className="m-0 text-[15px] leading-[1.45]">{decision}</p>
-          <Link href="/map" className="mt-0.5 text-[15px] font-semibold text-teal">
-            কেন এই পরামর্শ?
-          </Link>
-        </div>
-      </section>
+            {replay ? (
+              <ReplayChip date={replay} bg={view.ink} ink={view.sky} />
+            ) : (
+              <span className="text-[15px] font-medium">আজকের ধসা রোগের ঝুঁকি</span>
+            )}
+            <div
+              className="flex items-center gap-2 self-start rounded-[14px] pt-1 pr-4 pb-0.5 pl-3"
+              style={{ background: view.badgeBg, color: view.badgeInk }}
+            >
+              <WarnIcon size={26} weight={2.4} />
+              <span className="font-display text-[34px] leading-[1.15] font-extrabold">{view.word}</span>
+            </div>
+            <span className="text-[15px] leading-[1.4] font-medium">{sub}</span>
+          </HomeHeader>
+        }
+        strip={
+          <section aria-label="৫ দিনের পূর্বাভাস" className="stitch mx-4 mt-3.5 grid shrink-0 grid-cols-5 gap-1 rounded-[18px] px-2.5 py-3">
+            {days.map((d) => (
+              <div key={d.date} className="flex flex-col items-center gap-[3px]">
+                <span className="text-[13px] font-semibold">{d.name}</span>
+                <DayGlyph risk={d.risk} />
+                <span className="text-xs font-bold" style={{ color: d.color }}>
+                  {d.word}
+                </span>
+              </div>
+            ))}
+          </section>
+        }
+        demoNav={<DemoNav current={replay !== undefined ? 'replay' : (override ?? 'live')} />}
+        decision={
+          <section className="stitch-lg mx-4 mt-2 flex shrink-0 items-start gap-3.5 rounded-[20px] p-4">
+            <div
+              className="flex size-14 shrink-0 items-center justify-center rounded-full"
+              style={{ background: view.accentSoft, color: view.accent }}
+            >
+              <SprayIcon size={32} crossed={view.noSpray} />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-[13px] font-semibold text-muted">{replay ? 'সেদিনের সিদ্ধান্ত' : 'আজকের সিদ্ধান্ত'}</span>
+              <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{view.title}</h1>
+              <p className="m-0 text-[15px] leading-[1.45]">{decision}</p>
+              <Link href="/map" className="mt-0.5 text-[15px] font-semibold text-teal">
+                কেন এই পরামর্শ?
+              </Link>
+            </div>
+          </section>
+        }
+      />
 
       <Link
         href="/ledger"

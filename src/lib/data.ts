@@ -87,6 +87,9 @@ export type LedgerEntry = {
 
 export const SPRAY_COST = 800
 
+// Shown on the Ledger until the farmer saves a real planting date.
+export const SAMPLE_DAYS_SINCE_PLANTING = 52
+
 export const LEDGER: LedgerEntry[] = [
   { day: 44, note: 'ঝুঁকি কম', action: 'স্প্রে লাগেনি', kind: 'saved', icon: 'check', amount: SPRAY_COST },
   { day: 36, note: 'নাবি ধসা নিশ্চিত', action: 'স্প্রে করেছেন · কর্মকর্তা যাচাই করেছেন', kind: 'sprayed', icon: 'spray' },

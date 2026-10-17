@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
+import { todayIn } from '@/lib/dates'
 import { assessRisk } from '@/lib/risk'
-import { DEFAULT_LOCATION, fetchHourlyForecast, todayIn } from '@/lib/weather'
+import { DEFAULT_LOCATION, fetchHourlyForecast } from '@/lib/weather'
 
 function parseCoord(value: string | null, fallback: number, limit: number): number | null {
   if (value === null || value.trim() === '') return fallback

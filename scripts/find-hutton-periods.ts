@@ -3,7 +3,8 @@
 // Run: npx tsx scripts/find-hutton-periods.ts
 import { classifyDays, summarizeDays } from '@/lib/risk'
 import type { DayRisk } from '@/lib/risk'
-import { addDays, DEFAULT_LOCATION, fetchHourlyArchive, todayIn } from '@/lib/weather'
+import { addDays, todayIn } from '@/lib/dates'
+import { DEFAULT_LOCATION, fetchHourlyArchive } from '@/lib/weather'
 
 const WINTERS = 3
 const TIMEOUT_MS = 30_000

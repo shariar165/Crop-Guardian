@@ -1,7 +1,9 @@
+import { LOCAL_TZ } from '@/lib/dates'
+
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
 const ARCHIVE_URL = 'https://archive-api.open-meteo.com/v1/archive'
 
-export const FORECAST_TZ = 'Asia/Dhaka'
+export const FORECAST_TZ = LOCAL_TZ
 export const FORECAST_DAYS = 5
 export const FETCH_TIMEOUT_MS = 5000
 export const REVALIDATE_S = 3600
@@ -70,22 +72,4 @@ export function fetchHourlyArchive(
   params.set('start_date', start)
   params.set('end_date', end)
   return fetchHourly(`${ARCHIVE_URL}?${params}`, ARCHIVE_REVALIDATE_S, timeoutMs)
-}
-
-// Today's calendar date (YYYY-MM-DD) in the given time zone.
-export function todayIn(timeZone: string = FORECAST_TZ): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date())
-}
-
-export function addDays(isoDate: string, n: number): string {
-  const d = new Date(isoDate + 'T00:00:00Z')
-  d.setUTCDate(d.getUTCDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
-// A real calendar date written as YYYY-MM-DD. Date rolls 2025-02-30 over to March, so round-trip it.
-export function isIsoDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const d = new Date(value + 'T00:00:00Z')
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value
 }

@@ -2,7 +2,7 @@
 // two consecutive days with min temperature >= 10°C and >= 6 hours at RH >= 90%.
 import { bnWeekday, toBnDigits } from '@/lib/bn'
 import type { Risk } from '@/lib/data'
-import { addDays } from '@/lib/weather'
+import { addDays } from '@/lib/dates'
 import type { HourlyForecast } from '@/lib/weather'
 
 export const MIN_TEMP_C = 10
