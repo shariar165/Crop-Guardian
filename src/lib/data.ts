@@ -2,9 +2,10 @@ export type Risk = 'safe' | 'watch' | 'danger'
 
 export const RISKS: Risk[] = ['safe', 'watch', 'danger']
 
-export function parseRisk(value: string | string[] | undefined): Risk {
+// The ?risk= demo override; undefined means "use the live forecast".
+export function parseRiskOverride(value: string | string[] | undefined): Risk | undefined {
   const v = Array.isArray(value) ? value[0] : value
-  return RISKS.includes(v as Risk) ? (v as Risk) : 'watch'
+  return RISKS.includes(v as Risk) ? (v as Risk) : undefined
 }
 
 export const DAY_STATE: Record<Risk, { word: string; color: string }> = {
@@ -13,8 +14,7 @@ export const DAY_STATE: Record<Risk, { word: string; color: string }> = {
   danger: { word: 'বিপদ', color: '#C2412D' },
 }
 
-export const DAY_NAMES = ['আজ', 'রবি', 'সোম', 'মঙ্গল', 'বুধ']
-
+// Sample 5-day strips for the ?risk= demos and the offline fallback.
 export const FORECAST: Record<Risk, Risk[]> = {
   safe: ['safe', 'safe', 'safe', 'safe', 'watch'],
   watch: ['watch', 'watch', 'danger', 'danger', 'watch'],

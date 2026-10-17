@@ -4,21 +4,50 @@ import { outlineClass, PrimaryLink } from '@/components/Buttons'
 import { CameraIcon, CheckIcon, MicIcon, PinIcon, SprayIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph, FieldStrip, LogoMark, SkyScene } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
-import { DAY_NAMES, DAY_STATE, FORECAST, formatTaka, parseRisk, RISK_VIEW, RISKS, SAVED_COUNT, SAVED_TOTAL } from '@/lib/data'
-import { toBnDigits } from '@/lib/bn'
+import { DAY_STATE, FORECAST, formatTaka, parseRiskOverride, RISK_VIEW, RISKS, SAVED_COUNT, SAVED_TOTAL } from '@/lib/data'
+import type { Risk } from '@/lib/data'
+import { bnWeekday, toBnDigits } from '@/lib/bn'
+import { assessRisk } from '@/lib/risk'
+import { addDays, DEFAULT_LOCATION, fetchHourlyForecast, todayIn } from '@/lib/weather'
+
+const STALE_NOTE = 'পুরনো তথ্য — নেট নেই'
+
+// Live forecast by default; ?risk= forces a sample state for demos (no network).
+// If the forecast can't be fetched, fall back to the "watch" sample and mark it stale.
+async function loadRisk(override: Risk | undefined) {
+  const today = todayIn()
+  const sample = (risk: Risk) => ({
+    risk,
+    days: FORECAST[risk].map((r, i) => ({ date: addDays(today, i), risk: r })),
+    sub: RISK_VIEW[risk].sub,
+    stale: false,
+  })
+  if (override) return sample(override)
+  try {
+    const live = assessRisk(await fetchHourlyForecast(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon), today)
+    return { risk: live.today, days: live.days, sub: live.reason, stale: false }
+  } catch (err) {
+    console.error('Live risk unavailable, showing sample data:', err)
+    return { ...sample('watch'), stale: true }
+  }
+}
 
 export default async function Home({ searchParams }: PageProps<'/'>) {
-  const risk = parseRisk((await searchParams).risk)
+  const override = parseRiskOverride((await searchParams).risk)
+  const { risk, days: forecast, sub, stale } = await loadRisk(override)
   const view = RISK_VIEW[risk]
-  const days = FORECAST[risk].map((r, i) => ({ name: DAY_NAMES[i], risk: r, ...DAY_STATE[r] }))
+  const days = forecast.map((d, i) => ({ ...d, name: i === 0 ? 'আজ' : bnWeekday(d.date), ...DAY_STATE[d.risk] }))
 
   const speech = [
     'বগুড়া, শিবগঞ্জ। আজকের ধসা রোগের ঝুঁকি:',
     view.word + '।',
-    view.sub + '।',
+    sub + '।',
     view.title + '।',
     view.body,
-  ].join(' ')
+    stale && STALE_NOTE + '।',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div className="flex flex-1 flex-col">
@@ -37,9 +66,15 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
         </div>
 
         <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5">
-          <div className="flex items-center gap-1 text-sm font-semibold">
+          {/* Kept on one line; it may run past the column into empty sky rather than push the text down. */}
+          <div className="flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
             <PinIcon size={16} />
             বগুড়া, শিবগঞ্জ
+            {stale && (
+              <span className="ml-1 rounded-full border border-current px-1.5 text-[11px] leading-[18px]">
+                {STALE_NOTE}
+              </span>
+            )}
           </div>
           <span className="text-[15px] font-medium">আজকের ধসা রোগের ঝুঁকি</span>
           <div
@@ -49,7 +84,7 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
             <WarnIcon size={26} weight={2.4} />
             <span className="font-display text-[34px] leading-[1.15] font-extrabold">{view.word}</span>
           </div>
-          <span className="text-[15px] leading-[1.4] font-medium">{view.sub}</span>
+          <span className="text-[15px] leading-[1.4] font-medium">{sub}</span>
         </div>
 
         <FieldStrip />
@@ -57,7 +92,7 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
 
       <section aria-label="৫ দিনের পূর্বাভাস" className="stitch mx-4 mt-3.5 grid shrink-0 grid-cols-5 gap-1 rounded-[18px] px-2.5 py-3">
         {days.map((d) => (
-          <div key={d.name} className="flex flex-col items-center gap-[3px]">
+          <div key={d.date} className="flex flex-col items-center gap-[3px]">
             <span className="text-[13px] font-semibold">{d.name}</span>
             <DayGlyph risk={d.risk} />
             <span className="text-xs font-bold" style={{ color: d.color }}>
@@ -68,18 +103,18 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
       </section>
 
       <nav aria-label="ডেমো: ঝুঁকির অবস্থা বদলান" className="mx-4 mt-2 flex shrink-0 justify-center gap-1.5">
-        {RISKS.map((r) => (
+        {[undefined, ...RISKS].map((r) => (
           <Link
-            key={r}
-            href={r === 'watch' ? '/' : `/?risk=${r}`}
+            key={r ?? 'live'}
+            href={r ? `/?risk=${r}` : '/'}
             scroll={false}
             replace
-            aria-current={r === risk ? 'true' : undefined}
+            aria-current={r === override ? 'true' : undefined}
             className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold no-underline ${
-              r === risk ? 'bg-ink text-cream' : 'bg-sand text-muted-2'
+              r === override ? 'bg-ink text-cream' : 'bg-sand text-muted-2'
             }`}
           >
-            {DAY_STATE[r].word}
+            {r ? DAY_STATE[r].word : 'লাইভ'}
           </Link>
         ))}
       </nav>
