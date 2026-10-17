@@ -19,7 +19,7 @@ npm run lint
 
 | Route | Screen |
 |---|---|
-| `/` | Home: today's live risk, 5-day forecast, today's decision (`?risk=safe\|watch\|danger` forces a demo state) |
+| `/` | Home: today's live risk, 5-day forecast, today's decision (`?risk=safe\|watch\|danger` forces a demo state, `?replay=YYYY-MM-DD` replays past weather) |
 | `/camera` | Leaf photo |
 | `/result/uncertain` | "Not sure": candidate list |
 | `/questions` | Two questions that narrow the candidates |
@@ -41,5 +41,15 @@ Home's risk is computed from the weather, with no ML. `src/lib/weather.ts` fetch
 The same result is served as JSON at `GET /api/risk` (optional `lat`, `lon`). If the forecast can't be fetched, Home falls back to the sample data and shows "পুরনো তথ্য — নেট নেই".
 
 The header line under the risk and the text under today's decision are generated from the forecast numbers. When a danger day is ahead it is named from the forecast (e.g. "বুধবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে আবার জানাব।"), never as a fixed weekday. Both are kept to two lines on a phone; the tests guard their length.
+
+### Replay
+
+`/?replay=YYYY-MM-DD` runs the same engine on observed weather for the 5 days starting that date, from the [Open-Meteo archive](https://open-meteo.com/en/docs/historical-weather-api). The screen shows a "রিপ্লে: {date}" chip in place of "today". If the date is invalid, not yet over, or the archive can't be reached, it shows an error instead of sample data. The **রিপ্লে** demo pill opens `2026-01-14`, the start of a real Hutton period at Shibganj.
+
+To find more replay dates, list every danger day in the last three Dec–Feb winters:
+
+```bash
+npx tsx scripts/find-hutton-periods.ts
+```
 
 Everything else (diagnosis, map, ledger) is still static sample data in `src/lib/data.ts`.

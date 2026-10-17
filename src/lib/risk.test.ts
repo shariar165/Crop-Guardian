@@ -210,3 +210,13 @@ describe('buildReason', () => {
     }
   })
 })
+
+describe('classifyDays with gaps', () => {
+  it('does not join qualifying days across a missing date', () => {
+    const days = classifyDays([
+      { date: START, ...HUTTON },
+      { date: addDays(START, 2), ...HUTTON },
+    ])
+    assert.deepEqual(days.map((d) => d.risk), ['watch', 'watch'])
+  })
+})

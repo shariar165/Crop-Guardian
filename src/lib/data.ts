@@ -8,6 +8,15 @@ export function parseRiskOverride(value: string | string[] | undefined): Risk | 
   return RISKS.includes(v as Risk) ? (v as Risk) : undefined
 }
 
+// The ?replay= date as given (validated by the caller); undefined when absent or empty.
+export function parseReplay(value: string | string[] | undefined): string | undefined {
+  const v = (Array.isArray(value) ? value[0] : value)?.trim()
+  return v || undefined
+}
+
+// A real Hutton period at Shibganj (14–16 Jan 2026), found by scripts/find-hutton-periods.ts.
+export const REPLAY_DEMO_DATE = '2026-01-14'
+
 export const DAY_STATE: Record<Risk, { word: string; color: string }> = {
   safe: { word: 'নিরাপদ', color: '#2F6B3A' },
   watch: { word: 'সতর্ক', color: '#8A5E00' },

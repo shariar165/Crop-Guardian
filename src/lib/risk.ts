@@ -2,6 +2,7 @@
 // two consecutive days with min temperature >= 10°C and >= 6 hours at RH >= 90%.
 import { bnWeekday, toBnDigits } from '@/lib/bn'
 import type { Risk } from '@/lib/data'
+import { addDays } from '@/lib/weather'
 import type { HourlyForecast } from '@/lib/weather'
 
 export const MIN_TEMP_C = 10
@@ -38,14 +39,14 @@ export function qualifies(day: DaySummary): boolean {
   return day.minTemp >= MIN_TEMP_C && day.humidHours >= HUTTON_HUMID_HOURS
 }
 
-// Days outside the forecast window count as not qualifying.
+// Days outside the data, or missing from it, count as not qualifying.
 export function classifyDays(days: DaySummary[]): DayRisk[] {
-  return days.map((day, i) => {
+  const qualifyingDates = new Set(days.filter(qualifies).map((d) => d.date))
+  return days.map((day) => {
     let risk: Risk = 'safe'
     if (qualifies(day)) {
-      const prev = days[i - 1]
-      const next = days[i + 1]
-      risk = (prev && qualifies(prev)) || (next && qualifies(next)) ? 'danger' : 'watch'
+      const neighbourQualifies = [-1, 1].some((n) => qualifyingDates.has(addDays(day.date, n)))
+      risk = neighbourQualifies ? 'danger' : 'watch'
     } else if (day.minTemp >= MIN_TEMP_C && day.humidHours >= NEAR_HUMID_HOURS) {
       risk = 'watch'
     }
