@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-cream: #fbf6ec;
+  --color-ink: #2b1e16;
+  --color-paper: #fffdf8;
+  --color-line: #e6d8bc;
+  --color-stitch: #c4a979;
+  --color-sand: #efe6d4;
+  --color-sun: #e8b931;
+  --color-sun-shadow: #b8901c;
+  --color-sun-soft: #fff4d1;
+  --color-teal: #1f5f6b;
+  --color-teal-deep: #163f47;
+  --color-mist: #e2ece9;
+  --color-leaf: #2f6b3a;
+  --color-leaf-soft: #dcebdd;
+  --color-danger: #c2412d;
+  --color-danger-deep: #a8361f;
+  --color-danger-soft: #f5d9d2;
+  --color-amber: #8a5e00;
+  --color-amber-soft: #f6e7b8;
+  --color-muted: #6b5a4a;
+  --color-muted-2: #5a4a3c;
+  --color-night: #17120e;
+}
+
+@theme inline {
+  --font-body: var(--font-hind), sans-serif;
+  --font-display: var(--font-baloo), sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    background: #e9e2d2;
+    color: var(--color-ink);
+    font-family: var(--font-body);
+  }
+
+  a {
+    color: var(--color-teal);
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+}
+
+/* The design's signature card: solid border plus an inset dashed "stitch". */
+@utility stitch {
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-line);
+  outline: 1.5px dashed var(--color-stitch);
+  outline-offset: -7px;
+}
+
+@utility stitch-lg {
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-line);
+  outline: 1.5px dashed var(--color-stitch);
+  outline-offset: -8px;
+}
