@@ -12,6 +12,8 @@ export const LOOKAHEAD_DAYS = 2
 
 export type DaySummary = { date: string; minTemp: number; humidHours: number }
 export type DayRisk = DaySummary & { risk: Risk }
+// What the 5-day strip and the decision text need; the sample strips have only this.
+export type StripDay = Pick<DayRisk, 'date' | 'risk'>
 export type RiskAssessment = { today: Risk; days: DayRisk[]; reason: string }
 
 // Group hourly readings by local date (the forecast's `time` is already local).
@@ -51,16 +53,16 @@ export function classifyDays(days: DaySummary[]): DayRisk[] {
   })
 }
 
-// Index of the first danger day within the look-ahead window after today, or -1.
-function upcomingDanger(days: DayRisk[]): number {
-  for (let i = 1; i <= LOOKAHEAD_DAYS && i < days.length; i++) {
+// Index of the first danger day within `within` days after today, or -1.
+function upcomingDanger(days: StripDay[], within = LOOKAHEAD_DAYS): number {
+  for (let i = 1; i <= within && i < days.length; i++) {
     if (days[i].risk === 'danger') return i
   }
   return -1
 }
 
 // Today's level, raised to "watch" when a danger day is coming soon. Never lowered.
-export function overallRisk(days: DayRisk[]): Risk {
+export function overallRisk(days: StripDay[]): Risk {
   const today = days[0].risk
   return today === 'safe' && upcomingDanger(days) !== -1 ? 'watch' : today
 }
@@ -98,6 +100,23 @@ export function buildReason(days: DayRisk[], today: Risk): string {
   if (day.minTemp < MIN_TEMP_C) return `রাতে তাপমাত্রা ${bnTemp(day.minTemp)} — রোগ ছড়ানোর মতো গরম নয়`
   if (day.humidHours === 0) return `আজ আর্দ্রতা ${toBnDigits(HUMID_RH)}% ছোঁবে না, ঝুঁকি কম`
   return `আজ মাত্র ${toBnDigits(day.humidHours)} ঘণ্টা ${HUMID}, ঝুঁকি কম`
+}
+
+export const DECISION: Record<Risk, string> = {
+  safe: 'আগামী কয়েক দিন ঝুঁকি কম। শুধু শুধু ওষুধ দিয়ে টাকা নষ্ট করবেন না।',
+  watch: 'আবহাওয়া মাঝে মাঝে ভেজা। রোজ সকালে পাতা দেখে নিন।',
+  danger: 'নাবি ধসা ছড়ানোর মতো আবহাওয়া চলছে। আজই পাতা পরীক্ষা করুন।',
+}
+
+// The body under today's decision title. When a danger day lies ahead it is named from the
+// forecast (never a fixed weekday) and we promise to check again the afternoon before it.
+// Like the reason, it must fit two lines on the Home decision card.
+export function buildDecision(days: StripDay[], today: Risk): string {
+  const next = today === 'danger' ? -1 : upcomingDanger(days, days.length)
+  if (next === -1) return DECISION[today]
+  const from = next === 1 ? 'কাল' : bnWeekday(days[next].date) + 'বার'
+  const dayBefore = next === 1 ? 'আজ' : next === 2 ? 'কাল' : 'আগের দিন'
+  return `${from} থেকে ঝুঁকি বাড়বে। ${dayBefore} বিকেলে আবার জানাব।`
 }
 
 // `today` (YYYY-MM-DD) drops days that are already over, e.g. a cached forecast just after midnight.

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { addDays } from '@/lib/weather'
 import type { HourlyForecast } from '@/lib/weather'
-import { assessRisk, classifyDays, summarizeDays } from '@/lib/risk'
+import { bnWeekday } from '@/lib/bn'
+import type { Risk } from '@/lib/data'
+import { assessRisk, buildDecision, buildReason, classifyDays, DECISION, overallRisk, summarizeDays } from '@/lib/risk'
+import type { StripDay } from '@/lib/risk'
 
 const START = '2026-10-18' // a Sunday
 
@@ -122,5 +125,88 @@ describe('classifyDays', () => {
       { date: addDays(START, 1), minTemp: 12, humidHours: 6 },
     ])
     assert.deepEqual(days.map((d) => d.risk), ['watch', 'watch'])
+  })
+})
+
+// Longest strings measured in the browser to still fit two lines: the reason in the Home
+// header (184 px) and the decision on the card (254 px). A cheap guard against longer copy.
+const MAX_REASON_CHARS = 56
+const MAX_DECISION_CHARS = 66
+
+const RISK_LIST: Risk[] = ['safe', 'watch', 'danger']
+
+// Every 5-day strip of risks, each starting on every weekday.
+function* allStrips(): Generator<StripDay[]> {
+  for (let start = 0; start < 7; start++) {
+    for (let n = 0; n < 3 ** 5; n++) {
+      yield Array.from({ length: 5 }, (_, i) => ({
+        date: addDays(START, start + i),
+        risk: RISK_LIST[Math.floor(n / 3 ** i) % 3],
+      }))
+    }
+  }
+}
+
+const strip = (...risks: Risk[]): StripDay[] => risks.map((risk, i) => ({ date: addDays(START, i), risk }))
+
+describe('buildDecision', () => {
+  it('keeps the danger text when today is danger', () => {
+    assert.equal(buildDecision(strip('danger', 'danger', 'safe', 'safe', 'safe'), 'danger'), DECISION.danger)
+  })
+
+  it('says tomorrow, and promises to check back this afternoon', () => {
+    assert.equal(buildDecision(strip('watch', 'danger', 'danger', 'safe', 'safe'), 'watch'), 'কাল থেকে ঝুঁকি বাড়বে। আজ বিকেলে আবার জানাব।')
+  })
+
+  it('names the weekday of a danger day two days out', () => {
+    assert.equal(
+      buildDecision(strip('safe', 'watch', 'danger', 'danger', 'safe'), 'watch'),
+      'মঙ্গলবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে আবার জানাব।',
+    )
+  })
+
+  it('warns about danger later in the week even on a safe day', () => {
+    assert.equal(
+      buildDecision(strip('safe', 'safe', 'safe', 'danger', 'danger'), 'safe'),
+      'বুধবার থেকে ঝুঁকি বাড়বে। আগের দিন বিকেলে আবার জানাব।',
+    )
+  })
+
+  it('uses the generic line when no danger day is ahead', () => {
+    assert.equal(buildDecision(strip('watch', 'watch', 'safe', 'watch', 'safe'), 'watch'), DECISION.watch)
+    assert.equal(buildDecision(strip('safe', 'safe', 'safe', 'safe', 'watch'), 'safe'), DECISION.safe)
+  })
+
+  it('only ever names the first danger day ahead, and fits two lines', () => {
+    for (const days of allStrips()) {
+      const today = overallRisk(days)
+      const text = buildDecision(days, today)
+      const next = days.findIndex((d, i) => i > 0 && d.risk === 'danger')
+      const named = days.filter((d) => text.includes(bnWeekday(d.date) + 'বার'))
+      if (today === 'danger' || next <= 1) assert.deepEqual(named, [], text)
+      else assert.deepEqual(named, [days[next]], text)
+      assert.ok(text.length <= MAX_DECISION_CHARS, text)
+    }
+  })
+})
+
+describe('buildReason', () => {
+  it('fits two lines for every kind of day, however humid', () => {
+    const kinds = [
+      { minTemp: 5, humidHours: 24 },
+      { minTemp: 12, humidHours: 0 },
+      { minTemp: 12, humidHours: 5 },
+      { minTemp: 12, humidHours: 24 },
+      { minTemp: 28.4, humidHours: 19 },
+    ]
+    for (let start = 0; start < 7; start++) {
+      for (let n = 0; n < kinds.length ** 5; n++) {
+        const days = classifyDays(
+          Array.from({ length: 5 }, (_, i) => ({ date: addDays(START, start + i), ...kinds[Math.floor(n / kinds.length ** i) % kinds.length] })),
+        )
+        const text = buildReason(days, overallRisk(days))
+        assert.ok(text.length <= MAX_REASON_CHARS, text)
+      }
+    }
   })
 })

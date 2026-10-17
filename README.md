@@ -40,4 +40,6 @@ Home's risk is computed from the weather, with no ML. `src/lib/weather.ts` fetch
 
 The same result is served as JSON at `GET /api/risk` (optional `lat`, `lon`). If the forecast can't be fetched, Home falls back to the sample data and shows "পুরনো তথ্য — নেট নেই".
 
+The header line under the risk and the text under today's decision are generated from the forecast numbers. When a danger day is ahead it is named from the forecast (e.g. "বুধবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে আবার জানাব।"), never as a fixed weekday. Both are kept to two lines on a phone; the tests guard their length.
+
 Everything else (diagnosis, map, ledger) is still static sample data in `src/lib/data.ts`.

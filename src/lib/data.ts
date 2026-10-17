@@ -29,7 +29,6 @@ export type RiskView = {
   badgeInk: string
   sub: string
   title: string
-  body: string
   accent: string
   accentSoft: string
   sunOp: number
@@ -44,21 +43,18 @@ export const RISK_VIEW: Record<Risk, RiskView> = {
     sky: '#D9E9DF', ink: '#1E3A2A', word: 'নিরাপদ', badgeBg: '#2F6B3A', badgeInk: '#FFFFFF',
     sub: 'আবহাওয়া শুকনো, রোগ ছড়ানোর সম্ভাবনা কম',
     title: 'আজ স্প্রে লাগবে না',
-    body: 'আগামী কয়েক দিন ঝুঁকি কম। শুধু শুধু ওষুধ দিয়ে টাকা নষ্ট করবেন না।',
     accent: '#2F6B3A', accentSoft: '#DCEBDD', sunOp: 1, cloudOp: 0, fogOp: 0, rainOp: 0, noSpray: true,
   },
   watch: {
     sky: '#CDD8D4', ink: '#20343A', word: 'সতর্ক', badgeBg: '#E8B931', badgeInk: '#2B1E16',
     sub: 'ভোরে কুয়াশা, বাতাসে আর্দ্রতা বাড়ছে',
     title: 'আজ স্প্রে লাগবে না',
-    body: 'সোমবার থেকে ঝুঁকি বাড়বে। রবিবার বিকেলে আবার জানাব।',
     accent: '#8A5E00', accentSoft: '#F6E7B8', sunOp: 1, cloudOp: 1, fogOp: 1, rainOp: 0, noSpray: true,
   },
   danger: {
     sky: '#2C4A50', ink: '#FBF6EC', word: 'বিপদ', badgeBg: '#C2412D', badgeInk: '#FFFFFF',
     sub: 'টানা ৩ দিন ঘন কুয়াশা আর গুঁড়ি বৃষ্টি',
     title: '২ দিনের মধ্যে স্প্রে করুন',
-    body: 'নাবি ধসা ছড়ানোর মতো আবহাওয়া চলছে। আজই পাতা পরীক্ষা করুন।',
     accent: '#C2412D', accentSoft: '#F5D9D2', sunOp: 0, cloudOp: 1, fogOp: 1, rainOp: 1, noSpray: false,
   },
 }

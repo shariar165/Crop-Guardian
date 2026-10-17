@@ -7,7 +7,7 @@ import ListenButton from '@/components/ListenButton'
 import { DAY_STATE, FORECAST, formatTaka, parseRiskOverride, RISK_VIEW, RISKS, SAVED_COUNT, SAVED_TOTAL } from '@/lib/data'
 import type { Risk } from '@/lib/data'
 import { bnWeekday, toBnDigits } from '@/lib/bn'
-import { assessRisk } from '@/lib/risk'
+import { assessRisk, buildDecision, DECISION } from '@/lib/risk'
 import { addDays, DEFAULT_LOCATION, fetchHourlyForecast, todayIn } from '@/lib/weather'
 
 const STALE_NOTE = 'পুরনো তথ্য — নেট নেই'
@@ -37,13 +37,15 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
   const { risk, days: forecast, sub, stale } = await loadRisk(override)
   const view = RISK_VIEW[risk]
   const days = forecast.map((d, i) => ({ ...d, name: i === 0 ? 'আজ' : bnWeekday(d.date), ...DAY_STATE[d.risk] }))
+  // Stale sample days are not a forecast, so the decision must not name a day from them.
+  const decision = stale ? DECISION[risk] : buildDecision(forecast, risk)
 
   const speech = [
     'বগুড়া, শিবগঞ্জ। আজকের ধসা রোগের ঝুঁকি:',
     view.word + '।',
     sub + '।',
     view.title + '।',
-    view.body,
+    decision,
     stale && STALE_NOTE + '।',
   ]
     .filter(Boolean)
@@ -129,7 +131,7 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
         <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] font-semibold text-muted">আজকের সিদ্ধান্ত</span>
           <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{view.title}</h1>
-          <p className="m-0 text-[15px] leading-[1.45]">{view.body}</p>
+          <p className="m-0 text-[15px] leading-[1.45]">{decision}</p>
           <Link href="/map" className="mt-0.5 text-[15px] font-semibold text-teal">
             কেন এই পরামর্শ?
           </Link>
