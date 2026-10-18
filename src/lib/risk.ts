@@ -8,6 +8,8 @@ import type { HourlyForecast } from '@/lib/weather'
 export const MIN_TEMP_C = 10
 export const HUMID_RH = 90
 export const HUTTON_HUMID_HOURS = 6
+// A stricter alternative, compared in docs/risk-backtest.md. Not used by the app.
+export const STRICT_HUMID_HOURS = 10
 export const NEAR_HUMID_HOURS = 4
 export const LOOKAHEAD_DAYS = 2
 
@@ -35,16 +37,17 @@ export function summarizeDays(hourly: HourlyForecast): DaySummary[] {
     .map(([date, d]) => ({ date, ...d }))
 }
 
-export function qualifies(day: DaySummary): boolean {
-  return day.minTemp >= MIN_TEMP_C && day.humidHours >= HUTTON_HUMID_HOURS
+export function qualifies(day: DaySummary, humidHours = HUTTON_HUMID_HOURS): boolean {
+  return day.minTemp >= MIN_TEMP_C && day.humidHours >= humidHours
 }
 
 // Days outside the data, or missing from it, count as not qualifying.
-export function classifyDays(days: DaySummary[]): DayRisk[] {
-  const qualifyingDates = new Set(days.filter(qualifies).map((d) => d.date))
+// `humidHours` is only changed by the backtest script, to compare a stricter rule.
+export function classifyDays(days: DaySummary[], { humidHours = HUTTON_HUMID_HOURS } = {}): DayRisk[] {
+  const qualifyingDates = new Set(days.filter((d) => qualifies(d, humidHours)).map((d) => d.date))
   return days.map((day) => {
     let risk: Risk = 'safe'
-    if (qualifies(day)) {
+    if (qualifies(day, humidHours)) {
       const neighbourQualifies = [-1, 1].some((n) => qualifyingDates.has(addDays(day.date, n)))
       risk = neighbourQualifies ? 'danger' : 'watch'
     } else if (day.minTemp >= MIN_TEMP_C && day.humidHours >= NEAR_HUMID_HOURS) {

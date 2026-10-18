@@ -4,7 +4,7 @@ import { addDays } from '@/lib/dates'
 import type { HourlyForecast } from '@/lib/weather'
 import { bnWeekday } from '@/lib/bn'
 import type { Risk } from '@/lib/data'
-import { assessRisk, buildDecision, buildReason, classifyDays, DECISION, overallRisk, summarizeDays } from '@/lib/risk'
+import { assessRisk, buildDecision, buildReason, classifyDays, DECISION, overallRisk, STRICT_HUMID_HOURS, summarizeDays } from '@/lib/risk'
 import type { StripDay } from '@/lib/risk'
 
 const START = '2026-10-18' // a Sunday
@@ -218,5 +218,16 @@ describe('classifyDays with gaps', () => {
       { date: addDays(START, 2), ...HUTTON },
     ])
     assert.deepEqual(days.map((d) => d.risk), ['watch', 'watch'])
+  })
+})
+
+describe('classifyDays with the stricter backtest threshold', () => {
+  it('needs more humid hours to call danger', () => {
+    const summaries = [
+      { date: START, minTemp: 12, humidHours: 8 },
+      { date: addDays(START, 1), minTemp: 12, humidHours: 11 },
+    ]
+    assert.deepEqual(classifyDays(summaries).map((d) => d.risk), ['danger', 'danger'])
+    assert.deepEqual(classifyDays(summaries, { humidHours: STRICT_HUMID_HOURS }).map((d) => d.risk), ['watch', 'watch'])
   })
 })

@@ -50,8 +50,10 @@ The header line under the risk and the text under today's decision are generated
 To find more replay dates, list every danger day in the last three Dec–Feb winters:
 
 ```bash
-npx tsx scripts/find-hutton-periods.ts
+npx tsx scripts/find-hutton-periods.ts            # add --write to update docs/risk-backtest.md
 ```
+
+[docs/risk-backtest.md](docs/risk-backtest.md) compares how often the app's rule and a stricter one (≥ 10 humid hours) would have alerted in those winters.
 
 ### Season
 
