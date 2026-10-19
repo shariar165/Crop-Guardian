@@ -8,9 +8,11 @@ import { ViewfinderBackdrop, ViewfinderOutline } from '@/components/illustration
 import ListenButton from '@/components/ListenButton'
 import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
-import { clearCaptures, saveCapture } from '@/lib/captureStore'
+import { clearCaptures, saveCapture, saveDiagnosis } from '@/lib/captureStore'
 import type { Capture } from '@/lib/captureStore'
-import { loadModel, type ModelState } from '@/lib/diagnosis/client'
+import { diagnose, loadModel, type ModelState, whenReady } from '@/lib/diagnosis/client'
+import { combine } from '@/lib/diagnosis/combine'
+import { type Mock, MOCK_RESULT, RESULT_PATH, withMock } from '@/lib/diagnosis/mock'
 import { ANALYSIS_WIDTH, assessQuality, confirmText, coverSourceRect, isAcceptable, topHint } from '@/lib/imageQuality'
 import type { QualityReport } from '@/lib/imageQuality'
 
@@ -107,7 +109,7 @@ async function makeCapture(source: CanvasImageSource, crop: Crop): Promise<Captu
   return { blob, takenAt: Date.now(), quality }
 }
 
-export default function CameraScreen() {
+export default function CameraScreen({ mock }: { mock?: Mock }) {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -118,9 +120,11 @@ export default function CameraScreen() {
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState<Capture | null>(null)
   const [model, setModel] = useState<ModelState>({ phase: 'loading' })
+  const [analysis, setAnalysis] = useState<'idle' | 'running' | 'failed'>('idle')
+  const photos = useRef<Partial<Record<'top' | 'under', Capture>>>({})
 
-  // Load (or download, the first time) the model while the farmer takes the photos.
-  useEffect(() => loadModel(setModel), [])
+  // Load (or download, the first time) the model while the farmer takes the photos. Demos don't need it.
+  useEffect(() => (mock ? undefined : loadModel(setModel)), [mock])
 
   // Each visit starts a fresh pair of photos.
   useEffect(() => {
@@ -181,10 +185,29 @@ export default function CameraScreen() {
     return () => clearInterval(id)
   }, [status, pending])
 
+  // Diagnoses each photo on its own, combines them, and opens the matching result screen.
+  async function analyse() {
+    if (mock) return router.push(withMock(RESULT_PATH[MOCK_RESULT[mock]], mock))
+    const { top, under } = photos.current
+    if (!top || !under) return
+    setAnalysis('running')
+    try {
+      const config = await whenReady()
+      const result = combine(await diagnose(top.blob), await diagnose(under.blob), config)
+      await saveDiagnosis({ createdAt: Date.now(), result, answers: [] })
+      router.push(RESULT_PATH[result.decision])
+    } catch (err) {
+      console.error('Diagnosis failed', err)
+      setAnalysis('failed')
+    }
+  }
+
   async function keep(capture: Capture) {
     setPending(null)
+    const slot = step === 1 ? 'top' : 'under'
+    photos.current[slot] = capture
     try {
-      await saveCapture(step === 1 ? 'top' : 'under', capture)
+      await saveCapture(slot, capture)
     } catch (err) {
       console.error('Could not save the photo', err)
     }
@@ -192,7 +215,7 @@ export default function CameraScreen() {
       setStep(2)
       setBusy(false)
     } else {
-      router.push('/result/uncertain')
+      analyse()
     }
   }
 
@@ -333,6 +356,34 @@ export default function CameraScreen() {
           </ul>
         )}
 
+        {analysis !== 'idle' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[rgba(23,18,14,0.82)] p-6" aria-live="assertive">
+            {analysis === 'running' ? (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <ClockIcon size={40} weight={2.2} className="animate-spin [animation-duration:3s]" />
+                <span className="font-display text-2xl font-extrabold">পাতা দেখছি…</span>
+                {model.phase === 'downloading' && <span className="text-sm text-[#CDBFA9]">মডেল নামানো শেষ হলেই দেখব</span>}
+              </div>
+            ) : (
+              <div role="alert" className="flex flex-col items-center gap-3 text-center">
+                <WarnIcon size={36} />
+                <span className="font-display text-xl font-extrabold">
+                  {model.phase === 'error' && model.offline ? 'প্রথমবার মডেল নামাতে নেট লাগবে' : 'ছবি দেখা গেল না'}
+                </span>
+                <span className="text-sm leading-[1.45] text-[#CDBFA9]">ছবি দুটো রাখা আছে। নেট চালু করে আবার চেষ্টা করুন।</span>
+                <button
+                  type="button"
+                  onClick={analyse}
+                  className="flex h-12 items-center gap-2 rounded-full border-0 bg-sun px-5 text-base font-bold text-ink"
+                >
+                  <RestartIcon size={20} />
+                  আবার চেষ্টা করুন
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {pending && (
           <div className="absolute inset-0 flex items-end bg-black/55 p-3.5">
             <div
@@ -383,7 +434,7 @@ export default function CameraScreen() {
           </span>
         </div>
         <CameraControls onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
-        <ModelStatus state={model} onRetry={() => loadModel(setModel)} />
+        {!mock && <ModelStatus state={model} onRetry={() => loadModel(setModel)} />}
       </div>
     </div>
   )
