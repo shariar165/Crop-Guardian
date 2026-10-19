@@ -10,7 +10,7 @@ Built with Next.js (App Router), TypeScript and Tailwind CSS v4.
 npm install
 npm run dev      # http://localhost:3000
 npm run build && npm start
-npm test         # risk engine unit tests (node:test)
+npm test         # risk engine and photo-quality unit tests (node:test)
 npm run typecheck
 npm run lint
 ```
@@ -54,6 +54,18 @@ npx tsx scripts/find-hutton-periods.ts            # add --write to update docs/r
 ```
 
 [docs/risk-backtest.md](docs/risk-backtest.md) compares how often the app's rule and a stricter one (≥ 10 humid hours) would have alerted in those winters.
+
+## Camera
+
+`/camera` opens the phone's rear camera (`getUserMedia`) inside the leaf frame and checks every ~300 ms, on a 160 px copy of the visible frame, with no ML (`src/lib/imageQuality.ts`):
+
+- **Light**: mean luma below 60 → "আলো কম", above 215 → "আলো খুব বেশি".
+- **Focus**: variance of the Laplacian below `BLUR_THRESHOLD` (100) → "ফোন স্থির রাখুন". In dev the values are logged to the console as `[quality]` for tuning.
+- **Leaf**: share of Excess-Green (2G − R − B) pixels inside the leaf frame: almost none → "পাতা ফ্রেমের ভেতরে আনুন", too few → "আরো কাছে আনুন".
+
+The farmer takes two photos (top of the leaf, then the underside). A photo that fails the checks asks "… তবুও রাখবেন?" before it is kept. Photos are saved on the device as JPEGs (≤ 1024 px, quality 0.85) in IndexedDB (`src/lib/captureStore.ts`) for a future diagnosis upload, and the top photo is shown on `/result/uncertain`.
+
+**The camera needs a secure context: HTTPS, or `http://localhost`.** Opening the dev server from a phone over `http://<LAN-IP>:3000` has no `getUserMedia`, so the screen falls back to the phone's own camera app via a file picker. To test the live camera on a real phone, use `next dev --experimental-https` or an HTTPS tunnel. If camera permission is denied, the screen shows "ক্যামেরার অনুমতি দিন" with a retry button.
 
 ### Season
 

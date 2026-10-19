@@ -88,6 +88,15 @@ export function ViewfinderBackdrop() {
   )
 }
 
+/* Just the dashed leaf frame from ViewfinderLeaf, drawn over the live camera. */
+export function ViewfinderOutline({ className = '' }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 300 380" className={className}>
+      <path d="M150 0 C 262 40 302 205 262 330 C 222 382 78 382 38 330 C -2 205 38 40 150 0 Z" fill="none" stroke="#E8B931" strokeWidth="3" strokeDasharray="11 8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export function ViewfinderLeaf({ className = '' }: { className?: string }) {
   return (
     <svg role="img" aria-label="ক্যামেরায় একটি আলুর পাতা, পাতায় বাদামি দাগ" viewBox="0 0 300 380" className={className}>

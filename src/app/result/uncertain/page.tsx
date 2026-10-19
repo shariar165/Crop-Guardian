@@ -1,6 +1,7 @@
 import { PrimaryLink, SectionRule } from '@/components/Buttons'
 import { ChatQuestionIcon, FogCloudIcon, QuestionIcon, SendIcon } from '@/components/icons'
-import { CandidateThumb, PhotoLeaf } from '@/components/illustrations'
+import CapturedThumb from '@/components/CapturedThumb'
+import { CandidateThumb } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
 import TopBar from '@/components/TopBar'
 import { CANDIDATES } from '@/lib/data'
@@ -18,9 +19,8 @@ export default function UncertainPage() {
       <TopBar back="/camera" title="ফলাফল" right={<ListenButton text={SPEECH} label="ফলাফল পড়ে শোনান" />} />
 
       <div className="flex shrink-0 items-start gap-3.5 px-4">
-        <div className="stitch flex h-28 w-[92px] shrink-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[18px] bg-[#1F2A17]!">
-          <PhotoLeaf />
-          <span className="text-[11px] font-semibold text-[#F1E8D6]">আপনার ছবি</span>
+        <div className="stitch relative flex h-28 w-[92px] shrink-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[18px] bg-[#1F2A17]!">
+          <CapturedThumb />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
           <span className="flex h-8 items-center gap-1.5 self-start rounded-2xl bg-sun px-3 text-[15px] font-bold text-ink">
