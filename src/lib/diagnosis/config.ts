@@ -103,8 +103,22 @@ export function parseConfig(json: unknown): DiagnosisConfig {
   }
 }
 
+// Cache API store for the config, model and runtime, so diagnosis works offline after the first visit.
+export const MODEL_CACHE = 'crop-guardian-model'
+
+export const cacheAvailable = () => typeof caches !== 'undefined'
+
+// The latest config when online, else the copy cached last time.
 export async function loadConfig(url = CONFIG_URL): Promise<DiagnosisConfig> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Diagnosis config: HTTP ${res.status}`)
-  return parseConfig(await res.json())
+  try {
+    const res = await fetch(url, { cache: 'no-cache' })
+    if (!res.ok) throw new Error(`Diagnosis config: HTTP ${res.status}`)
+    const config = parseConfig(await res.clone().json())
+    if (cacheAvailable()) await (await caches.open(MODEL_CACHE)).put(url, res)
+    return config
+  } catch (err) {
+    const cached = cacheAvailable() ? await caches.match(url) : undefined
+    if (!cached) throw err
+    return parseConfig(await cached.json())
+  }
 }

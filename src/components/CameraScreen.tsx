@@ -10,6 +10,7 @@ import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { clearCaptures, saveCapture } from '@/lib/captureStore'
 import type { Capture } from '@/lib/captureStore'
+import { loadModel, type ModelState } from '@/lib/diagnosis/client'
 import { ANALYSIS_WIDTH, assessQuality, confirmText, coverSourceRect, isAcceptable, topHint } from '@/lib/imageQuality'
 import type { QualityReport } from '@/lib/imageQuality'
 
@@ -40,6 +41,44 @@ function pills(r: QualityReport | null): Pill[] {
     { label: LEAF_LABEL[r.leaf], state: r.leaf === 'ok' ? 'ok' : 'warn' },
     { label: FOCUS_LABEL[r.focus], state: r.focus === 'ok' ? 'ok' : 'warn' },
   ]
+}
+
+function ModelStatus({ state, onRetry }: { state: ModelState; onRetry: () => void }) {
+  if (state.phase === 'ready') {
+    return (
+      <div className="flex items-center justify-center gap-1.5 text-[13px] font-medium text-[#CDBFA9]">
+        <OfflineIcon size={16} />
+        নেট ছাড়াও চলবে
+      </div>
+    )
+  }
+  if (state.phase === 'error') {
+    return (
+      <div role="alert" className="flex items-center justify-center gap-2 text-[13px] font-semibold text-[#F3CE5B]">
+        <WarnIcon size={16} />
+        {state.offline ? 'প্রথমবার মডেল নামাতে নেট লাগবে' : 'মডেল চালু হলো না'}
+        <button type="button" onClick={onRetry} className="h-8 rounded-full border-0 bg-sun px-3 text-[13px] font-bold text-ink">
+          আবার চেষ্টা
+        </button>
+      </div>
+    )
+  }
+  const pct = state.phase === 'downloading' && state.total > 0 ? Math.floor((state.loaded / state.total) * 100) : null
+  const size = state.phase === 'downloading' && state.total === 0 ? ` · ${toBnDigits(Math.round(state.loaded / 1e6))} MB` : ''
+  return (
+    <div className="flex flex-col items-center gap-1.5" aria-live="polite">
+      <span className="text-[13px] font-medium text-[#CDBFA9]">
+        {state.phase === 'downloading'
+          ? `মডেল নামাচ্ছি… একবারই লাগবে${pct === null ? size : ` · ${toBnDigits(pct)}%`}`
+          : 'মডেল চালু হচ্ছে…'}
+      </span>
+      {pct !== null && (
+        <span className="h-1.5 w-40 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
+          <span className="block h-full rounded-full bg-sun transition-[width]" style={{ width: `${pct}%` }} />
+        </span>
+      )}
+    </div>
+  )
 }
 
 // The part of the video frame the farmer actually sees in the (object-cover) viewfinder.
@@ -78,6 +117,10 @@ export default function CameraScreen() {
   const [step, setStep] = useState<Step>(1)
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState<Capture | null>(null)
+  const [model, setModel] = useState<ModelState>({ phase: 'loading' })
+
+  // Load (or download, the first time) the model while the farmer takes the photos.
+  useEffect(() => loadModel(setModel), [])
 
   // Each visit starts a fresh pair of photos.
   useEffect(() => {
@@ -340,10 +383,7 @@ export default function CameraScreen() {
           </span>
         </div>
         <CameraControls onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
-        <div className="flex items-center justify-center gap-1.5 text-[13px] font-medium text-[#CDBFA9]">
-          <OfflineIcon size={16} />
-          নেট ছাড়াও চলবে · পরে সিঙ্ক হবে
-        </div>
+        <ModelStatus state={model} onRetry={() => loadModel(setModel)} />
       </div>
     </div>
   )
