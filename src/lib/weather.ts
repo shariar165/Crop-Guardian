@@ -11,7 +11,7 @@ export const REVALIDATE_S = 3600
 export const ARCHIVE_REVALIDATE_S = 86400
 
 // Shibganj, Bogura.
-export const DEFAULT_LOCATION = { lat: 25.02, lon: 89.32 }
+export const DEFAULT_LOCATION = { lat: 25.02, lon: 89.32, name: 'শিবগঞ্জ, বগুড়া' }
 
 export type HourlyForecast = {
   time: string[] // local time in FORECAST_TZ, e.g. "2026-10-18T05:00"

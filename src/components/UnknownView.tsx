@@ -7,6 +7,7 @@ import { Loading, NoDiagnosis, ValidationBadge, WhyCard } from '@/components/Dia
 import { CameraIcon, CheckIcon, SearchIcon, SendIcon, WarnIcon } from '@/components/icons'
 import { UnknownArt } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
+import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar from '@/components/TopBar'
 import { getCapture } from '@/lib/captureStore'
 import { CONFIDENCE_WORD, knownList } from '@/lib/diagnosis/explain'
@@ -75,8 +76,10 @@ export default function UnknownView({ mock }: { mock?: Mock }) {
       <div className="min-h-4 flex-1" />
 
       <div className="flex shrink-0 flex-col gap-2.5 px-4 pt-3 pb-[18px]">
-        <button
-          type="button"
+        <OfficerShareButton
+          record={record}
+          config={config}
+          demo={!!mock}
           className="flex min-h-[72px] items-center justify-center gap-3 rounded-[20px] border-0 bg-teal px-4 py-2 text-white shadow-[0_4px_0_#133C44]"
         >
           <SendIcon size={28} weight={2.2} />
@@ -84,7 +87,7 @@ export default function UnknownView({ mock }: { mock?: Mock }) {
             <span className="font-display text-xl font-extrabold">কৃষি কর্মকর্তাকে পাঠান</span>
             <span className="text-[13px] font-medium text-[#D4E6E3]">উপসহকারী কৃষি কর্মকর্তা</span>
           </span>
-        </button>
+        </OfficerShareButton>
         <Link href="/camera" className={`${outlineClass} min-h-[58px] gap-2.5 text-lg font-bold`}>
           <CameraIcon size={24} weight={2.2} />
           আবার ছবি তুলুন

@@ -13,6 +13,7 @@ import { primaryClass, tealClass } from './Buttons'
 import { AnswerArt } from './illustrations'
 import { BackIcon, CheckIcon, QuestionIcon, RestartIcon, WarnIcon, WaveIcon } from './icons'
 import ListenButton from './ListenButton'
+import OfficerShareButton from './OfficerShareButton'
 import { RoundLink } from './TopBar'
 
 export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mock; answers?: string }) {
@@ -155,9 +156,14 @@ export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mo
               ফলাফল ও করণীয় দেখুন
             </Link>
           ) : (
-            <button type="button" className={`${tealClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}>
+            <OfficerShareButton
+              record={record}
+              config={config}
+              demo={!!mock}
+              className={`${tealClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}
+            >
               কৃষি কর্মকর্তাকে পাঠান
-            </button>
+            </OfficerShareButton>
           )}
           <button
             type="button"

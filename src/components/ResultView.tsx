@@ -4,6 +4,7 @@ import { tealClass } from '@/components/Buttons'
 import { Loading, NoDiagnosis, ValidationBadge, WhyCard } from '@/components/DiagnosisParts'
 import { CheckIcon, DocIcon, HomeIcon, PersonIcon, WarnIcon } from '@/components/icons'
 import ListenButton from '@/components/ListenButton'
+import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar, { RoundLink } from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { ADVICE_SOURCE, CLASS_CONTENT } from '@/lib/diagnosis/content'
@@ -104,10 +105,15 @@ export default function ResultView({ mock, answers }: { mock?: Mock; answers?: s
 
       <div className="grid shrink-0 grid-cols-[2fr_3fr] gap-2.5 px-4 pb-[18px]">
         <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
-        <button type="button" className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}>
+        <OfficerShareButton
+          record={record}
+          config={config}
+          demo={!!mock}
+          className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}
+        >
           <PersonIcon size={24} />
           কৃষি কর্মকর্তাকে দেখান
-        </button>
+        </OfficerShareButton>
       </div>
     </div>
   )

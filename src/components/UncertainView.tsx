@@ -6,6 +6,7 @@ import { Loading, NoDiagnosis, ValidationBadge, WhyCard } from '@/components/Dia
 import { ChatQuestionIcon, QuestionIcon, SendIcon } from '@/components/icons'
 import { CandidateThumb } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
+import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { CLASS_CONTENT } from '@/lib/diagnosis/content'
@@ -82,13 +83,15 @@ export default function UncertainView({ mock }: { mock?: Mock }) {
             </span>
           </PrimaryLink>
         )}
-        <button
-          type="button"
+        <OfficerShareButton
+          record={record}
+          config={config}
+          demo={!!mock}
           className="flex min-h-12 items-center justify-center gap-2 border-0 bg-transparent text-base font-bold text-teal"
         >
           <SendIcon size={20} />
           সরাসরি কৃষি কর্মকর্তাকে পাঠান
-        </button>
+        </OfficerShareButton>
       </div>
     </div>
   )
