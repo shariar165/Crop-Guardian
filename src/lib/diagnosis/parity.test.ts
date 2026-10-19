@@ -13,7 +13,7 @@ describe('the model on the parity images', () => {
     const session = await ort.InferenceSession.create(join(process.cwd(), 'public', 'model', realConfig.modelFile))
 
     for (const f of parityFixtures) {
-      const image = sharp(join(PARITY_DIR, f.image))
+      const image = sharp(join(PARITY_DIR, f.file))
       const { width = 0, height = 0 } = await image.metadata()
       const g = resizeGeometry(width, height, realConfig)
       const { data } = await image
@@ -28,10 +28,10 @@ describe('the model on the parity images', () => {
       const logits = Array.from(output[realConfig.outputName].data as Float32Array)
 
       const drift = Math.max(...logits.map((x, i) => Math.abs(x - f.logits[i])))
-      t.diagnostic(`${f.image}: max logit drift ${drift.toFixed(4)}`)
+      t.diagnostic(`${f.file}: max logit drift ${drift.toFixed(4)}`)
       const r = decide(logits, realConfig)
-      assert.equal(r.decision, f.decision, f.image)
-      assert.deepEqual(r.candidates, f.candidates, f.image)
+      assert.equal(r.decision, f.decision, f.file)
+      assert.deepEqual(r.candidates, f.candidates, f.file)
     }
   })
 })

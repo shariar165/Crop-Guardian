@@ -1,1 +1,248 @@
-[]
+[
+  {
+    "file": "healthy_0.jpg",
+    "group": "healthy",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Healthy/1692336758850.jpg",
+    "logits": [
+      -12.91655,
+      11.25037,
+      -7.30285,
+      10.79554
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0,
+      0.9999,
+      0.0001
+    ],
+    "ood_score": 0.3882
+  },
+  {
+    "file": "healthy_1.jpg",
+    "group": "healthy",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Healthy/1692336758935.jpg",
+    "logits": [
+      -7.49652,
+      7.56169,
+      -3.36994,
+      6.15301
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0004,
+      0.9963,
+      0.0033
+    ],
+    "ood_score": 0.1964
+  },
+  {
+    "file": "healthy_2.jpg",
+    "group": "healthy",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Healthy/20230712_120140.jpg",
+    "logits": [
+      -7.22791,
+      1.73917,
+      -3.67854,
+      5.84377
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0088,
+      0.9356,
+      0.0556
+    ],
+    "ood_score": 0.9837
+  },
+  {
+    "file": "healthy_3.jpg",
+    "group": "healthy",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Healthy/20230712_120306.jpg",
+    "logits": [
+      -5.80499,
+      9.21166,
+      -3.63224,
+      4.3224
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0004,
+      0.9984,
+      0.0012
+    ],
+    "ood_score": 0.0075
+  },
+  {
+    "file": "late_blight_0.jpg",
+    "group": "late_blight",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Phytopthora/1692332350385.jpg",
+    "logits": [
+      -5.34911,
+      -8.24954,
+      1.10089,
+      6.98313
+    ],
+    "decision": "confident",
+    "candidates": [
+      "late_blight"
+    ],
+    "probs": [
+      0.0333,
+      0.0074,
+      0.9593
+    ],
+    "ood_score": 0.9972
+  },
+  {
+    "file": "late_blight_1.jpg",
+    "group": "late_blight",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Phytopthora/1692335404516.jpg",
+    "logits": [
+      -12.61871,
+      -6.62824,
+      9.48576,
+      0.92998
+    ],
+    "decision": "confident",
+    "candidates": [
+      "late_blight"
+    ],
+    "probs": [
+      0.0,
+      0.0002,
+      0.9998
+    ],
+    "ood_score": 0.0002
+  },
+  {
+    "file": "late_blight_2.jpg",
+    "group": "late_blight",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Phytopthora/1692336758747.jpg",
+    "logits": [
+      -9.13811,
+      -7.24084,
+      15.1126,
+      4.52707
+    ],
+    "decision": "confident",
+    "candidates": [
+      "late_blight"
+    ],
+    "probs": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "ood_score": 0.0
+  },
+  {
+    "file": "late_blight_3.jpg",
+    "group": "late_blight",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Phytopthora/1692336759084.jpg",
+    "logits": [
+      -17.28937,
+      -9.81662,
+      3.38604,
+      5.11301
+    ],
+    "decision": "confident",
+    "candidates": [
+      "late_blight"
+    ],
+    "probs": [
+      0.0,
+      0.001,
+      0.999
+    ],
+    "ood_score": 0.849
+  },
+  {
+    "file": "unseen_disease_0.jpg",
+    "group": "unseen_disease",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Bacteria/1692332350433.jpg",
+    "logits": [
+      -3.88893,
+      -2.70291,
+      0.77244,
+      11.19953
+    ],
+    "decision": "unknown",
+    "candidates": [],
+    "probs": [
+      0.0704,
+      0.1307,
+      0.7989
+    ],
+    "ood_score": 1.0
+  },
+  {
+    "file": "unseen_disease_1.jpg",
+    "group": "unseen_disease",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Nematode/20230712_120750.jpg",
+    "logits": [
+      -3.90957,
+      -5.98724,
+      3.43366,
+      5.93465
+    ],
+    "decision": "confident",
+    "candidates": [
+      "late_blight"
+    ],
+    "probs": [
+      0.0212,
+      0.0072,
+      0.9716
+    ],
+    "ood_score": 0.9242
+  },
+  {
+    "file": "unseen_disease_2.jpg",
+    "group": "unseen_disease",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Pest/1692332350400.jpg",
+    "logits": [
+      -8.44593,
+      -4.94728,
+      -3.81364,
+      10.90604
+    ],
+    "decision": "unknown",
+    "candidates": [],
+    "probs": [
+      0.0545,
+      0.3371,
+      0.6085
+    ],
+    "ood_score": 1.0
+  },
+  {
+    "file": "unseen_disease_3.jpg",
+    "group": "unseen_disease",
+    "source": "Potato Leaf Disease Dataset in Uncontrolled Environment/Virus/1692335404669.jpg",
+    "logits": [
+      -12.93456,
+      -1.70883,
+      -3.41101,
+      10.09397
+    ],
+    "decision": "unknown",
+    "candidates": [],
+    "probs": [
+      0.002,
+      0.7068,
+      0.2912
+    ],
+    "ood_score": 1.0
+  }
+]

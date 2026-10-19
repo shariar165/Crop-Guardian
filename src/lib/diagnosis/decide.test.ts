@@ -4,15 +4,17 @@ import { decide } from '@/lib/diagnosis/decide'
 import { logitsFor, PARITY_SKIP, parityFixtures, realConfig, syntheticConfig } from '@/lib/diagnosis/__fixtures__'
 
 const [, HEALTHY, LATE] = realConfig.diseases
+// The notebook rounds probs and ood_score to 4 decimals.
+const TOLERANCE = 1e-4
 
 describe('decide on the notebook parity fixtures', () => {
   it('makes the same decision and candidates as the notebook', { skip: PARITY_SKIP }, () => {
     for (const f of parityFixtures) {
       const r = decide(f.logits, realConfig)
-      assert.equal(r.decision, f.decision, f.image)
-      assert.deepEqual(r.candidates, f.candidates, f.image)
-      f.probs?.forEach((p, i) => assert.ok(Math.abs(r.probs[i] - p) < 1e-5, `${f.image} probs[${i}]`))
-      if (f.ood_score !== undefined) assert.ok(Math.abs(r.oodScore - f.ood_score) < 1e-5, `${f.image} ood_score`)
+      assert.equal(r.decision, f.decision, f.file)
+      assert.deepEqual(r.candidates, f.candidates, f.file)
+      f.probs?.forEach((p, i) => assert.ok(Math.abs(r.probs[i] - p) < TOLERANCE, `${f.file} probs[${i}]`))
+      if (f.ood_score !== undefined) assert.ok(Math.abs(r.oodScore - f.ood_score) < TOLERANCE, `${f.file} ood_score`)
     }
   })
 })

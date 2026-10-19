@@ -94,6 +94,6 @@ After one visit with internet, the diagnosis works with none. The model worker k
 
 To try it, run `npm run build && npm start`, open `/camera` once, then stop the server (or switch the phone to airplane mode) and take the photos again. A service worker and the camera both need a secure context: `localhost`, or HTTPS on a phone. Offline, `?mock=` is ignored: the cached pages are saved without their query, so they show the last real result.
 
-`src/lib/diagnosis/__fixtures__/parity/` holds the notebook's reference outputs. `decide.test.ts` and `parity.test.ts` (which runs the real model with onnxruntime-node) check the app makes the same decisions; both are skipped until the notebook's export is added there (see its README).
+`src/lib/diagnosis/__fixtures__/parity/` holds the notebook's reference outputs. `decide.test.ts` and `parity.test.ts` (which runs the real model with onnxruntime-node) check the app makes the same decisions on 12 notebook images (4 healthy, 4 late blight, 4 diseases the model never saw).
 
 The map and ledger are still static sample data in `src/lib/data.ts`.

@@ -30,7 +30,9 @@ export function logitsFor(probs: number[], config: DiagnosisConfig, other = -20)
 }
 
 export type ParityFixture = {
-  image: string
+  file: string
+  group?: string
+  source?: string
   logits: number[]
   decision: Decision
   candidates: string[]
