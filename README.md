@@ -88,6 +88,12 @@ Confident opens `/result`, uncertain `/result/uncertain`, unknown `/unknown`. Fr
 
 "কৃষি কর্মকর্তাকে পাঠান / দেখান" (on every result screen and at the end of the questions) uses the phone's share sheet (Web Share API) with both leaf photos and a short Bengali summary: date, place, the app's result and candidates, and the farmer's answers (`src/lib/shareCase.ts`). Where sharing isn't available it opens a WhatsApp link with the text only. Each sent case is kept on the device (IndexedDB `cases`) for the ledger to show later. No server is involved.
 
+### Offline
+
+After one visit with internet, the diagnosis works with none. The model worker keeps the model, config and wasm in the Cache API. `public/sw.js` (a hand-written service worker, registered in production builds only) precaches `/camera`, the result screens, `/questions` and `/offline`, plus every hashed `/_next/static` file they use. Pages are network-first, so they stay fresh when online. Home isn't cached: offline it opens `/offline` ("নেট নেই — আবহাওয়ার ঝুঁকি দেখা যাচ্ছে না") with a button to the camera, so an old risk is never shown as today's. On the result screens, the weather row says the forecast is unavailable.
+
+To try it, run `npm run build && npm start`, open `/camera` once, then stop the server (or switch the phone to airplane mode) and take the photos again. A service worker and the camera both need a secure context: `localhost`, or HTTPS on a phone. Offline, `?mock=` is ignored: the cached pages are saved without their query, so they show the last real result.
+
 `src/lib/diagnosis/__fixtures__/parity/` holds the notebook's reference outputs. `decide.test.ts` and `parity.test.ts` (which runs the real model with onnxruntime-node) check the app makes the same decisions; both are skipped until the notebook's export is added there (see its README).
 
 The map and ledger are still static sample data in `src/lib/data.ts`.

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Baloo_Da_2, Hind_Siliguri } from 'next/font/google'
 import PhoneFrame from '@/components/PhoneFrame'
+import ServiceWorker from '@/components/ServiceWorker'
 import './globals.css'
 
 const hind = Hind_Siliguri({
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="bn" className={`${hind.variable} ${baloo.variable}`}>
       <body suppressHydrationWarning>
         <PhoneFrame>{children}</PhoneFrame>
+        <ServiceWorker />
       </body>
     </html>
   )

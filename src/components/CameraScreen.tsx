@@ -66,7 +66,7 @@ function ModelStatus({ state, onRetry }: { state: ModelState; onRetry: () => voi
       </div>
     )
   }
-  const pct = state.phase === 'downloading' && state.total > 0 ? Math.floor((state.loaded / state.total) * 100) : null
+  const pct = state.phase === 'downloading' && state.total > 0 ? Math.min(100, Math.floor((state.loaded / state.total) * 100)) : null
   const size = state.phase === 'downloading' && state.total === 0 ? ` · ${toBnDigits(Math.round(state.loaded / 1e6))} MB` : ''
   return (
     <div className="flex flex-col items-center gap-1.5" aria-live="polite">

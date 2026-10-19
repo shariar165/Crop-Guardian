@@ -13,6 +13,19 @@ const post = (msg: WorkerResponse) => self.postMessage(msg)
 type Loaded = { session: ort.InferenceSession; config: DiagnosisConfig }
 let loaded: Promise<Loaded> | null = null
 
+// Real file sizes, written at build time by scripts/copy-ort.mjs. A compressed response has no
+// usable Content-Length, so this is what the progress bar measures against.
+const SIZES_URL = '/ort/sizes.json'
+
+async function knownSizes(): Promise<Record<string, number>> {
+  try {
+    const res = await fetch(SIZES_URL, { cache: 'no-store' })
+    return res.ok ? await res.json() : {}
+  } catch {
+    return {}
+  }
+}
+
 // Each file from the cache, or else downloaded once, with combined progress, and cached.
 async function fetchAll(urls: string[]): Promise<ArrayBuffer[]> {
   const cache = cacheAvailable() ? await caches.open(MODEL_CACHE) : null
@@ -29,7 +42,8 @@ async function fetchAll(urls: string[]): Promise<ArrayBuffer[]> {
       return res
     }),
   )
-  const sizes = responses.map((r, i) => (hits[i] ? 0 : Number(r.headers.get('content-length')) || 0))
+  const known = await knownSizes()
+  const sizes = urls.map((u, i) => (hits[i] ? 0 : known[u] || 0))
   const total = sizes.every((s, i) => s > 0 || hits[i]) ? sizes.reduce((a, b) => a + b, 0) : 0
   const done = urls.map(() => 0)
   const report = () => post({ type: 'progress', loaded: done.reduce((a, b) => a + b, 0), total })
