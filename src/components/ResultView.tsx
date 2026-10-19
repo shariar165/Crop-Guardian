@@ -8,7 +8,9 @@ import TopBar, { RoundLink } from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { ADVICE_SOURCE, CLASS_CONTENT } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
+import { finalOf } from '@/lib/diagnosis/flow'
 import type { Mock } from '@/lib/diagnosis/mock'
+import { answerLine } from '@/lib/diagnosis/questions'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
 
 const BANNER = {
@@ -17,16 +19,18 @@ const BANNER = {
   ok: 'bg-leaf-soft text-[#24502C]',
 }
 
-export default function ResultView({ mock }: { mock?: Mock }) {
-  const view = useDiagnosis(mock)
+export default function ResultView({ mock, answers }: { mock?: Mock; answers?: string }) {
+  const view = useDiagnosis(mock, answers)
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
   const { config, record } = view
-  const id = record.result.candidates[0]
-  const name = labelOf(id, config)
-  const content = CLASS_CONTENT[id]
-  const word = CONFIDENCE_WORD.confident
+  // useDiagnosis only shows this screen when there is a final answer.
+  const final = finalOf(record)!
+  const name = labelOf(final.id, config)
+  const content = CLASS_CONTENT[final.id]
+  // Narrowing by the farmer's answers isn't calibrated like the model, so it isn't called "sure".
+  const word = final.via === 'model' ? CONFIDENCE_WORD.confident : 'ছবি আর আপনার উত্তর মিলিয়ে'
   const speech =
     `${word}: ${name}। ${content.banner.text}। এখন কী করবেন: ` +
     content.steps.map((s, i) => `${toBnDigits(i + 1)}. ${s}।`).join(' ')
@@ -45,7 +49,11 @@ export default function ResultView({ mock }: { mock?: Mock }) {
       />
 
       <div className="flex shrink-0 flex-col gap-1.5 px-[18px]">
-        <span className="flex h-8 items-center gap-1.5 self-start rounded-2xl bg-leaf px-3 text-[15px] font-bold text-white">
+        <span
+          className={`flex h-8 items-center gap-1.5 self-start rounded-2xl px-3 text-[15px] font-bold ${
+            final.via === 'model' ? 'bg-leaf text-white' : 'bg-sun text-ink'
+          }`}
+        >
           <CheckIcon size={18} weight={2.8} />
           {word}
         </span>
@@ -61,7 +69,12 @@ export default function ResultView({ mock }: { mock?: Mock }) {
         <ValidationBadge className="mt-1" />
       </div>
 
-      <WhyCard record={record} config={config} photos={!mock} />
+      <WhyCard
+        record={record}
+        config={config}
+        photos={!mock}
+        answers={record.answers.flatMap((a) => answerLine(a) ?? [])}
+      />
 
       <section className="mx-4 mt-4 flex shrink-0 flex-col gap-2.5">
         <h2 className="m-0 font-display text-lg font-bold">এখন কী করবেন</h2>

@@ -3,6 +3,7 @@ import type { DiagnosisRecord } from '../captureStore'
 import { combine } from './combine'
 import type { DiagnosisConfig } from './config'
 import type { Decision, PhotoResult } from './decide'
+import { RESULT_PATH } from './flow'
 
 export const MOCKS = ['confident', 'healthy', 'uncertain', 'unknown'] as const
 export type Mock = (typeof MOCKS)[number]
@@ -10,14 +11,6 @@ export type Mock = (typeof MOCKS)[number]
 export function parseMock(value: string | string[] | undefined): Mock | undefined {
   return MOCKS.find((m) => m === value)
 }
-
-export const RESULT_PATH: Record<Decision, string> = {
-  confident: '/result',
-  uncertain: '/result/uncertain',
-  unknown: '/unknown',
-}
-
-export const withMock = (path: string, mock: Mock | undefined) => (mock ? `${path}?mock=${mock}` : path)
 
 // A photo the model is sure about, if `id` is a class this model knows.
 function sure(id: string, config: DiagnosisConfig): PhotoResult {
@@ -43,9 +36,11 @@ export function mockDiagnosis(mock: Mock, config: DiagnosisConfig): DiagnosisRec
   return { createdAt: Date.now(), result: combine(top, under, config), answers: [] }
 }
 
-export const MOCK_RESULT: Record<Mock, Decision> = {
+const MOCK_RESULT: Record<Mock, Decision> = {
   confident: 'confident',
   healthy: 'confident',
   uncertain: 'uncertain',
   unknown: 'unknown',
 }
+
+export const mockPath = (mock: Mock) => RESULT_PATH[MOCK_RESULT[mock]]

@@ -68,14 +68,6 @@ export const RISK_VIEW: Record<Risk, RiskView> = {
   },
 }
 
-export type CandidateId = 'late' | 'early' | 'nutri'
-
-export const CANDIDATES: { id: CandidateId; name: string; en: string; sign: string }[] = [
-  { id: 'late', name: 'নাবি ধসা', en: 'Late blight', sign: 'পানিভেজা বাদামি দাগ, কিনারায় ফ্যাকাশে বলয়' },
-  { id: 'early', name: 'আগাম ধসা', en: 'Early blight', sign: 'গোল দাগের ভেতর চাকতির মতো রিং' },
-  { id: 'nutri', name: 'পুষ্টির ঘাটতি', en: 'Nutrient deficiency', sign: 'পাতার কিনারা হলুদ বা বাদামি হয়ে যাওয়া' },
-]
-
 export type LedgerEntry = {
   day: number
   note: string

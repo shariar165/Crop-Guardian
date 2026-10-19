@@ -10,7 +10,9 @@ import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { CLASS_CONTENT } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
-import { type Mock, withMock } from '@/lib/diagnosis/mock'
+import { withMock } from '@/lib/diagnosis/flow'
+import type { Mock } from '@/lib/diagnosis/mock'
+import { questionCount } from '@/lib/diagnosis/questions'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
 
 export default function UncertainView({ mock }: { mock?: Mock }) {
@@ -21,10 +23,12 @@ export default function UncertainView({ mock }: { mock?: Mock }) {
   const { config, record } = view
   const candidates = record.result.candidates
   const heading = `${toBnDigits(candidates.length)}টার যেকোনোটা হতে পারে`
+  const asks = questionCount(candidates, [])
   const speech =
     `${CONFIDENCE_WORD.uncertain}। ${heading}: ` +
     candidates.map((id) => labelOf(id, config)).join(', ') +
-    '। ভুল ওষুধ এড়াতে আমি আন্দাজে একটা নাম বলব না। নিশ্চিত হতে কয়েকটা প্রশ্নের উত্তর দিন।'
+    '। ভুল ওষুধ এড়াতে আমি আন্দাজে একটা নাম বলব না।' +
+    (asks ? ` বাছাই করতে ${toBnDigits(asks)}টা প্রশ্নের উত্তর দিন।` : ' কৃষি কর্মকর্তাকে দেখান।')
 
   return (
     <div className="flex flex-1 flex-col">
@@ -69,13 +73,15 @@ export default function UncertainView({ mock }: { mock?: Mock }) {
       <div className="min-h-4 flex-1" />
 
       <div className="flex shrink-0 flex-col gap-2 px-4 pb-[18px]">
-        <PrimaryLink href={withMock('/questions', mock)} className="min-h-[72px] gap-3 px-4 py-2">
-          <ChatQuestionIcon size={30} weight={2.2} />
-          <span className="flex flex-col leading-[1.2]">
-            <span className="font-display text-[22px] font-extrabold">প্রশ্নের উত্তর দিন</span>
-            <span className="text-sm font-medium">পাতা দেখে হ্যাঁ বা না বলুন</span>
-          </span>
-        </PrimaryLink>
+        {asks > 0 && (
+          <PrimaryLink href={withMock('/questions', mock)} className="min-h-[72px] gap-3 px-4 py-2">
+            <ChatQuestionIcon size={30} weight={2.2} />
+            <span className="flex flex-col leading-[1.2]">
+              <span className="font-display text-[22px] font-extrabold">{toBnDigits(asks)}টা প্রশ্নের উত্তর দিন</span>
+              <span className="text-sm font-medium">পাতা দেখে হ্যাঁ বা না বলুন</span>
+            </span>
+          </PrimaryLink>
+        )}
         <button
           type="button"
           className="flex min-h-12 items-center justify-center gap-2 border-0 bg-transparent text-base font-bold text-teal"
