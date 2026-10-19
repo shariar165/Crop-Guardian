@@ -12,21 +12,34 @@ const VARIANT: Record<Variant, string> = {
   outline: 'min-h-[66px] rounded-[20px] border-2 border-ink bg-transparent text-ink text-lg font-bold gap-2 justify-center',
 }
 
-/** Reads `text` aloud in Bengali using the browser's speech synthesis. */
+const bengaliVoice = (synth: SpeechSynthesis) => synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('bn'))
+
+/**
+ * Reads `text` aloud in Bengali using the browser's speech synthesis.
+ * With `requireVoice`, it stays silent when no Bengali voice is installed.
+ */
 export default function ListenButton({
   text,
   label,
   variant = 'sand',
   className = '',
+  requireVoice = false,
 }: {
   text: string
   label: string
   variant?: Variant
   className?: string
+  requireVoice?: boolean
 }) {
   const [speaking, setSpeaking] = useState(false)
 
-  useEffect(() => () => window.speechSynthesis?.cancel(), [])
+  useEffect(() => {
+    const synth = window.speechSynthesis
+    if (!synth) return
+    // Some browsers (Chrome) load voices asynchronously; asking for them starts the load.
+    synth.getVoices()
+    return () => synth.cancel()
+  }, [])
 
   function toggle() {
     const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
@@ -36,10 +49,11 @@ export default function ListenButton({
       setSpeaking(false)
       return
     }
+    const voice = bengaliVoice(synth)
+    if (!voice && requireVoice) return
     synth.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'bn-BD'
-    const voice = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('bn'))
     if (voice) utterance.voice = voice
     utterance.rate = 0.9
     utterance.onend = () => setSpeaking(false)

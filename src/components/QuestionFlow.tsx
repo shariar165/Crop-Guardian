@@ -1,74 +1,56 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { Loading, NoDiagnosis } from '@/components/DiagnosisParts'
 import { toBnDigits } from '@/lib/bn'
-import { CANDIDATES, type CandidateId } from '@/lib/data'
+import { type Answer, saveDiagnosis } from '@/lib/captureStore'
+import { labelOf } from '@/lib/diagnosis/explain'
+import { withMock } from '@/lib/diagnosis/flow'
+import type { Mock } from '@/lib/diagnosis/mock'
+import { nextQuestion, questionCount, remainingAfter } from '@/lib/diagnosis/questions'
+import { useDiagnosisState } from '@/lib/diagnosis/useDiagnosis'
 import { primaryClass, tealClass } from './Buttons'
 import { AnswerArt } from './illustrations'
-import { BackIcon, CheckIcon, QuestionIcon, RestartIcon, WaveIcon } from './icons'
+import { BackIcon, CheckIcon, QuestionIcon, RestartIcon, WarnIcon, WaveIcon } from './icons'
 import ListenButton from './ListenButton'
+import OfficerShareButton from './OfficerShareButton'
 import { RoundLink } from './TopBar'
 
-type Answer = 'yes' | 'no' | 'unsure'
-type State = { step: 0 | 1; out: Partial<Record<CandidateId, true>>; done: boolean }
+export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mock; answers?: string }) {
+  const [view, setRecord] = useDiagnosisState(mock, mockAnswers)
+  if (view.status === 'loading') return <Loading />
+  if (view.status === 'empty') return <NoDiagnosis />
 
-const INITIAL: State = { step: 0, out: {}, done: false }
+  const { config, record } = view
+  const candidates = record.result.candidates
+  const answers = record.answers
+  const left = remainingAfter(candidates, answers)
+  const q = nextQuestion(candidates, answers)
+  const total = questionCount(candidates, answers)
+  const outcome = q ? null : left.length === 1 ? 'one' : left.length === 0 ? 'none' : 'many'
+  const stepLabel = q ? `প্রশ্ন ${toBnDigits(answers.length + 1)} / ${toBnDigits(total)}` : 'শেষ'
 
-const QUESTIONS = [
-  {
-    text: 'দাগের ভেতরে কি চাকতির মতো গোল গোল রিং আছে?',
-    yesArt: 'rings',
-    noArt: 'plain',
-  },
-  {
-    text: 'পাতা উল্টে দেখুন: নিচে কি সাদা তুলার মতো কিছু আছে?',
-    yesArt: 'spores',
-    noArt: 'noSpores',
-  },
-] as const
-
-/* Each answer rules candidates out ("out"); same logic as the design prototype. */
-function reduce(s: State, kind: Answer): State {
-  const out = { ...s.out }
-  if (s.step === 0) {
-    if (kind === 'yes') {
-      out.late = true
-      out.nutri = true
-      return { step: 0, out, done: true }
-    }
-    if (kind === 'no') out.early = true
-    return { step: 1, out, done: false }
+  // Demos keep their answers in the URL; real answers are saved with the diagnosis.
+  const update = (next: typeof answers) => {
+    const updated = { ...record, answers: next }
+    setRecord(updated)
+    if (!mock) saveDiagnosis(updated).catch((err) => console.error('Could not save the answer', err))
   }
-  if (kind === 'yes') {
-    out.early = true
-    out.nutri = true
-  } else if (kind === 'no') {
-    out.late = true
-  }
-  return { step: 1, out, done: true }
-}
+  const answer = (kind: Answer) => q && update([...answers, { question: q.id, answer: kind }])
 
-export default function QuestionFlow() {
-  const [state, setState] = useState<State>(INITIAL)
-  const answer = (kind: Answer) => setState((s) => reduce(s, kind))
-
-  const chips = CANDIDATES.map((c) => ({ ...c, gone: !!state.out[c.id] }))
-  const left = chips.filter((c) => !c.gone)
-  const one = state.done && left.length === 1
-  const stepLabel = state.done ? 'শেষ' : state.step === 0 ? 'প্রশ্ন ১ / ২' : 'প্রশ্ন ২ / ২'
-  const q = QUESTIONS[state.step]
-
-  const speech = state.done
-    ? one
-      ? `তালিকা ছোট হয়ে একটায় এসেছে: ${left[0].name}`
-      : 'এখনও নিশ্চিত নই। আন্দাজে ওষুধ না দিয়ে কৃষি কর্মকর্তাকে দেখানোই ভালো।'
-    : q.text
+  const name = outcome === 'one' ? labelOf(left[0], config) : ''
+  const speech = q
+    ? q.text
+    : outcome === 'one'
+      ? `তালিকা ছোট হয়ে একটায় এসেছে: ${name}`
+      : outcome === 'none'
+        ? 'আপনার উত্তর ছবির সাথে মিলছে না। কৃষি কর্মকর্তাকে দেখানোই ভালো।'
+        : 'এখনও নিশ্চিত নই। আন্দাজে ওষুধ না দিয়ে কৃষি কর্মকর্তাকে দেখানোই ভালো।'
 
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex h-16 shrink-0 items-center justify-between px-4">
-        <RoundLink href="/result/uncertain" label="ফিরে যান">
+        <RoundLink href={withMock('/result/uncertain', mock)} label="ফিরে যান">
           <BackIcon />
         </RoundLink>
         <div className="flex flex-col items-center gap-1">
@@ -76,8 +58,9 @@ export default function QuestionFlow() {
             {stepLabel}
           </h1>
           <div className="flex gap-1.5" aria-hidden="true">
-            <span className="h-1.5 w-[26px] rounded-[3px] bg-sun" />
-            <span className={`h-1.5 w-[26px] rounded-[3px] ${state.step >= 1 || state.done ? 'bg-sun' : 'bg-line'}`} />
+            {Array.from({ length: Math.max(total, 1) }, (_, i) => (
+              <span key={i} className={`h-1.5 w-[26px] rounded-[3px] ${i <= answers.length || !q ? 'bg-sun' : 'bg-line'}`} />
+            ))}
           </div>
         </div>
         <ListenButton text={speech} label="প্রশ্নটি আবার শোনান" />
@@ -91,24 +74,25 @@ export default function QuestionFlow() {
           </span>
         </div>
         <ul className="m-0 flex min-h-[52px] list-none flex-wrap gap-2 p-0">
-          {chips.map((c) => (
-            <li
-              key={c.id}
-              className={`flex h-11 items-center gap-1.5 rounded-full border-2 px-3.5 text-base font-bold transition-all duration-300 ${
-                c.gone ? 'border-line bg-sand/60 text-muted' : 'border-sun bg-sun-soft'
-              }`}
-            >
-              <span className={c.gone ? 'line-through decoration-2' : ''}>{c.name}</span>
-              {c.gone && (
-                <span className="rounded-lg bg-danger-soft px-[7px] py-px text-xs font-bold text-[#8A3424]">বাদ</span>
-              )}
-            </li>
-          ))}
+          {candidates.map((id) => {
+            const gone = !left.includes(id)
+            return (
+              <li
+                key={id}
+                className={`flex h-11 items-center gap-1.5 rounded-full border-2 px-3.5 text-base font-bold transition-all duration-300 ${
+                  gone ? 'border-line bg-sand/60 text-muted' : 'border-sun bg-sun-soft'
+                }`}
+              >
+                <span className={gone ? 'line-through decoration-2' : ''}>{labelOf(id, config)}</span>
+                {gone && <span className="rounded-lg bg-danger-soft px-[7px] py-px text-xs font-bold text-[#8A3424]">বাদ</span>}
+              </li>
+            )
+          })}
         </ul>
       </section>
 
-      {!state.done ? (
-        <div key={state.step} className="flex flex-1 flex-col gap-3.5 px-4 py-[18px]">
+      {q ? (
+        <div key={q.id} className="flex flex-1 flex-col gap-3.5 px-4 py-[18px]">
           <div className="flex items-center gap-2 text-sm font-semibold text-teal">
             <WaveIcon size={22} />
             প্রশ্নটা পড়ে শোনানো হচ্ছে
@@ -117,8 +101,8 @@ export default function QuestionFlow() {
           <div className="grid grid-cols-2 gap-3">
             {(
               [
-                ['yes', q.yesArt, 'হ্যাঁ, আছে'],
-                ['no', q.noArt, 'না, নেই'],
+                ['yes', q.art.yes, 'হ্যাঁ, আছে'],
+                ['no', q.art.no, 'না, নেই'],
               ] as const
             ).map(([kind, art, label]) => (
               <button
@@ -143,37 +127,47 @@ export default function QuestionFlow() {
       ) : (
         <div className="flex flex-1 flex-col gap-3.5 px-4 py-[18px]">
           <div className="flex flex-1 flex-col items-center justify-center gap-2.5 rounded-3xl border-[1.5px] border-line bg-paper px-5 py-[22px] text-center outline-[1.5px] outline-offset-[-9px] outline-stitch outline-dashed">
-            {one ? (
+            {outcome === 'one' ? (
               <>
                 <span className="flex size-[72px] items-center justify-center rounded-full bg-leaf-soft text-leaf">
                   <CheckIcon size={40} weight={2.6} />
                 </span>
                 <span className="text-base font-semibold text-muted">তালিকা ছোট হয়ে একটায় এসেছে</span>
-                <span className="font-display text-[40px] leading-[1.1] font-extrabold">{left[0].name}</span>
-                <span className="max-w-[280px] text-[15px] leading-[1.45]">ছবি, আবহাওয়া আর আপনার উত্তর মিলিয়ে নিশ্চিত হলাম।</span>
+                <span className="font-display text-[40px] leading-[1.1] font-extrabold">{name}</span>
+                <span className="max-w-[280px] text-[15px] leading-[1.45]">ছবি আর আপনার উত্তর মিলিয়ে বাছাই করলাম।</span>
               </>
             ) : (
               <>
                 <span className="flex size-[72px] items-center justify-center rounded-full bg-amber-soft text-amber">
-                  <QuestionIcon size={40} weight={2.2} />
+                  {outcome === 'none' ? <WarnIcon size={40} weight={2.2} /> : <QuestionIcon size={40} weight={2.2} />}
                 </span>
-                <span className="font-display text-[30px] leading-[1.15] font-extrabold">এখনও নিশ্চিত নই</span>
+                <span className="font-display text-[30px] leading-[1.15] font-extrabold">
+                  {outcome === 'none' ? 'উত্তর ছবির সাথে মিলছে না' : 'এখনও নিশ্চিত নই'}
+                </span>
                 <span className="max-w-[290px] text-[15px] leading-[1.45]">আন্দাজে ওষুধ না দিয়ে কৃষি কর্মকর্তাকে দেখানোই ভালো।</span>
               </>
             )}
           </div>
-          {one ? (
-            <Link href="/result" className={`${primaryClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}>
+          {outcome === 'one' ? (
+            <Link
+              href={withMock('/result', mock, answers)}
+              className={`${primaryClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}
+            >
               ফলাফল ও করণীয় দেখুন
             </Link>
           ) : (
-            <Link href="/unknown" className={`${tealClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}>
+            <OfficerShareButton
+              record={record}
+              config={config}
+              demo={!!mock}
+              className={`${tealClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}
+            >
               কৃষি কর্মকর্তাকে পাঠান
-            </Link>
+            </OfficerShareButton>
           )}
           <button
             type="button"
-            onClick={() => setState(INITIAL)}
+            onClick={() => update([])}
             className="flex min-h-12 items-center gap-1.5 self-center border-0 bg-transparent px-5 text-base font-bold text-teal"
           >
             <RestartIcon size={20} weight={2.2} />

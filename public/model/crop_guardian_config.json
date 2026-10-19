@@ -1,0 +1,51 @@
+{
+  "model_file": "crop_guardian_v2.onnx",
+  "input_name": "image",
+  "output_name": "logits",
+  "classes": [
+    "early_blight",
+    "healthy",
+    "late_blight",
+    "other"
+  ],
+  "labels_bn": {
+    "early_blight": "আগাম ধসা",
+    "healthy": "সুস্থ",
+    "late_blight": "নাবি ধসা",
+    "other": "অন্য রোগ"
+  },
+  "preprocess": {
+    "resize_shorter_side": 255,
+    "center_crop": 224,
+    "scale": 0.00392156862745098,
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "layout": "NCHW",
+    "dtype": "float32"
+  },
+  "temperature": 1.9194217920303345,
+  "conformal_qhat": 0.11263823509216309,
+  "conformal_alpha": 0.1,
+  "ood": {
+    "method": "p_other",
+    "threshold": 0.9993531107902527
+  },
+  "decision": [
+    "disease_logits = logits[0:3]",
+    "p = softmax(disease_logits / temperature)",
+    "ood_score = softmax(all logits)[3] if method == 'p_other'; = -temperature*logsumexp(disease_logits/temperature) if 'energy'; = -max(p) if 'msp'",
+    "set = [i for i in 0..2 if p[i] >= 1 - conformal_qhat]",
+    "if ood_score > threshold or set is empty -> 'unknown' (চিনি না)",
+    "elif len(set) == 1 -> 'confident' (নিশ্চিত), label = classes[set[0]]",
+    "else -> 'uncertain' (নিশ্চিত নই), candidates = set sorted by p desc"
+  ],
+  "provenance": "notebook 03 (leave-class-out OOD), model C + 'other' class; thresholds fitted on Indonesian field-cal split"
+}
