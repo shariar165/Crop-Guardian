@@ -135,31 +135,18 @@ export function PhotoLeaf() {
   )
 }
 
-/* Same photo with the detected lesions circled, used in the diagnosis "why" list. */
-export function PhotoLeafMarked() {
-  return (
-    <svg role="img" aria-label="আপনার ছবি, দাগগুলো চিহ্নিত" viewBox="0 0 48 48" className="size-[46px] shrink-0 rounded-xl bg-[#1F2A17]">
-      <path d="M24 4 C 40 12 42 34 24 46 C 6 34 8 12 24 4 Z" fill="#4E8A3E" />
-      <path d="M26 15 C 28 11 34 12 34 17 C 35 21 29 22 27 20 C 25 19 25 17 26 15 Z" fill="#5B3A21" />
-      <circle cx="30" cy="17" r="8" fill="none" stroke="#E8B931" strokeWidth="2" strokeDasharray="3 2" />
-      <path d="M15 31 C 16 29 20 29 21 32 C 21 34 18 35 16 34 C 15 33 14 32 15 31 Z" fill="#5B3A21" />
-      <circle cx="18" cy="32" r="6" fill="none" stroke="#E8B931" strokeWidth="2" strokeDasharray="3 2" />
-    </svg>
-  )
-}
-
-/* Reference thumbnails for each candidate problem. */
-export function CandidateThumb({ id }: { id: 'late' | 'early' | 'nutri' }) {
+/* Reference thumbnails for each class the model can name (by class id); other ids get a plain leaf. */
+export function CandidateThumb({ id }: { id: string }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 56 56" className="size-14 shrink-0 rounded-[14px] bg-[#EEF3E6]">
-      {id === 'late' && (
+      {id === 'late_blight' && (
         <>
           <path d="M6 44 C 10 16 38 6 50 8 C 50 32 36 50 6 44 Z" fill="#4E8A3E" />
           <ellipse cx="30" cy="27" rx="11" ry="9" fill="#A3B25A" />
           <path d="M23 25 C 26 18 36 19 37 27 C 38 33 30 35 26 33 C 22 31 21 28 23 25 Z" fill="#4A2E1A" />
         </>
       )}
-      {id === 'early' && (
+      {id === 'early_blight' && (
         <>
           <path d="M6 44 C 10 16 38 6 50 8 C 50 32 36 50 6 44 Z" fill="#4E8A3E" />
           <circle cx="29" cy="28" r="10" fill="#7A5434" />
@@ -167,10 +154,10 @@ export function CandidateThumb({ id }: { id: 'late' | 'early' | 'nutri' }) {
           <circle cx="29" cy="28" r="3.5" fill="none" stroke="#3E2817" strokeWidth="1.6" />
         </>
       )}
-      {id === 'nutri' && (
+      {id !== 'late_blight' && id !== 'early_blight' && (
         <>
-          <path d="M6 44 C 10 16 38 6 50 8 C 50 32 36 50 6 44 Z" fill="#6E9A45" stroke="#C9A23A" strokeWidth="4" strokeLinejoin="round" />
-          <path d="M8 43 L 46 11" stroke="#4E7A35" strokeWidth="1.5" />
+          <path d="M6 44 C 10 16 38 6 50 8 C 50 32 36 50 6 44 Z" fill="#4E8A3E" />
+          <path d="M8 43 L 46 11" stroke="#3B6E2F" strokeWidth="1.5" />
         </>
       )}
     </svg>

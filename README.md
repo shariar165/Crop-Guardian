@@ -20,11 +20,13 @@ npm run lint
 | Route | Screen |
 |---|---|
 | `/` | Home: today's live risk, 5-day forecast, today's decision (`?risk=safe\|watch\|danger` forces a demo state, `?replay=YYYY-MM-DD` replays past weather) |
-| `/camera` | Leaf photo |
-| `/result/uncertain` | "Not sure": candidate list |
+| `/camera` | Leaf photos (top, then underside) and on-device diagnosis |
+| `/result/uncertain` | "Not sure": the candidates the photos left |
 | `/questions` | Two questions that narrow the candidates |
-| `/result` | Final diagnosis (late blight) |
+| `/result` | Final diagnosis, including "healthy" |
 | `/unknown` | Can't identify: send to agriculture officer |
+
+The camera and the three result screens take `?mock=confident|healthy|uncertain|unknown` for demos, without the model or photos.
 | `/map` | Union-level risk map |
 | `/ledger` | Season savings |
 | `/planting` | Planting date, saved on the device (from Home and the Ledger header) |
@@ -73,4 +75,17 @@ Risk is shown only while the crop is in the field (`src/lib/season.ts`): from pl
 
 The server can't read localStorage, so Home is rendered as if no planting date is set, and a saved date takes over right after the page loads.
 
-Everything else (diagnosis, map, ledger) is still static sample data in `src/lib/data.ts`.
+## Diagnosis
+
+The leaf photos are diagnosed on the phone, with no server. The model (EfficientNet-B0, `public/model/crop_guardian_v2.onnx`) and its calibrated config (`crop_guardian_config.json`) come from the training notebook's export. Classes, Bengali labels, preprocessing, temperature and thresholds are all read from the config; none are written in the code.
+
+- `src/lib/diagnosis/worker.ts` runs [onnxruntime-web](https://onnxruntime.ai/docs/get-started/with-javascript/web.html) (wasm, one thread) in a Web Worker, so the camera never freezes. The camera screen starts it; the first time it downloads the model and the wasm (about 30 MB, "মডেল নামাচ্ছি… একবারই লাগবে") and keeps them in the Cache API. The wasm is copied from `node_modules` into `public/ort/<version>/` by `scripts/copy-ort.mjs` on install, dev and build: nothing comes from a CDN.
+- `preprocess.ts`: shorter side to 255, centre crop 224, scale, mean/std, NCHW float32, with torchvision's rounding.
+- `decide.ts` follows `decision` in the config exactly: softmax of the disease logits at temperature T, the conformal set `p ≥ 1 − qhat`, and the OOD score. A photo is **unknown** if the OOD score is over the threshold or the set is empty, **confident** if the set has one class, otherwise **uncertain**. With the current config (`1 − qhat ≈ 0.89`), one photo is never uncertain.
+- `combine.ts` decides each photo on its own (the thresholds were calibrated per photo) and keeps the more cautious result: unknown > uncertain > confident. Two confident photos that disagree become uncertain with both classes.
+
+Confident opens `/result`, uncertain `/result/uncertain`, unknown `/unknown`. The result is kept on the device (IndexedDB) with the photos. "কেন মনে হলো?" lists only real inputs: what each photo gave, today's weather risk from `/api/risk`, and the farmer's answers. Advice per class is fixed text in `content.ts` that never gives a dose (always "লেবেল অনুযায়ী") and should be reviewed by an agronomist. Every result says "পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা": the thresholds were fitted on Indonesian field photos, not Bangladeshi ones.
+
+`src/lib/diagnosis/__fixtures__/parity/` holds the notebook's reference outputs. `decide.test.ts` and `parity.test.ts` (which runs the real model with onnxruntime-node) check the app makes the same decisions; both are skipped until the notebook's export is added there (see its README).
+
+The map and ledger are still static sample data in `src/lib/data.ts`.
