@@ -1,31 +1,33 @@
 // Sends a case to the agriculture officer through the phone's own share sheet (photos + a short
 // Bengali summary), or a WhatsApp text link where sharing isn't available. Sent cases are kept on
-// the device for the ledger.
+// the device for the ledger, and uploaded for the officer's list and the map when signed in.
 import { bnDate } from '@/lib/bn'
-import { type DiagnosisRecord, getCapture, saveCase } from '@/lib/captureStore'
+import { type CaseRecord, type DiagnosisRecord, getCapture, getCases, putCase, saveCase } from '@/lib/captureStore'
 import type { DiagnosisConfig } from '@/lib/diagnosis/config'
 import { CONFIDENCE_WORD, labelOf, orList, photoLine } from '@/lib/diagnosis/explain'
 import { finalOf } from '@/lib/diagnosis/flow'
 import { answerLine } from '@/lib/diagnosis/questions'
-import { DEFAULT_LOCATION } from '@/lib/weather'
+import { clientUnion, placeOf } from '@/lib/unions'
 
 export const SHARE_TITLE = 'Crop Guardian — আলুর পাতা'
 
-export function caseSummary(record: DiagnosisRecord, config: DiagnosisConfig, date: string): string {
-  const { result } = record
+// The app's result in a few words, e.g. "নিশ্চিত — নাবি ধসা".
+export function caseVerdict({ result }: DiagnosisRecord, config: DiagnosisConfig): string {
+  return result.decision === 'confident'
+    ? `${CONFIDENCE_WORD.confident} — ${labelOf(result.candidates[0], config)}`
+    : result.decision === 'uncertain'
+      ? `${CONFIDENCE_WORD.uncertain} — ${orList(result.candidates, config)}`
+      : CONFIDENCE_WORD.unknown
+}
+
+export function caseSummary(record: DiagnosisRecord, config: DiagnosisConfig, date: string, place: string): string {
   const final = finalOf(record)
-  const verdict =
-    result.decision === 'confident'
-      ? `${CONFIDENCE_WORD.confident} — ${labelOf(result.candidates[0], config)}`
-      : result.decision === 'uncertain'
-        ? `${CONFIDENCE_WORD.uncertain} — ${orList(result.candidates, config)}`
-        : CONFIDENCE_WORD.unknown
   return [
     `${SHARE_TITLE} (পরীক্ষামূলক অ্যাপ)`,
     `তারিখ: ${bnDate(date)}`,
-    `এলাকা: ${DEFAULT_LOCATION.name}`,
-    `অ্যাপের ফল: ${verdict}`,
-    photoLine(result, config),
+    `এলাকা: ${place}`,
+    `অ্যাপের ফল: ${caseVerdict(record, config)}`,
+    photoLine(record.result, config),
     ...record.answers.flatMap((a) => answerLine(a) ?? []),
     ...(final?.via === 'questions' ? [`উত্তর মিলিয়ে বাকি: ${labelOf(final.id, config)}`] : []),
     'দয়া করে দেখে পরামর্শ দিন।',
@@ -34,14 +36,56 @@ export function caseSummary(record: DiagnosisRecord, config: DiagnosisConfig, da
 
 export const whatsappUrl = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`
 
-export type ShareOutcome = 'share' | 'whatsapp' | 'cancelled'
+// The fields of a case the server keeps, as sent in the "case" part of POST /api/cases.
+export function uploadFields(record: CaseRecord) {
+  const { result, answers } = record.diagnosis
+  return {
+    sentAt: record.sentAt,
+    unionId: record.unionId ?? null,
+    decision: result.decision,
+    candidates: result.candidates,
+    finalId: finalOf(record.diagnosis)?.id ?? null,
+    answers,
+  }
+}
 
-export async function shareCase(record: DiagnosisRecord, text: string, { demo = false } = {}): Promise<ShareOutcome> {
-  const captures = demo ? [] : await Promise.all([getCapture('top'), getCapture('under')])
+export type UploadOutcome = 'uploaded' | 'signedOut' | 'failed'
+
+export async function uploadCase(record: CaseRecord): Promise<UploadOutcome> {
+  const body = new FormData()
+  body.set('case', JSON.stringify(uploadFields(record)))
+  record.photos.forEach((blob, i) => body.set(i === 0 ? 'top' : 'under', blob, i === 0 ? 'leaf-top.jpg' : 'leaf-under.jpg'))
+  try {
+    const res = await fetch('/api/cases', { method: 'POST', body })
+    if (res.status === 401) return 'signedOut'
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  } catch (err) {
+    console.error('Could not upload the case', err)
+    return 'failed'
+  }
+  if (record.id !== undefined) await putCase({ ...record, uploaded: true })
+  return 'uploaded'
+}
+
+// Uploads the cases that didn't reach the server (sent offline or signed out). Stops at the first
+// failure: the rest will wait for the next try.
+export async function syncCases(): Promise<void> {
+  const pending = (await getCases()).filter((c) => c.uploaded === false)
+  for (const record of pending) {
+    if ((await uploadCase(record)) !== 'uploaded') return
+  }
+}
+
+export type ShareOutcome = { via: 'share' | 'whatsapp'; upload: UploadOutcome } | 'cancelled'
+
+export async function shareCase(record: DiagnosisRecord, config: DiagnosisConfig, date: string): Promise<ShareOutcome> {
+  const union = clientUnion()
+  const text = caseSummary(record, config, date, placeOf(union).name)
+  const captures = await Promise.all([getCapture('top'), getCapture('under')])
   const photos = captures.flatMap((c) => (c ? [c.blob] : []))
   const files = photos.map((blob, i) => new File([blob], i === 0 ? 'leaf-top.jpg' : 'leaf-under.jpg', { type: 'image/jpeg' }))
 
-  let via: ShareOutcome = 'whatsapp'
+  let via: 'share' | 'whatsapp' = 'whatsapp'
   if (typeof navigator.share === 'function') {
     const withFiles = files.length > 0 && navigator.canShare?.({ files })
     try {
@@ -55,10 +99,11 @@ export async function shareCase(record: DiagnosisRecord, text: string, { demo = 
   }
   if (via === 'whatsapp') window.open(whatsappUrl(text), '_blank', 'noopener')
 
-  if (!demo) {
-    await saveCase({ sentAt: Date.now(), diagnosis: record, photos, via }).catch((err) =>
-      console.error('Could not save the sent case', err),
-    )
+  const saved: CaseRecord = { sentAt: Date.now(), diagnosis: record, photos, via, unionId: union?.id, uploaded: false }
+  try {
+    saved.id = await saveCase(saved)
+  } catch (err) {
+    console.error('Could not save the sent case', err)
   }
-  return via
+  return { via, upload: await uploadCase(saved) }
 }

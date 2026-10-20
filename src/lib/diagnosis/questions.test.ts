@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { AnswerRecord } from '@/lib/captureStore'
-import { belongsOn, finalOf, parseAnswers, screenFor, withMock } from '@/lib/diagnosis/flow'
-import { mockDiagnosis } from '@/lib/diagnosis/mock'
+import { belongsOn, finalOf, screenFor } from '@/lib/diagnosis/flow'
 import { answerLine, nextQuestion, QUESTIONS, questionCount, remainingAfter } from '@/lib/diagnosis/questions'
-import { realConfig } from '@/lib/diagnosis/__fixtures__'
+import { fixtureDiagnosis, realConfig } from '@/lib/diagnosis/__fixtures__'
 
 const [EARLY, HEALTHY, LATE] = realConfig.diseases
 const ans = (question: string, answer: AnswerRecord['answer']): AnswerRecord => ({ question, answer })
@@ -56,37 +55,27 @@ describe('nextQuestion', () => {
 
 describe('finalOf and the screen for a diagnosis', () => {
   it('takes a confident photo result as final', () => {
-    const r = mockDiagnosis('confident', realConfig)
+    const r = fixtureDiagnosis('confident', realConfig)
     assert.deepEqual(finalOf(r), { id: LATE, via: 'model' })
     assert.equal(screenFor(r), '/result')
   })
 
   it('takes the one class the answers left, marked as from the questions', () => {
-    const r = { ...mockDiagnosis('uncertain', realConfig), answers: [ans('rings', 'no')] }
+    const r = { ...fixtureDiagnosis('uncertain', realConfig), answers: [ans('rings', 'no')] }
     assert.deepEqual(finalOf(r), { id: LATE, via: 'questions' })
     assert.ok(belongsOn('/result', r))
     assert.ok(belongsOn('/result/uncertain', r))
   })
 
   it('has no final result while uncertain or unknown', () => {
-    const u = mockDiagnosis('uncertain', realConfig)
+    const u = fixtureDiagnosis('uncertain', realConfig)
     assert.equal(finalOf(u), null)
     assert.equal(screenFor(u), '/result/uncertain')
     assert.ok(!belongsOn('/result', u))
     assert.ok(belongsOn('/questions', u))
-    const x = mockDiagnosis('unknown', realConfig)
+    const x = fixtureDiagnosis('unknown', realConfig)
     assert.equal(screenFor(x), '/unknown')
     assert.ok(!belongsOn('/questions', x))
-  })
-})
-
-describe('demo answers in the URL', () => {
-  it('round-trips and drops anything unknown', () => {
-    const url = withMock('/result', 'uncertain', [ans('rings', 'no'), ans('spores', 'unsure')])
-    assert.equal(url, '/result?mock=uncertain&a=rings.no,spores.unsure')
-    assert.deepEqual(parseAnswers('rings.no,spores.unsure'), [ans('rings', 'no'), ans('spores', 'unsure')])
-    assert.deepEqual(parseAnswers('rings.maybe,colour.yes'), [])
-    assert.equal(withMock('/result', undefined, [ans('rings', 'no')]), '/result')
   })
 })
 

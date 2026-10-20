@@ -4,6 +4,11 @@ export function toBnDigits(n: number | string): string {
   return String(n).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)])
 }
 
+// "০১৭" → "017": what a farmer types on a Bengali keyboard, as ASCII digits.
+export function fromBnDigits(s: string): string {
+  return s.replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)))
+}
+
 export const BN_WEEKDAYS = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহস্পতি', 'শুক্র', 'শনি']
 
 // Weekday name for a calendar date (YYYY-MM-DD), independent of the server's time zone.

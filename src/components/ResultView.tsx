@@ -10,7 +10,6 @@ import { toBnDigits } from '@/lib/bn'
 import { ADVICE_SOURCE, CLASS_CONTENT } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
 import { finalOf } from '@/lib/diagnosis/flow'
-import type { Mock } from '@/lib/diagnosis/mock'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
 
@@ -20,8 +19,8 @@ const BANNER = {
   ok: 'bg-leaf-soft text-[#24502C]',
 }
 
-export default function ResultView({ mock, answers }: { mock?: Mock; answers?: string }) {
-  const view = useDiagnosis(mock, answers)
+export default function ResultView() {
+  const view = useDiagnosis()
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
@@ -73,7 +72,6 @@ export default function ResultView({ mock, answers }: { mock?: Mock; answers?: s
       <WhyCard
         record={record}
         config={config}
-        photos={!mock}
         answers={record.answers.flatMap((a) => answerLine(a) ?? [])}
       />
 
@@ -108,7 +106,6 @@ export default function ResultView({ mock, answers }: { mock?: Mock; answers?: s
         <OfficerShareButton
           record={record}
           config={config}
-          demo={!!mock}
           className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}
         >
           <PersonIcon size={24} />

@@ -12,8 +12,7 @@ import { clearCaptures, saveCapture, saveDiagnosis } from '@/lib/captureStore'
 import type { Capture } from '@/lib/captureStore'
 import { diagnose, loadModel, type ModelState, whenReady } from '@/lib/diagnosis/client'
 import { combine } from '@/lib/diagnosis/combine'
-import { RESULT_PATH, withMock } from '@/lib/diagnosis/flow'
-import { type Mock, mockPath } from '@/lib/diagnosis/mock'
+import { RESULT_PATH } from '@/lib/diagnosis/flow'
 import { ANALYSIS_WIDTH, assessQuality, confirmText, coverSourceRect, isAcceptable, topHint } from '@/lib/imageQuality'
 import type { QualityReport } from '@/lib/imageQuality'
 
@@ -110,7 +109,7 @@ async function makeCapture(source: CanvasImageSource, crop: Crop): Promise<Captu
   return { blob, takenAt: Date.now(), quality }
 }
 
-export default function CameraScreen({ mock }: { mock?: Mock }) {
+export default function CameraScreen() {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -124,8 +123,8 @@ export default function CameraScreen({ mock }: { mock?: Mock }) {
   const [analysis, setAnalysis] = useState<'idle' | 'running' | 'failed'>('idle')
   const photos = useRef<Partial<Record<'top' | 'under', Capture>>>({})
 
-  // Load (or download, the first time) the model while the farmer takes the photos. Demos don't need it.
-  useEffect(() => (mock ? undefined : loadModel(setModel)), [mock])
+  // Load (or download, the first time) the model while the farmer takes the photos.
+  useEffect(() => loadModel(setModel), [])
 
   // Each visit starts a fresh pair of photos.
   useEffect(() => {
@@ -188,7 +187,6 @@ export default function CameraScreen({ mock }: { mock?: Mock }) {
 
   // Diagnoses each photo on its own, combines them, and opens the matching result screen.
   async function analyse() {
-    if (mock) return router.push(withMock(mockPath(mock), mock))
     const { top, under } = photos.current
     if (!top || !under) return
     setAnalysis('running')
@@ -435,7 +433,7 @@ export default function CameraScreen({ mock }: { mock?: Mock }) {
           </span>
         </div>
         <CameraControls onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
-        {!mock && <ModelStatus state={model} onRetry={() => loadModel(setModel)} />}
+        <ModelStatus state={model} onRetry={() => loadModel(setModel)} />
       </div>
     </div>
   )

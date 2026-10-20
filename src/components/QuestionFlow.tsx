@@ -5,8 +5,6 @@ import { Loading, NoDiagnosis } from '@/components/DiagnosisParts'
 import { toBnDigits } from '@/lib/bn'
 import { type Answer, saveDiagnosis } from '@/lib/captureStore'
 import { labelOf } from '@/lib/diagnosis/explain'
-import { withMock } from '@/lib/diagnosis/flow'
-import type { Mock } from '@/lib/diagnosis/mock'
 import { nextQuestion, questionCount, remainingAfter } from '@/lib/diagnosis/questions'
 import { useDiagnosisState } from '@/lib/diagnosis/useDiagnosis'
 import { primaryClass, tealClass } from './Buttons'
@@ -16,8 +14,8 @@ import ListenButton from './ListenButton'
 import OfficerShareButton from './OfficerShareButton'
 import { RoundLink } from './TopBar'
 
-export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mock; answers?: string }) {
-  const [view, setRecord] = useDiagnosisState(mock, mockAnswers)
+export default function QuestionFlow() {
+  const [view, setRecord] = useDiagnosisState()
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
@@ -30,11 +28,11 @@ export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mo
   const outcome = q ? null : left.length === 1 ? 'one' : left.length === 0 ? 'none' : 'many'
   const stepLabel = q ? `প্রশ্ন ${toBnDigits(answers.length + 1)} / ${toBnDigits(total)}` : 'শেষ'
 
-  // Demos keep their answers in the URL; real answers are saved with the diagnosis.
+  // Answers are saved with the diagnosis.
   const update = (next: typeof answers) => {
     const updated = { ...record, answers: next }
     setRecord(updated)
-    if (!mock) saveDiagnosis(updated).catch((err) => console.error('Could not save the answer', err))
+    saveDiagnosis(updated).catch((err) => console.error('Could not save the answer', err))
   }
   const answer = (kind: Answer) => q && update([...answers, { question: q.id, answer: kind }])
 
@@ -50,7 +48,7 @@ export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mo
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex h-16 shrink-0 items-center justify-between px-4">
-        <RoundLink href={withMock('/result/uncertain', mock)} label="ফিরে যান">
+        <RoundLink href="/result/uncertain" label="ফিরে যান">
           <BackIcon />
         </RoundLink>
         <div className="flex flex-col items-center gap-1">
@@ -150,7 +148,7 @@ export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mo
           </div>
           {outcome === 'one' ? (
             <Link
-              href={withMock('/result', mock, answers)}
+              href="/result"
               className={`${primaryClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}
             >
               ফলাফল ও করণীয় দেখুন
@@ -159,7 +157,6 @@ export default function QuestionFlow({ mock, answers: mockAnswers }: { mock?: Mo
             <OfficerShareButton
               record={record}
               config={config}
-              demo={!!mock}
               className={`${tealClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}
             >
               কৃষি কর্মকর্তাকে পাঠান

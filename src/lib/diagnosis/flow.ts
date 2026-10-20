@@ -1,8 +1,7 @@
 // Which screen a diagnosis belongs on, and its final answer once the farmer has answered questions.
-import type { Answer, AnswerRecord, DiagnosisRecord } from '@/lib/captureStore'
+import type { DiagnosisRecord } from '@/lib/captureStore'
 import type { Decision } from './decide'
-import type { Mock } from './mock'
-import { QUESTIONS, remainingAfter } from './questions'
+import { remainingAfter } from './questions'
 
 export const RESULT_PATH: Record<Decision, string> = {
   confident: '/result',
@@ -28,22 +27,3 @@ export function belongsOn(path: string, record: DiagnosisRecord): boolean {
 }
 
 export const screenFor = (record: DiagnosisRecord) => (finalOf(record) ? '/result' : RESULT_PATH[record.result.decision])
-
-// Demo answers travel in the URL (`a=rings.yes,spores.no`), so demos never touch the device's data.
-const ANSWERS: Answer[] = ['yes', 'no', 'unsure']
-
-export function parseAnswers(value: string | string[] | undefined): AnswerRecord[] {
-  if (typeof value !== 'string' || !value) return []
-  return value.split(',').flatMap((pair) => {
-    const [question, answer] = pair.split('.')
-    return QUESTIONS.some((q) => q.id === question) && ANSWERS.includes(answer as Answer)
-      ? [{ question, answer: answer as Answer }]
-      : []
-  })
-}
-
-export function withMock(path: string, mock: Mock | undefined, answers: AnswerRecord[] = []): string {
-  if (!mock) return path
-  const a = answers.length ? `&a=${answers.map((x) => `${x.question}.${x.answer}`).join(',')}` : ''
-  return `${path}?mock=${mock}${a}`
-}

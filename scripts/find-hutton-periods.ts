@@ -1,5 +1,5 @@
 // Lists every day in the last three Dec–Feb winters at Shibganj that the risk engine calls danger,
-// using observed weather from the Open-Meteo archive (used to pick Home's ?replay= date), and how
+// using observed weather from the Open-Meteo archive, and how
 // often it would alert under the app's rule and a stricter one.
 // Run: npx tsx scripts/find-hutton-periods.ts [--write]   (--write updates docs/risk-backtest.md)
 import { writeFileSync } from 'node:fs'

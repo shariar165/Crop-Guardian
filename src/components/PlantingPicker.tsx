@@ -42,9 +42,9 @@ function PickerForm({ stored, back }: { stored: string | null; back: string }) {
   }
 
   return (
-    <div className="flex shrink-0 flex-col gap-4 px-4">
-      <p className="m-0 text-[17px] leading-[1.45] font-medium">
-        আলু কবে লাগিয়েছেন? তারিখ দিলে চারা গজানো থেকে ফসল তোলা পর্যন্ত ঠিক সময়ে ঝুঁকির খবর পাবেন।
+    <div className="mt-3 flex shrink-0 flex-col gap-4 px-4">
+      <p className="m-0 text-[15px] leading-[1.45]">
+        আলু কবে লাগিয়েছেন? তারিখ দিলে চারা গজানো থেকে ফসল তোলা পর্যন্ত ঠিক সময়ে ঝুঁকির খবর পাবেন, আর মৌসুমের হিসাব শুরু হবে।
       </p>
 
       <div className="grid grid-cols-[1fr_1.6fr_1.3fr] gap-2">

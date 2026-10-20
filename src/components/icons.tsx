@@ -71,11 +71,10 @@ export const LedgerIcon = (p: IconProps) => (
   </Icon>
 )
 
-export const MicIcon = (p: IconProps) => (
+export const BookIcon = (p: IconProps) => (
   <Icon {...p}>
-    <rect x="9" y="3" width="6" height="11" rx="3" />
-    <path d="M5 11a7 7 0 0 0 14 0" />
-    <path d="M12 18v3" />
+    <path d="M12 6.5C10 5 7 4.5 3.5 5v13.5C7 18 10 18.5 12 20c2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z" />
+    <path d="M12 6.5V20" />
   </Icon>
 )
 

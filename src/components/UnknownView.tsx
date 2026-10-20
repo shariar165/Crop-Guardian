@@ -11,25 +11,23 @@ import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar from '@/components/TopBar'
 import { getCapture } from '@/lib/captureStore'
 import { CONFIDENCE_WORD, knownList } from '@/lib/diagnosis/explain'
-import type { Mock } from '@/lib/diagnosis/mock'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
 import { isAcceptable } from '@/lib/imageQuality'
 
-// Whether both photos passed the light, focus and leaf checks; null until known (or in demos).
-function usePhotosClear(enabled: boolean): boolean | null {
+// Whether both photos passed the light, focus and leaf checks; null until known.
+function usePhotosClear(): boolean | null {
   const [clear, setClear] = useState<boolean | null>(null)
   useEffect(() => {
-    if (!enabled) return
     Promise.all([getCapture('top'), getCapture('under')])
       .then((caps) => setClear(caps.every((c) => c && isAcceptable(c.quality))))
       .catch(() => {})
-  }, [enabled])
+  }, [])
   return clear
 }
 
-export default function UnknownView({ mock }: { mock?: Mock }) {
-  const view = useDiagnosis(mock)
-  const clear = usePhotosClear(!mock)
+export default function UnknownView() {
+  const view = useDiagnosis()
+  const clear = usePhotosClear()
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
@@ -71,7 +69,7 @@ export default function UnknownView({ mock }: { mock?: Mock }) {
         )}
       </section>
 
-      <WhyCard record={record} config={config} title={`ছবি আর আবহাওয়া · ${CONFIDENCE_WORD.unknown}`} photos={!mock} />
+      <WhyCard record={record} config={config} title={`ছবি আর আবহাওয়া · ${CONFIDENCE_WORD.unknown}`} />
 
       <div className="min-h-4 flex-1" />
 
@@ -79,7 +77,6 @@ export default function UnknownView({ mock }: { mock?: Mock }) {
         <OfficerShareButton
           record={record}
           config={config}
-          demo={!!mock}
           className="flex min-h-[72px] items-center justify-center gap-3 rounded-[20px] border-0 bg-teal px-4 py-2 text-white shadow-[0_4px_0_#133C44]"
         >
           <SendIcon size={28} weight={2.2} />
