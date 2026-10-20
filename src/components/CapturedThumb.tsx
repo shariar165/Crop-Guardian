@@ -6,11 +6,10 @@ import { type CaptureSlot, getCapture } from '@/lib/captureStore'
 
 const LABEL = 'text-[11px] font-semibold text-[#F1E8D6]'
 
-// An object URL for the farmer's photo in `slot`, or null when there isn't one (or in demos).
-function useCapturedUrl(slot: CaptureSlot, enabled = true): string | null {
+// An object URL for the farmer's photo in `slot`, or null when there isn't one.
+function useCapturedUrl(slot: CaptureSlot): string | null {
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
-    if (!enabled) return
     let objectUrl: string | null = null
     let cancelled = false
     getCapture(slot)
@@ -24,13 +23,13 @@ function useCapturedUrl(slot: CaptureSlot, enabled = true): string | null {
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [slot, enabled])
+  }, [slot])
   return url
 }
 
-/** The farmer's top-of-leaf photo from the camera screen, or the sample drawing if there isn't one. */
-export default function CapturedThumb({ enabled = true }: { enabled?: boolean }) {
-  const url = useCapturedUrl('top', enabled)
+/** The farmer's top-of-leaf photo from the camera screen, or a leaf drawing if there isn't one. */
+export default function CapturedThumb() {
+  const url = useCapturedUrl('top')
 
   if (!url) {
     return (
@@ -51,8 +50,8 @@ export default function CapturedThumb({ enabled = true }: { enabled?: boolean })
 }
 
 /** A small square of the farmer's photo for the "why" list. */
-export function PhotoChip({ slot = 'top', enabled = true }: { slot?: CaptureSlot; enabled?: boolean }) {
-  const url = useCapturedUrl(slot, enabled)
+export function PhotoChip({ slot = 'top' }: { slot?: CaptureSlot }) {
+  const url = useCapturedUrl(slot)
   return (
     <span className="relative flex size-[46px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#1F2A17]">
       {url ? (

@@ -11,13 +11,11 @@ import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { CLASS_CONTENT } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
-import { withMock } from '@/lib/diagnosis/flow'
-import type { Mock } from '@/lib/diagnosis/mock'
 import { questionCount } from '@/lib/diagnosis/questions'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
 
-export default function UncertainView({ mock }: { mock?: Mock }) {
-  const view = useDiagnosis(mock)
+export default function UncertainView() {
+  const view = useDiagnosis()
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
@@ -37,7 +35,7 @@ export default function UncertainView({ mock }: { mock?: Mock }) {
 
       <div className="flex shrink-0 items-start gap-3.5 px-4">
         <div className="stitch relative flex h-28 w-[92px] shrink-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[18px] bg-[#1F2A17]!">
-          <CapturedThumb enabled={!mock} />
+          <CapturedThumb />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
           <span className="flex h-8 items-center gap-1.5 self-start rounded-2xl bg-sun px-3 text-[15px] font-bold text-ink">
@@ -69,13 +67,13 @@ export default function UncertainView({ mock }: { mock?: Mock }) {
         ))}
       </ul>
 
-      <WhyCard record={record} config={config} title="ছবি আর আবহাওয়া" photos={!mock} />
+      <WhyCard record={record} config={config} title="ছবি আর আবহাওয়া" />
 
       <div className="min-h-4 flex-1" />
 
       <div className="flex shrink-0 flex-col gap-2 px-4 pb-[18px]">
         {asks > 0 && (
-          <PrimaryLink href={withMock('/questions', mock)} className="min-h-[72px] gap-3 px-4 py-2">
+          <PrimaryLink href="/questions" className="min-h-[72px] gap-3 px-4 py-2">
             <ChatQuestionIcon size={30} weight={2.2} />
             <span className="flex flex-col leading-[1.2]">
               <span className="font-display text-[22px] font-extrabold">{toBnDigits(asks)}টা প্রশ্নের উত্তর দিন</span>
@@ -86,7 +84,6 @@ export default function UncertainView({ mock }: { mock?: Mock }) {
         <OfficerShareButton
           record={record}
           config={config}
-          demo={!!mock}
           className="flex min-h-12 items-center justify-center gap-2 border-0 bg-transparent text-base font-bold text-teal"
         >
           <SendIcon size={20} />

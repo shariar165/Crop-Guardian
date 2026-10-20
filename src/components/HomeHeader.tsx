@@ -1,18 +1,19 @@
+import Link from 'next/link'
 import type { RiskView } from '@/lib/data'
-import { PinIcon } from './icons'
+import { PersonIcon, PinIcon } from './icons'
 import { FieldStrip, LogoMark, SkyScene } from './illustrations'
 import ListenButton from './ListenButton'
 
-/* The sky header on Home: logo, read-aloud, location, then `children` in the text column. */
+/* The sky header on Home: logo, read-aloud, the farmer's place, then `children` in the text column. */
 export default function HomeHeader({
   view,
+  place,
   speech,
-  locationNote,
   children,
 }: {
   view: RiskView
+  place: string
   speech: string
-  locationNote?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -27,15 +28,21 @@ export default function HomeHeader({
             <span className="text-[13px] font-medium">মাঠের সৎ ডাক্তার</span>
           </div>
         </div>
-        <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
+        <div className="flex items-center gap-2">
+          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
+          <Link href="/account" aria-label="আমার অ্যাকাউন্ট" className="flex size-11 items-center justify-center rounded-full bg-white/78 text-ink">
+            <PersonIcon size={22} />
+          </Link>
+        </div>
       </div>
 
       <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5">
         {/* Kept on one line; it may run past the column into empty sky rather than push the text down. */}
         <div className="flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
           <PinIcon size={16} />
-          বগুড়া, শিবগঞ্জ
-          {locationNote}
+          <Link href="/planting" className="text-inherit no-underline">
+            {place}
+          </Link>
         </div>
         {children}
       </div>

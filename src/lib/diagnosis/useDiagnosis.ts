@@ -6,8 +6,7 @@ import { type DiagnosisRecord, getDiagnosis } from '@/lib/captureStore'
 import type { RiskAssessment } from '@/lib/risk'
 import { type DiagnosisConfig, loadConfig } from './config'
 import type { TodayRisk } from './explain'
-import { belongsOn, parseAnswers, screenFor, withMock } from './flow'
-import { type Mock, mockDiagnosis } from './mock'
+import { belongsOn, screenFor } from './flow'
 
 export type DiagnosisView =
   | { status: 'loading' }
@@ -15,9 +14,9 @@ export type DiagnosisView =
   | { status: 'empty' }
   | { status: 'ready'; config: DiagnosisConfig; record: DiagnosisRecord }
 
-// The current diagnosis from the device, or the demo one for `?mock=` (with its answers from the URL).
+// The current diagnosis from the device.
 // On a screen it doesn't belong on (an old link, the back button), moves to the right one.
-export function useDiagnosis(mock?: Mock, mockAnswers?: string): DiagnosisView {
+export function useDiagnosis(): DiagnosisView {
   const [view, setView] = useState<DiagnosisView>({ status: 'loading' })
   const router = useRouter()
   const pathname = usePathname()
@@ -27,7 +26,7 @@ export function useDiagnosis(mock?: Mock, mockAnswers?: string): DiagnosisView {
     ;(async () => {
       try {
         const config = await loadConfig()
-        const record = mock ? { ...mockDiagnosis(mock, config), answers: parseAnswers(mockAnswers) } : await getDiagnosis()
+        const record = await getDiagnosis()
         if (!cancelled) setView(record ? { status: 'ready', config, record } : { status: 'empty' })
       } catch (err) {
         console.error('Could not read the diagnosis', err)
@@ -37,10 +36,10 @@ export function useDiagnosis(mock?: Mock, mockAnswers?: string): DiagnosisView {
     return () => {
       cancelled = true
     }
-  }, [mock, mockAnswers])
+  }, [])
 
   const misplaced = view.status === 'ready' && !belongsOn(pathname, view.record)
-  const target = misplaced ? withMock(screenFor(view.record), mock, view.record.answers) : null
+  const target = misplaced ? screenFor(view.record) : null
   useEffect(() => {
     if (target) router.replace(target)
   }, [target, router])
@@ -49,8 +48,8 @@ export function useDiagnosis(mock?: Mock, mockAnswers?: string): DiagnosisView {
 }
 
 // Lets a screen update the diagnosis it shows (the questions screen records answers).
-export function useDiagnosisState(mock?: Mock, mockAnswers?: string) {
-  const view = useDiagnosis(mock, mockAnswers)
+export function useDiagnosisState() {
+  const view = useDiagnosis()
   const [override, setOverride] = useState<DiagnosisRecord | null>(null)
   const current: DiagnosisView = view.status === 'ready' && override ? { ...view, record: override } : view
   return [current, setOverride] as const

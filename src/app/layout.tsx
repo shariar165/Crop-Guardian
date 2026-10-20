@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Baloo_Da_2, Hind_Siliguri } from 'next/font/google'
+import CaseSync from '@/components/CaseSync'
 import PhoneFrame from '@/components/PhoneFrame'
 import ServiceWorker from '@/components/ServiceWorker'
 import './globals.css'
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body suppressHydrationWarning>
         <PhoneFrame>{children}</PhoneFrame>
         <ServiceWorker />
+        <CaseSync />
       </body>
     </html>
   )

@@ -29,6 +29,10 @@ export type CaseRecord = {
   diagnosis: DiagnosisRecord
   photos: Blob[]
   via: 'share' | 'whatsapp'
+  // The farmer's union when it was sent, for the officer's list and the map.
+  unionId?: string
+  // Whether it reached the server (/api/cases). Older records, and cases sent signed out, have none.
+  uploaded?: boolean
 }
 
 const DB_NAME = 'crop-guardian'
@@ -90,6 +94,14 @@ export async function getDiagnosis(): Promise<DiagnosisRecord | undefined> {
   return run<DiagnosisRecord | undefined>(DIAGNOSIS, 'readonly', (s) => s.get(CURRENT))
 }
 
-export async function saveCase(record: CaseRecord): Promise<void> {
-  await run(CASES, 'readwrite', (s) => s.add(record))
+export async function saveCase(record: CaseRecord): Promise<number> {
+  return Number(await run(CASES, 'readwrite', (s) => s.add(record)))
+}
+
+export async function getCases(): Promise<CaseRecord[]> {
+  return run<CaseRecord[]>(CASES, 'readonly', (s) => s.getAll())
+}
+
+export async function putCase(record: CaseRecord): Promise<void> {
+  await run(CASES, 'readwrite', (s) => s.put(record))
 }

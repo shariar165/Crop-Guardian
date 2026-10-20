@@ -2,8 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { CLASS_CONTENT } from '@/lib/diagnosis/content'
 import { knownList, photoLine, riskLine } from '@/lib/diagnosis/explain'
-import { mockDiagnosis } from '@/lib/diagnosis/mock'
-import { realConfig } from '@/lib/diagnosis/__fixtures__'
+import { fixtureDiagnosis, realConfig } from '@/lib/diagnosis/__fixtures__'
 
 describe('class content', () => {
   it('has advice for every class the model can name', () => {
@@ -19,17 +18,17 @@ describe('class content', () => {
 
 describe('photoLine', () => {
   it('says once when both photos agree', () => {
-    const r = mockDiagnosis('confident', realConfig).result
+    const r = fixtureDiagnosis('confident', realConfig).result
     assert.equal(photoLine(r, realConfig), 'দুই ছবিতেই একই ফল: নাবি ধসা (নিশ্চিত)')
   })
 
   it('names each photo when they differ', () => {
     assert.equal(
-      photoLine(mockDiagnosis('uncertain', realConfig).result, realConfig),
+      photoLine(fixtureDiagnosis('uncertain', realConfig).result, realConfig),
       'পাতার উপরের দিক: আগাম ধসা (নিশ্চিত) · নিচের দিক: নাবি ধসা (নিশ্চিত)',
     )
     assert.equal(
-      photoLine(mockDiagnosis('unknown', realConfig).result, realConfig),
+      photoLine(fixtureDiagnosis('unknown', realConfig).result, realConfig),
       'পাতার উপরের দিক: নাবি ধসা (নিশ্চিত) · নিচের দিক: চিনতে পারিনি',
     )
   })

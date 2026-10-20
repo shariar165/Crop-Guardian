@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { PrimaryLink } from '@/components/Buttons'
 import { CameraIcon, OfflineIcon } from '@/components/icons'
 
@@ -21,6 +22,9 @@ export default function OfflinePage() {
         <CameraIcon size={26} weight={2.2} />
         পাতার ছবি তুলুন
       </PrimaryLink>
+      <Link href="/guide" className="text-base font-bold text-teal">
+        কীভাবে ব্যবহার করবেন
+      </Link>
     </div>
   )
 }

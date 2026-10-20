@@ -29,17 +29,15 @@ export function WhyCard({
   config,
   answers = [],
   title = 'কেন মনে হলো?',
-  photos = true,
 }: {
   record: DiagnosisRecord
   config: DiagnosisConfig
   answers?: string[]
   title?: string
-  photos?: boolean
 }) {
   const risk = useTodayRisk()
   const rows: Row[] = [
-    { icon: <PhotoChip enabled={photos} />, text: photoLine(record.result, config) },
+    { icon: <PhotoChip />, text: photoLine(record.result, config) },
     {
       icon: (
         <span className="flex size-[46px] shrink-0 items-center justify-center rounded-xl bg-mist text-teal">

@@ -40,9 +40,8 @@ export function seasonFor(today: string, planting: string | null): Season {
   return { phase: phaseOf(today, start, end), start, end, source: 'fallback' }
 }
 
-// Replay and the ?risk= demos always show risk, whatever the season.
-export function riskActive(season: Season, bypass: boolean): boolean {
-  return bypass || season.phase === 'during'
+export function riskActive(season: Season): boolean {
+  return season.phase === 'during'
 }
 
 // The line under "এখন ধসা রোগের মৌসুম নয়": when alerts will start. Fits two lines in the Home header.
