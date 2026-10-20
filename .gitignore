@@ -12,3 +12,6 @@ next-env.d.ts
 
 # onnxruntime-web wasm, copied from node_modules by scripts/copy-ort.mjs
 /public/ort/
+
+.vercel
+.env*

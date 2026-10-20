@@ -11,19 +11,25 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "auth:migrate": "node --env-file=.env.local node_modules/auth/dist/index.mjs migrate --config src/lib/auth/auth.ts",
+    "db:migrate": "tsx scripts/migrate-cases.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "better-auth": "^1.7.11",
     "next": "^16.4.2",
     "onnxruntime-web": "1.30.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "auth": "^1.7.11",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.2",
     "onnxruntime-node": "1.30.0",
