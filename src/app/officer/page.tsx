@@ -9,7 +9,7 @@ import { parseConfig } from '@/lib/diagnosis/config'
 import { CONFIDENCE_WORD, labelOf, orList } from '@/lib/diagnosis/explain'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { formatBdPhone } from '@/lib/phone'
-import { unionById } from '@/lib/unions'
+import { fullName, unionById } from '@/lib/areas'
 import rawConfig from '../../../public/model/crop_guardian_config.json'
 import { reviewCase } from './actions'
 
@@ -36,7 +36,7 @@ function CaseCard({ c }: { c: OfficerCase }) {
   return (
     <li className="stitch flex flex-col gap-2.5 rounded-[20px] p-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-        <span className="font-display text-lg font-extrabold">{union ? union.nameBn : 'ইউনিয়ন জানা নেই'}</span>
+        <span className="font-display text-lg font-extrabold">{union ? fullName(union) : 'ইউনিয়ন জানা নেই'}</span>
         <span className="text-[13px] font-semibold text-muted">{sentOn(c.sentAt)}</span>
       </div>
       {c.phone && (

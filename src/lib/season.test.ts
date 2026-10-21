@@ -53,3 +53,24 @@ describe('seasonFor without a planting date', () => {
     assert.equal(offSeasonMessage(seasonFor('2026-10-18', null)), '১৫ নভেম্বর ২০২৬ থেকে ঝুঁকির খবর দেব')
   })
 })
+
+describe('seasonFor paddy', () => {
+  it('runs from transplant + 15 to + 110 days', () => {
+    const s = seasonFor('2026-01-20', '2026-01-10', 'boro')
+    assert.deepEqual(s, { phase: 'before', start: '2026-01-25', end: '2026-04-30', source: 'planting' })
+    assert.equal(offSeasonMessage(s, 'boro'), 'চারা লেগে গেলে, ২৫ জানুয়ারি ২০২৬ থেকে ঝুঁকির খবর দেব')
+    assert.match(offSeasonMessage(seasonFor('2026-05-01', '2026-01-10', 'boro'), 'boro'), /নতুন ধান রুইলে তারিখ দিন/)
+  })
+
+  it('assumes Boro from 1 Jan to 15 May without a date, within one year', () => {
+    assert.deepEqual(seasonFor('2026-03-01', null, 'boro'), { phase: 'during', start: '2026-01-01', end: '2026-05-15', source: 'fallback' })
+    assert.deepEqual(seasonFor('2026-05-16', null, 'boro'), { phase: 'before', start: '2027-01-01', end: '2027-05-15', source: 'fallback' })
+    assert.deepEqual(seasonFor('2026-12-31', null, 'boro'), { phase: 'before', start: '2027-01-01', end: '2027-05-15', source: 'fallback' })
+  })
+
+  it('assumes Aman from 15 Jul to 15 Nov without a date', () => {
+    assert.equal(seasonFor('2026-10-20', null, 'aman').phase, 'during')
+    assert.deepEqual(seasonFor('2026-11-16', null, 'aman'), { phase: 'before', start: '2027-07-15', end: '2027-11-15', source: 'fallback' })
+    assert.equal(offSeasonMessage(seasonFor('2026-07-01', null, 'aman'), 'aman'), '১৫ জুলাই ২০২৬ থেকে ঝুঁকির খবর দেব')
+  })
+})

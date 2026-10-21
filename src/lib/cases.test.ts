@@ -20,6 +20,15 @@ describe('parseCaseUpload', () => {
     assert.deepEqual(c.answers, [{ question: 'rings', answer: 'no' }])
   })
 
+  it('stores the union by its full id, also from an old bare Shibganj one', () => {
+    const old = parseCaseUpload(GOOD, NOW)
+    assert.ok(!('error' in old))
+    assert.equal(old.unionId, 'bogura-shibganj.kichak')
+    const full = parseCaseUpload({ ...GOOD, unionId: 'bogura-shibganj.kichak' }, NOW)
+    assert.ok(!('error' in full))
+    assert.equal(full.unionId, 'bogura-shibganj.kichak')
+  })
+
   it('allows no union and no final answer', () => {
     assert.ok(!('error' in parseCaseUpload({ ...GOOD, unionId: null, finalId: null }, NOW)))
   })

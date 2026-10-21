@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { parseHourly, parseHourlyMany } from '@/lib/weather'
+import { parseHourly, parseHourlyMany, parseNasaPower } from '@/lib/weather'
 
 const point = (rh: number) => ({
   latitude: 25,
@@ -34,5 +34,29 @@ describe('Open-Meteo responses', () => {
   it('accepts a single point as an object, and refuses a wrong count', () => {
     assert.equal(parseHourlyMany(point(80), 1).length, 1)
     assert.throws(() => parseHourlyMany([point(80)], 13), /expected 13/)
+  })
+})
+
+describe('NASA POWER responses', () => {
+  const body = {
+    properties: {
+      parameter: {
+        T2M: { '2025010101': 12.94, '2025010100': 13.33, '2025010102': -999 },
+        RH2M: { '2025010100': 87.82, '2025010101': 89.84, '2025010102': 92.23 },
+      },
+    },
+  }
+
+  it('reads the hourly series in time order, as local times, with fill values missing', () => {
+    assert.deepEqual(parseNasaPower(body), {
+      time: ['2025-01-01T00:00', '2025-01-01T01:00', '2025-01-01T02:00'],
+      temperature: [13.33, 12.94, null],
+      humidity: [87.82, 89.84, 92.23],
+    })
+  })
+
+  it('refuses a response without both series', () => {
+    assert.throws(() => parseNasaPower({ properties: { parameter: { T2M: {} } } }), /malformed/)
+    assert.throws(() => parseNasaPower({ messages: ['error'] }), /malformed/)
   })
 })

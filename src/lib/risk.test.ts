@@ -154,21 +154,28 @@ describe('buildDecision', () => {
     assert.equal(buildDecision(strip('danger', 'danger', 'safe', 'safe', 'safe'), 'danger'), DECISION.danger)
   })
 
-  it('says tomorrow, and promises to check back this afternoon', () => {
-    assert.equal(buildDecision(strip('watch', 'danger', 'danger', 'safe', 'safe'), 'watch'), 'কাল থেকে ঝুঁকি বাড়বে। আজ বিকেলে আবার জানাব।')
+  it('says tomorrow, and asks the farmer to look again this afternoon', () => {
+    assert.equal(buildDecision(strip('watch', 'danger', 'danger', 'safe', 'safe'), 'watch'), 'কাল থেকে ঝুঁকি বাড়বে। আজ বিকেলে আবার দেখে নিন।')
+  })
+
+  it('promises an SMS only when the farmer has alerts on', () => {
+    assert.equal(
+      buildDecision(strip('watch', 'danger', 'danger', 'safe', 'safe'), 'watch', DECISION, true),
+      'কাল থেকে ঝুঁকি বাড়বে। আজ বিকেলে SMS-এ জানাব।',
+    )
   })
 
   it('names the weekday of a danger day two days out', () => {
     assert.equal(
       buildDecision(strip('safe', 'watch', 'danger', 'danger', 'safe'), 'watch'),
-      'মঙ্গলবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে আবার জানাব।',
+      'মঙ্গলবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে আবার দেখে নিন।',
     )
   })
 
   it('warns about danger later in the week even on a safe day', () => {
     assert.equal(
       buildDecision(strip('safe', 'safe', 'safe', 'danger', 'danger'), 'safe'),
-      'বুধবার থেকে ঝুঁকি বাড়বে। আগের দিন বিকেলে আবার জানাব।',
+      'বুধবার থেকে ঝুঁকি বাড়বে। আগের দিন বিকেলে আবার দেখে নিন।',
     )
   })
 
@@ -180,12 +187,14 @@ describe('buildDecision', () => {
   it('only ever names the first danger day ahead, and fits two lines', () => {
     for (const days of allStrips()) {
       const today = overallRisk(days)
-      const text = buildDecision(days, today)
-      const next = days.findIndex((d, i) => i > 0 && d.risk === 'danger')
-      const named = days.filter((d) => text.includes(bnWeekday(d.date) + 'বার'))
-      if (today === 'danger' || next <= 1) assert.deepEqual(named, [], text)
-      else assert.deepEqual(named, [days[next]], text)
-      assert.ok(text.length <= MAX_DECISION_CHARS, text)
+      for (const alerts of [false, true]) {
+        const text = buildDecision(days, today, DECISION, alerts)
+        const next = days.findIndex((d, i) => i > 0 && d.risk === 'danger')
+        const named = days.filter((d) => text.includes(bnWeekday(d.date) + 'বার'))
+        if (today === 'danger' || next <= 1) assert.deepEqual(named, [], text)
+        else assert.deepEqual(named, [days[next]], text)
+        assert.ok(text.length <= MAX_DECISION_CHARS, text)
+      }
     }
   })
 })

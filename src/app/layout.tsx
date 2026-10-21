@@ -19,7 +19,7 @@ const baloo = Baloo_Da_2({
 
 export const metadata: Metadata = {
   title: 'Crop Guardian — মাঠের সৎ ডাক্তার',
-  description: 'আলুর ধসা রোগের ঝুঁকি, ছবি দেখে রোগ চেনা আর মৌসুমের হিসাব।',
+  description: 'আলুর ধসা আর ধানের ব্লাস্ট রোগের ঝুঁকি, ছবি দেখে রোগ চেনা আর মৌসুমের হিসাব।',
 }
 
 export const viewport: Viewport = {

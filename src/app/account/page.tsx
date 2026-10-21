@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import AlertToggle from '@/components/AlertToggle'
 import BottomNav from '@/components/BottomNav'
 import { tealClass } from '@/components/Buttons'
 import { PersonIcon } from '@/components/icons'
@@ -6,15 +7,21 @@ import SignOutButton from '@/components/SignOutButton'
 import TopBar from '@/components/TopBar'
 import { isRole, type Role } from '@/lib/auth/roles'
 import { requireUser } from '@/lib/auth/session'
+import { getAlert } from '@/lib/alertDb'
 import { formatBdPhone } from '@/lib/phone'
+import { getPlace } from '@/lib/place'
 
 export const metadata = { title: 'আমার অ্যাকাউন্ট — Crop Guardian' }
 
 const ROLE_LABEL: Record<Role, string> = { farmer: 'কৃষক', officer: 'কৃষি কর্মকর্তা' }
 
 export default async function AccountPage() {
-  const { user } = await requireUser('/account')
+  const { user, showcase } = await requireUser('/account')
   const role = isRole(user.role) ? user.role : 'farmer'
+  // The showcase officer has no phone to text. The account must open even if alerts can't be read.
+  const [alert, place] = showcase
+    ? [null, null]
+    : await Promise.all([getAlert(user.id).catch((err) => (console.error('Alert read failed', err), null)), getPlace()])
   return (
     <div className="flex flex-1 flex-col">
       <TopBar back="/" title="আমার অ্যাকাউন্ট" right={<span className="size-11" />} />
@@ -28,6 +35,7 @@ export default async function AccountPage() {
             <span className="font-display text-[23px] font-extrabold">{formatBdPhone(user.phoneNumber)}</span>
           </div>
         </section>
+        {place && <AlertToggle enabled={alert?.enabled === true} place={place.union ? place.name : null} />}
         {role === 'officer' && (
           <Link href="/officer" className={`${tealClass} h-[58px] text-lg font-bold`}>
             কৃষকদের পাঠানো কেস

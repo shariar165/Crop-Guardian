@@ -9,9 +9,11 @@ import PlantingDays from '@/components/PlantingDays'
 import SprayButton from '@/components/SprayButton'
 import { bnDate, toBnDigits } from '@/lib/bn'
 import { getCases } from '@/lib/captureStore'
+import { cropOf, isSeasonId, SEASONS, type SeasonId } from '@/lib/crops'
 import { DAY_STATE, formatTaka } from '@/lib/data'
-import { LOCAL_TZ } from '@/lib/dates'
+import { LOCAL_TZ, todayIn } from '@/lib/dates'
 import { loadConfig } from '@/lib/diagnosis/config'
+import { mainField, useChosenSeason, useFields } from '@/lib/fields'
 import type { Ledger, LedgerWeek, WeekKind } from '@/lib/ledger'
 import { caseVerdict } from '@/lib/shareCase'
 import { MAX_SPRAY_COST, saveSprayCost } from '@/lib/sprayLog'
@@ -19,6 +21,7 @@ import { type LedgerState, useLedger } from '@/lib/useLedger'
 
 const KIND: Record<WeekKind, { icon: React.ReactNode; tone: 'good' | 'bad' | 'plain' }> = {
   saved: { icon: <CheckIcon size={18} weight={2.6} />, tone: 'good' },
+  calm: { icon: <CheckIcon size={18} weight={2.6} />, tone: 'plain' },
   onTime: { icon: <SprayBottleIcon size={18} weight={2.2} />, tone: 'good' },
   missed: { icon: <WarnIcon size={18} weight={2.2} />, tone: 'bad' },
   extra: { icon: <SprayBottleIcon size={18} weight={2.2} />, tone: 'plain' },
@@ -34,6 +37,7 @@ function weekText(w: LedgerWeek): { note: string; action: string } {
   const sprays = w.sprays.map((d) => bnDate(d).replace(/ \S+$/, '')).join(', ')
   switch (w.kind) {
     case 'saved':
+    case 'calm':
       return { note: worst, action: 'স্প্রে লাগেনি' }
     case 'onTime':
       return { note: danger, action: `সময়মতো স্প্রে করেছেন (${sprays})` }
@@ -48,7 +52,15 @@ function weekText(w: LedgerWeek): { note: string; action: string } {
   }
 }
 
-function speechFor(ledger: Ledger): string {
+const dangerWeeks = (ledger: Ledger) => ledger.onTimeCount + ledger.missedCount
+
+function speechFor(ledger: Ledger, season: SeasonId): string {
+  if (!cropOf(season).calendarBaseline) {
+    const parts = [`এই মৌসুমে ${toBnDigits(dangerWeeks(ledger))} সপ্তাহে ${cropOf(season).diseaseBn}ের বিপদ ছিল।`]
+    parts.push(`${toBnDigits(ledger.onTimeCount)} সপ্তাহে সময়মতো স্প্রে করেছেন, মোট ${toBnDigits(ledger.sprayCount)}টা স্প্রে লেখা আছে।`)
+    if (ledger.missedCount) parts.push(`${toBnDigits(ledger.missedCount)} সপ্তাহে বিপদ ছিল কিন্তু স্প্রে লেখা নেই।`)
+    return parts.join(' ')
+  }
   const parts = [`এই মৌসুমে বাঁচিয়েছেন ${toBnDigits(ledger.savedTotal)} টাকা।`]
   parts.push(`${toBnDigits(ledger.savedCount)}টা অপ্রয়োজনীয় স্প্রে এড়ানো, ${toBnDigits(ledger.onTimeCount)}টা সময়মতো স্প্রে করেছেন।`)
   if (ledger.missedCount) parts.push(`${toBnDigits(ledger.missedCount)} সপ্তাহে বিপদ ছিল কিন্তু স্প্রে লেখা নেই।`)
@@ -142,54 +154,9 @@ function Prompt({ title, text, href, action }: { title: string; text: string; hr
   )
 }
 
-function Body({ state }: { state: LedgerState }) {
-  if (state.status === 'loading') {
-    return <p className="mx-4 mt-6 text-center text-[15px] text-muted">হিসাব করছি…</p>
-  }
-  if (state.status === 'noPlanting') {
-    return (
-      <Prompt
-        title="হিসাব শুরু করতে রোপণের তারিখ দিন"
-        text="আলু কবে লাগিয়েছেন জানালে, চারা গজানো থেকে প্রতি সপ্তাহের আসল আবহাওয়া দেখে হিসাব করব: কোন সপ্তাহে স্প্রে লাগেনি, কোনটায় লেগেছে।"
-        href="/planting?from=ledger"
-        action="তারিখ দিন"
-      />
-    )
-  }
-  if (state.status === 'notYet') {
-    return (
-      <section className="stitch-lg mx-4 mt-3.5 flex shrink-0 flex-col gap-2 rounded-[20px] p-4">
-        <h2 className="m-0 font-display text-[22px] leading-[1.2] font-extrabold">চারা গজালে হিসাব শুরু হবে</h2>
-        <p className="m-0 text-[15px] leading-[1.45]">{bnDate(state.from)} থেকে প্রতি সপ্তাহের হিসাব এখানে দেখাব।</p>
-      </section>
-    )
-  }
-  if (state.status === 'error') {
-    return (
-      <p role="alert" className="mx-4 mt-3.5 mb-0 rounded-[16px] bg-amber-soft px-4 py-3 text-[15px] leading-[1.45] font-semibold text-[#6B4A00]">
-        আবহাওয়ার তথ্য আনা যায়নি — নেট নেই? নেট এলে হিসাব দেখাব। স্প্রে লিখে রাখা চলবে।
-      </p>
-    )
-  }
-
-  const { ledger, cost } = state
+function Weeks({ ledger }: { ledger: Ledger }) {
   return (
     <>
-      <section className="mx-4 mt-3.5 flex shrink-0 flex-col gap-1 rounded-[22px] bg-ink px-[18px] pt-[18px] pb-4 text-cream outline-[1.5px] outline-offset-[-8px] outline-sun outline-dashed">
-        <span className="text-[15px] font-medium text-line">এই মৌসুমে বাঁচিয়েছেন</span>
-        <span className="font-display text-[50px] leading-[1.05] font-extrabold text-sun">{formatTaka(ledger.savedTotal)}</span>
-        <div className="mt-2 grid grid-cols-2 gap-3 border-t-[1.5px] border-dashed border-[#6E5A45] pt-2.5">
-          <div className="flex flex-col">
-            <span className="font-display text-2xl font-extrabold text-[#BFE3B4]">{toBnDigits(ledger.savedCount)}টা</span>
-            <span className="text-sm text-line">অপ্রয়োজনীয় স্প্রে এড়ানো</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display text-2xl font-extrabold text-cream">{toBnDigits(ledger.onTimeCount)}টা</span>
-            <span className="text-sm text-line">সময়মতো স্প্রে করেছেন</span>
-          </div>
-        </div>
-      </section>
-
       <SectionRule label="সপ্তাহে সপ্তাহে" className="mx-[18px] mt-4 mb-2" />
 
       <ol className="m-0 flex shrink-0 list-none flex-col px-[18px]">
@@ -215,6 +182,94 @@ function Body({ state }: { state: LedgerState }) {
           )
         })}
       </ol>
+    </>
+  )
+}
+
+const TOTALS = 'mx-4 mt-3.5 flex shrink-0 flex-col gap-1 rounded-[22px] bg-ink px-[18px] pt-[18px] pb-4 text-cream outline-[1.5px] outline-offset-[-8px] outline-sun outline-dashed'
+
+// For a crop with no calendar habit to compare with (paddy), what the weather asked for and what
+// the farmer did, with no money figure.
+function DangerTotals({ ledger, season }: { ledger: Ledger; season: SeasonId }) {
+  return (
+    <section className={TOTALS}>
+      <span className="text-[15px] font-medium text-line">এই মৌসুমে {cropOf(season).diseaseBn}ের বিপদ ছিল</span>
+      <span className="font-display text-[50px] leading-[1.05] font-extrabold text-sun">{toBnDigits(dangerWeeks(ledger))} সপ্তাহে</span>
+      <div className="mt-2 grid grid-cols-2 gap-3 border-t-[1.5px] border-dashed border-[#6E5A45] pt-2.5">
+        <div className="flex flex-col">
+          <span className="font-display text-2xl font-extrabold text-[#BFE3B4]">{toBnDigits(ledger.onTimeCount)} সপ্তাহ</span>
+          <span className="text-sm text-line">সময়মতো স্প্রে করেছেন</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="font-display text-2xl font-extrabold text-cream">{toBnDigits(ledger.sprayCount)}টা</span>
+          <span className="text-sm text-line">মোট স্প্রে লেখা আছে</span>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
+  const crop = cropOf(season)
+  if (state.status === 'loading') {
+    return <p className="mx-4 mt-6 text-center text-[15px] text-muted">হিসাব করছি…</p>
+  }
+  if (state.status === 'noPlanting') {
+    return (
+      <Prompt
+        title="হিসাব শুরু করতে রোপণের তারিখ দিন"
+        text="কোন ফসল কবে লাগিয়েছেন জানালে, চারা থেকে প্রতি সপ্তাহের আসল আবহাওয়া দেখে হিসাব করব: কোন সপ্তাহে স্প্রে লাগেনি, কোনটায় লেগেছে।"
+        href="/planting?from=ledger"
+        action="তারিখ দিন"
+      />
+    )
+  }
+  if (state.status === 'notYet') {
+    return (
+      <section className="stitch-lg mx-4 mt-3.5 flex shrink-0 flex-col gap-2 rounded-[20px] p-4">
+        <h2 className="m-0 font-display text-[22px] leading-[1.2] font-extrabold">{crop.startPhrase} হিসাব শুরু হবে</h2>
+        <p className="m-0 text-[15px] leading-[1.45]">{bnDate(state.from)} থেকে প্রতি সপ্তাহের হিসাব এখানে দেখাব।</p>
+      </section>
+    )
+  }
+  if (state.status === 'error') {
+    return (
+      <p role="alert" className="mx-4 mt-3.5 mb-0 rounded-[16px] bg-amber-soft px-4 py-3 text-[15px] leading-[1.45] font-semibold text-[#6B4A00]">
+        আবহাওয়ার তথ্য আনা যায়নি — নেট নেই? নেট এলে হিসাব দেখাব। স্প্রে লিখে রাখা চলবে।
+      </p>
+    )
+  }
+
+  const { ledger, cost } = state
+  if (!crop.calendarBaseline) {
+    return (
+      <>
+        <DangerTotals ledger={ledger} season={season} />
+        <Weeks ledger={ledger} />
+        <p className="mx-[18px] mt-2 mb-0 text-[13px] leading-[1.45] text-muted">
+          {crop.nameBn}ে প্রতি সপ্তাহে স্প্রে করার চল নেই, তাই কত টাকা বাঁচল তা হিসাব করি না। শুধু দেখাই কোন সপ্তাহে বিপদ ছিল আর আপনি স্প্রে করেছেন কি না।
+        </p>
+      </>
+    )
+  }
+  return (
+    <>
+      <section className={TOTALS}>
+        <span className="text-[15px] font-medium text-line">এই মৌসুমে বাঁচিয়েছেন</span>
+        <span className="font-display text-[50px] leading-[1.05] font-extrabold text-sun">{formatTaka(ledger.savedTotal)}</span>
+        <div className="mt-2 grid grid-cols-2 gap-3 border-t-[1.5px] border-dashed border-[#6E5A45] pt-2.5">
+          <div className="flex flex-col">
+            <span className="font-display text-2xl font-extrabold text-[#BFE3B4]">{toBnDigits(ledger.savedCount)}টা</span>
+            <span className="text-sm text-line">অপ্রয়োজনীয় স্প্রে এড়ানো</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-display text-2xl font-extrabold text-cream">{toBnDigits(ledger.onTimeCount)}টা</span>
+            <span className="text-sm text-line">সময়মতো স্প্রে করেছেন</span>
+          </div>
+        </div>
+      </section>
+
+      <Weeks ledger={ledger} />
 
       <SprayCost cost={cost} />
       <p className="mx-[18px] mt-2 mb-0 text-[13px] leading-[1.45] text-muted">
@@ -253,25 +308,49 @@ function SentCases() {
   )
 }
 
-export default function LedgerView({ place }: { place: string }) {
-  const state = useLedger()
+// One field's ledger: `start` (?field=) picks it, else the field Home last showed; a chip per field switches.
+export default function LedgerView({ place, start }: { place: string; start: string | null }) {
+  const fields = useFields()
+  const chosen = useChosenSeason()
+  const [picked, setPicked] = useState<SeasonId | null>(isSeasonId(start) ? start : null)
+  const field = fields.find((f) => f.season === picked) ?? mainField(fields, todayIn(), chosen)
+  const season = field?.season ?? 'potato'
+  const state = useLedger(field)
   return (
     <>
       <header className="flex shrink-0 items-center justify-between gap-2 pt-4 pr-4 pl-[18px]">
         <div className="flex min-w-0 flex-col leading-[1.2]">
           <h1 className="m-0 font-display text-[25px] font-extrabold">মৌসুমের হিসাব</h1>
           <span className="text-sm font-medium text-muted">
-            আলু · {place} · <PlantingDays />
+            {SEASONS[season].nameBn} · {place} · <PlantingDays field={field} />
           </span>
         </div>
-        {state.status === 'ready' && <ListenButton text={speechFor(state.ledger)} label="হিসাব পড়ে শোনান" />}
+        {state.status === 'ready' && <ListenButton text={speechFor(state.ledger, season)} label="হিসাব পড়ে শোনান" />}
       </header>
 
-      <Body state={state} />
+      {fields.length > 1 && (
+        <div role="group" aria-label="কোন জমির হিসাব" className="mx-4 mt-3 flex shrink-0 gap-2">
+          {fields.map((f) => (
+            <button
+              key={f.season}
+              type="button"
+              aria-pressed={f.season === season}
+              onClick={() => setPicked(f.season)}
+              className={`h-11 flex-1 rounded-full border-2 px-3 text-base font-bold ${
+                f.season === season ? 'border-ink bg-ink text-cream' : 'border-line bg-paper text-ink'
+              }`}
+            >
+              {SEASONS[f.season].nameBn}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <Body state={state} season={season} />
 
       {state.status !== 'noPlanting' && state.status !== 'loading' && (
         <div className="mx-4 mt-3 shrink-0">
-          <SprayButton className="w-full" />
+          <SprayButton season={season} className="w-full" />
         </div>
       )}
 

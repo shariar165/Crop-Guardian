@@ -73,3 +73,25 @@ describe('buildLedger', () => {
     assert.deepEqual(buildLedger({ planting: PLANTED, today: '2026-09-05', days: [], sprays: [], cost: COST }).weeks, [])
   })
 })
+
+describe('buildLedger for paddy', () => {
+  const TRANSPLANTED = '2026-01-10'
+  const ESTABLISHED = '2026-01-25' // transplant + 15
+
+  it('counts no savings for a quiet week, as paddy has no weekly spray habit', () => {
+    const today = addDays(ESTABLISHED, 14)
+    const days = [...week('safe'), ...week('danger')].map((risk, i) => ({ date: addDays(ESTABLISHED, i), risk }))
+    const l = buildLedger({ planting: TRANSPLANTED, today, days, sprays: [addDays(ESTABLISHED, 8)], cost: COST, season: 'boro' })
+    assert.deepEqual(
+      l.weeks.map((w) => w.kind),
+      ['ongoing', 'onTime', 'calm'],
+    )
+    assert.equal(l.savedTotal, 0)
+    assert.equal(l.savedCount, 0)
+    assert.equal(l.onTimeCount, 1)
+  })
+
+  it('ends at transplant + 110 days', () => {
+    assert.deepEqual(ledgerSpan(TRANSPLANTED, '2026-12-01', 'boro'), { from: ESTABLISHED, to: '2026-04-30' })
+  })
+})

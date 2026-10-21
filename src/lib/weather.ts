@@ -6,7 +6,7 @@ const ARCHIVE_URL = 'https://archive-api.open-meteo.com/v1/archive'
 export const FORECAST_TZ = LOCAL_TZ
 export const FORECAST_DAYS = 5
 export const FETCH_TIMEOUT_MS = 5000
-// Many points in one request take Open-Meteo several seconds (3–4 s for the 13 unions).
+// Many points in one request take Open-Meteo several seconds (3–4 s for an upazila's unions).
 export const MANY_TIMEOUT_MS = 15_000
 export const REVALIDATE_S = 3600
 // Past weather barely changes once published.
@@ -15,7 +15,7 @@ export const ARCHIVE_REVALIDATE_S = 86400
 // Weather since planting comes from the forecast API's `past_days`, which allows up to 92.
 export const MAX_PAST_DAYS = 92
 
-// Shibganj upazila, Bogura, when the farmer hasn't picked a union.
+// Shibganj upazila, Bogura, when the farmer hasn't picked a union (and for the backtests).
 export const DEFAULT_LOCATION = { lat: 25.02, lon: 89.32, name: 'শিবগঞ্জ, বগুড়া' }
 
 export type HourlyForecast = {
@@ -112,4 +112,50 @@ export function fetchHourlyArchive(
   params.set('start_date', start)
   params.set('end_date', end)
   return fetchHourly(`${ARCHIVE_URL}?${params}`, ARCHIVE_REVALIDATE_S, timeoutMs)
+}
+
+// NASA POWER (MERRA-2 reanalysis, ~50 km), a second source of past weather for the backtest, to
+// check the rule against more than one model. Its "LST" is local solar time: at 89–90°E within a
+// few minutes of Bangladesh time, so hours line up with Open-Meteo's.
+const NASA_POWER_URL = 'https://power.larc.nasa.gov/api/temporal/hourly/point'
+const NASA_FILL = -999
+
+type NasaPowerResponse = { properties?: { parameter?: { T2M?: unknown; RH2M?: unknown } } }
+
+const isSeries = (v: unknown): v is Record<string, number> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+// Hourly series keyed "YYYYMMDDHH" become the same shape as Open-Meteo's. Fill values are missing.
+export function parseNasaPower(body: unknown): HourlyForecast {
+  const parameter = (body as NasaPowerResponse)?.properties?.parameter
+  const t2m = parameter?.T2M
+  const rh = parameter?.RH2M
+  if (!isSeries(t2m) || !isSeries(rh)) throw new Error('NASA POWER returned malformed hourly data')
+  const reading = (v: unknown) => (typeof v === 'number' && v !== NASA_FILL ? v : null)
+  const keys = Object.keys(t2m).sort()
+  return {
+    time: keys.map((k) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}T${k.slice(8, 10)}:00`),
+    temperature: keys.map((k) => reading(t2m[k])),
+    humidity: keys.map((k) => reading(rh[k])),
+  }
+}
+
+// Reanalysis weather for start..end inclusive (YYYY-MM-DD local dates). Slow: allow ~30 s a winter.
+export async function fetchHourlyNasaPower(
+  lat: number,
+  lon: number,
+  start: string,
+  end: string,
+  timeoutMs = FETCH_TIMEOUT_MS,
+): Promise<HourlyForecast> {
+  const params = new URLSearchParams({
+    parameters: 'T2M,RH2M',
+    community: 'AG',
+    latitude: coord(lat),
+    longitude: coord(lon),
+    start: start.replaceAll('-', ''),
+    end: end.replaceAll('-', ''),
+    format: 'JSON',
+    'time-standard': 'LST',
+  })
+  return parseNasaPower(await fetchJson(`${NASA_POWER_URL}?${params}`, ARCHIVE_REVALIDATE_S, timeoutMs))
 }

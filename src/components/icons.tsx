@@ -235,3 +235,27 @@ export const WaveIcon = (p: IconProps) => (
     <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
   </Icon>
 )
+
+export const SproutIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 21v-9" />
+    <path d="M12 12c0-4 3-6.5 7-6.5 0 4-3 6.5-7 6.5z" />
+    <path d="M12 14.5c0-3-2.3-5-5.5-5 0 3 2.3 5 5.5 5z" />
+    <path d="M7 21h10" />
+  </Icon>
+)
+
+export const BasketIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 10h18l-2 10H5z" />
+    <path d="M8 10l3-6M16 10l-3-6" />
+    <path d="M9 14v3M15 14v3" />
+  </Icon>
+)
+
+export const BoxIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 8l9-5 9 5v8l-9 5-9-5z" />
+    <path d="M3 8l9 5 9-5M12 13v8" />
+  </Icon>
+)

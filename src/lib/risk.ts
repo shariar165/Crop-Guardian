@@ -17,7 +17,8 @@ export type DaySummary = { date: string; minTemp: number; humidHours: number }
 export type DayRisk = DaySummary & { risk: Risk }
 // What the 5-day strip and the decision text need; the sample strips have only this.
 export type StripDay = Pick<DayRisk, 'date' | 'risk'>
-export type RiskAssessment = { today: Risk; days: DayRisk[]; reason: string }
+// Each crop's rule fills `days` with its own day summaries; screens only read date and risk.
+export type RiskAssessment = { today: Risk; days: StripDay[]; reason: string }
 
 // Group hourly readings by local date (the forecast's `time` is already local).
 // Missing (null) readings are ignored; a day with no temperature at all is dropped.
@@ -41,24 +42,38 @@ export function qualifies(day: DaySummary, humidHours = HUTTON_HUMID_HOURS): boo
   return day.minTemp >= MIN_TEMP_C && day.humidHours >= humidHours
 }
 
-// Days outside the data, or missing from it, count as not qualifying.
-// `humidHours` is only changed by the backtest script, to compare a stricter rule.
-export function classifyDays(days: DaySummary[], { humidHours = HUTTON_HUMID_HOURS } = {}): DayRisk[] {
-  const qualifyingDates = new Set(days.filter((d) => qualifies(d, humidHours)).map((d) => d.date))
+// The shape every disease rule here shares: a qualifying day next to another is danger, a lone
+// qualifying day or a near miss is watch. Days outside the data, or missing from it, count as
+// not qualifying. Used by this late-blight rule and the rice-blast rule (blast.ts).
+export function classifyRun<T extends { date: string }>(
+  days: T[],
+  qualifiesDay: (day: T) => boolean,
+  nearDay: (day: T) => boolean,
+): (T & { risk: Risk })[] {
+  const qualifyingDates = new Set(days.filter(qualifiesDay).map((d) => d.date))
   return days.map((day) => {
     let risk: Risk = 'safe'
-    if (qualifies(day, humidHours)) {
+    if (qualifiesDay(day)) {
       const neighbourQualifies = [-1, 1].some((n) => qualifyingDates.has(addDays(day.date, n)))
       risk = neighbourQualifies ? 'danger' : 'watch'
-    } else if (day.minTemp >= MIN_TEMP_C && day.humidHours >= NEAR_HUMID_HOURS) {
+    } else if (nearDay(day)) {
       risk = 'watch'
     }
     return { ...day, risk }
   })
 }
 
+// `humidHours` is only changed by the backtest script, to compare a stricter rule.
+export function classifyDays(days: DaySummary[], { humidHours = HUTTON_HUMID_HOURS } = {}): DayRisk[] {
+  return classifyRun(
+    days,
+    (d) => qualifies(d, humidHours),
+    (d) => d.minTemp >= MIN_TEMP_C && d.humidHours >= NEAR_HUMID_HOURS,
+  )
+}
+
 // Index of the first danger day within `within` days after today, or -1.
-function upcomingDanger(days: StripDay[], within = LOOKAHEAD_DAYS): number {
+export function upcomingDanger(days: StripDay[], within = LOOKAHEAD_DAYS): number {
   for (let i = 1; i <= within && i < days.length; i++) {
     if (days[i].risk === 'danger') return i
   }
@@ -78,9 +93,14 @@ function huttonRun(days: DayRisk[], from: number): DayRisk[] {
   return run
 }
 
-const HUMID = `আর্দ্রতা ${toBnDigits(HUMID_RH)}%-এর বেশি`
+export const HUMID = `আর্দ্রতা ${toBnDigits(HUMID_RH)}%-এর বেশি`
 
-function bnTemp(t: number): string {
+// "কাল", or the weekday of a danger day further ahead: named from the forecast, never fixed.
+export function dangerFrom(days: StripDay[], index: number): string {
+  return index === 1 ? 'কাল' : bnWeekday(days[index].date) + 'বার'
+}
+
+export function bnTemp(t: number): string {
   return `${toBnDigits(Math.round(t))}°সে`
 }
 
@@ -95,10 +115,7 @@ export function buildReason(days: DayRisk[], today: Risk): string {
   if (today === 'danger') return `আগামী ${runPhrase(huttonRun(days, 0))}`
 
   const soon = upcomingDanger(days)
-  if (soon !== -1) {
-    const when = soon === 1 ? 'কাল' : bnWeekday(days[soon].date) + 'বার'
-    return `${when} থেকে ${runPhrase(huttonRun(days, soon))}`
-  }
+  if (soon !== -1) return `${dangerFrom(days, soon)} থেকে ${runPhrase(huttonRun(days, soon))}`
 
   if (today === 'watch') return `আজ ${toBnDigits(day.humidHours)} ঘণ্টা ${HUMID}, রাতে ${bnTemp(day.minTemp)}`
   if (day.minTemp < MIN_TEMP_C) return `রাতে তাপমাত্রা ${bnTemp(day.minTemp)} — রোগ ছড়ানোর মতো গরম নয়`
@@ -113,14 +130,16 @@ export const DECISION: Record<Risk, string> = {
 }
 
 // The body under today's decision title. When a danger day lies ahead it is named from the
-// forecast (never a fixed weekday) and we promise to check again the afternoon before it.
+// forecast (never a fixed weekday), with the afternoon before it: when the farmer has SMS alerts
+// on (`alerts`), we promise to text then (src/lib/alerts.ts); otherwise we ask them to look again.
 // Like the reason, it must fit two lines on the Home decision card.
-export function buildDecision(days: StripDay[], today: Risk): string {
+// `decision` holds the crop's line for each level (see crops.ts); late blight's by default.
+export function buildDecision(days: StripDay[], today: Risk, decision: Record<Risk, string> = DECISION, alerts = false): string {
   const next = today === 'danger' ? -1 : upcomingDanger(days, days.length)
-  if (next === -1) return DECISION[today]
-  const from = next === 1 ? 'কাল' : bnWeekday(days[next].date) + 'বার'
+  if (next === -1) return decision[today]
+  const from = dangerFrom(days, next)
   const dayBefore = next === 1 ? 'আজ' : next === 2 ? 'কাল' : 'আগের দিন'
-  return `${from} থেকে ঝুঁকি বাড়বে। ${dayBefore} বিকেলে আবার জানাব।`
+  return `${from} থেকে ঝুঁকি বাড়বে। ${dayBefore} বিকেলে ${alerts ? 'SMS-এ জানাব' : 'আবার দেখে নিন'}।`
 }
 
 // `today` (YYYY-MM-DD) drops days that are already over, e.g. a cached forecast just after midnight.

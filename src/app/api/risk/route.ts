@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
+import { CROPS, isCropId } from '@/lib/crops'
 import { todayIn } from '@/lib/dates'
 import { getPlace } from '@/lib/place'
-import { assessRisk } from '@/lib/risk'
 import { fetchHourlyForecast } from '@/lib/weather'
 
 function parseCoord(value: string | null, fallback: number, limit: number): number | null {
@@ -10,9 +10,12 @@ function parseCoord(value: string | null, fallback: number, limit: number): numb
   return Number.isFinite(n) && Math.abs(n) <= limit ? n : null
 }
 
-// Today's risk at `lat`/`lon`, by default at the farmer's union (or the upazila when none is set).
+// Today's risk for `crop` (potato by default) at `lat`/`lon`, by default at the farmer's union (or
+// Shibganj, Bogura, when none is set).
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
+  const crop = params.get('crop') ?? 'potato'
+  if (!isCropId(crop)) return Response.json({ error: 'crop must be potato or paddy' }, { status: 400 })
   const place = await getPlace()
   const lat = parseCoord(params.get('lat'), place.lat, 90)
   const lon = parseCoord(params.get('lon'), place.lon, 180)
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    return Response.json(assessRisk(await fetchHourlyForecast(lat, lon), todayIn()))
+    return Response.json(CROPS[crop].assess(await fetchHourlyForecast(lat, lon), todayIn()))
   } catch (err) {
     console.error('Risk forecast failed:', err)
     return Response.json({ error: 'Weather forecast unavailable' }, { status: 502 })

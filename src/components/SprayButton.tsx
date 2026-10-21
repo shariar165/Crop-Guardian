@@ -1,14 +1,18 @@
 'use client'
 
 import { SprayBottleIcon } from '@/components/icons'
+import type { SeasonId } from '@/lib/crops'
 import { todayIn } from '@/lib/dates'
 import { useHydrated } from '@/lib/deviceStore'
 import { addSpray, removeSpray, useSprays } from '@/lib/sprayLog'
+import { useShownSeason } from './FieldsGate'
 
-/** "আজ স্প্রে করেছি": logs today's spray on the device for the season ledger, with undo. */
-export default function SprayButton({ className = '' }: { className?: string }) {
+/** "আজ স্প্রে করেছি": logs today's spray for a field (by default the one Home shows) on the device for its ledger, with undo. */
+export default function SprayButton({ season: given, className = '' }: { season?: SeasonId; className?: string }) {
+  const shown = useShownSeason()
+  const season = given ?? shown
   const hydrated = useHydrated()
-  const sprays = useSprays()
+  const sprays = useSprays(season)
   const today = todayIn()
   if (!hydrated) return null
 
@@ -16,7 +20,7 @@ export default function SprayButton({ className = '' }: { className?: string }) 
     return (
       <p role="status" className={`m-0 flex flex-wrap items-center gap-x-2 text-[15px] font-semibold text-leaf ${className}`}>
         আজকের স্প্রে হিসাবে লেখা হয়েছে
-        <button type="button" onClick={() => removeSpray(today)} className="border-0 bg-transparent p-0 text-[15px] font-bold text-teal underline">
+        <button type="button" onClick={() => removeSpray(season, today)} className="border-0 bg-transparent p-0 text-[15px] font-bold text-teal underline">
           মুছুন
         </button>
       </p>
@@ -25,7 +29,7 @@ export default function SprayButton({ className = '' }: { className?: string }) 
   return (
     <button
       type="button"
-      onClick={() => addSpray(today)}
+      onClick={() => addSpray(season, today)}
       className={`flex min-h-12 items-center justify-center gap-2 rounded-[16px] border-2 border-ink bg-paper px-4 text-base font-bold text-ink ${className}`}
     >
       <SprayBottleIcon size={22} weight={2.2} />

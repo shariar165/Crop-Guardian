@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { SEASONS } from '@/lib/crops'
 import { addDays, todayIn } from '@/lib/dates'
 import { useHydrated } from '@/lib/deviceStore'
+import type { Field } from '@/lib/fields'
 import { buildLedger, type Ledger, ledgerSpan } from '@/lib/ledger'
-import { usePlantingDate } from '@/lib/plantingDate'
 import type { StripDay } from '@/lib/risk'
-import { EMERGENCE_DAYS } from '@/lib/season'
 import { useSprayCost, useSprays } from '@/lib/sprayLog'
 
 export type LedgerState =
@@ -17,43 +17,52 @@ export type LedgerState =
   | { status: 'error'; planting: string }
   | { status: 'ready'; planting: string; ledger: Ledger; cost: number; sprays: string[] }
 
-type Weather = { from: string; days: StripDay[] } | { from: string; error: true }
+type Weather = { key: string; days: StripDay[] } | { key: string; error: true }
 
-// The season ledger from this device's planting date and sprays, and the weather since emergence.
-export function useLedger(): LedgerState {
+// The season ledger of one field (see fields.ts): its sprays, and the weather since emergence
+// judged by its crop's rule.
+export function useLedger(field: Field | null): LedgerState {
   const hydrated = useHydrated()
-  const planting = usePlantingDate()
-  const sprays = useSprays()
+  const sprays = useSprays(field?.season ?? 'potato')
   const cost = useSprayCost()
   const today = todayIn()
-  const span = planting ? ledgerSpan(planting, today) : null
-  const from = span?.from ?? null
+  const span = field ? ledgerSpan(field.planted, today, field.season) : null
+  const crop = field ? SEASONS[field.season].crop : null
+  const key = span && crop ? `${crop}:${span.from}` : null
   const [weather, setWeather] = useState<Weather | null>(null)
 
   useEffect(() => {
-    if (!from) return
+    if (!key) return
+    const [cropId, from] = key.split(':')
     let cancelled = false
-    fetch(`/api/risk/season?from=${from}`)
+    fetch(`/api/risk/season?from=${from}&crop=${cropId}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then(
         (body: { days: StripDay[] }) => {
-          if (!cancelled) setWeather({ from, days: body.days })
+          if (!cancelled) setWeather({ key, days: body.days })
         },
         (err) => {
           console.error('Season weather unavailable', err)
-          if (!cancelled) setWeather({ from, error: true })
+          if (!cancelled) setWeather({ key, error: true })
         },
       )
     return () => {
       cancelled = true
     }
-  }, [from])
+  }, [key])
 
-  // The planting date is only readable on the device, after hydration.
+  // The fields are only readable on the device, after hydration.
   if (!hydrated) return { status: 'loading' }
-  if (!planting) return { status: 'noPlanting' }
-  if (!span) return { status: 'notYet', planting, from: addDays(planting, EMERGENCE_DAYS) }
-  if (!weather || weather.from !== span.from) return { status: 'loading' }
+  if (!field) return { status: 'noPlanting' }
+  const planting = field.planted
+  if (!span) return { status: 'notYet', planting, from: addDays(planting, SEASONS[field.season].startDays) }
+  if (!weather || weather.key !== key) return { status: 'loading' }
   if ('error' in weather) return { status: 'error', planting }
-  return { status: 'ready', planting, cost, sprays, ledger: buildLedger({ planting, today, days: weather.days, sprays, cost }) }
+  return {
+    status: 'ready',
+    planting,
+    cost,
+    sprays,
+    ledger: buildLedger({ planting, today, days: weather.days, sprays, cost, season: field.season }),
+  }
 }
