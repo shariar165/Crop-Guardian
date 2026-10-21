@@ -1,7 +1,7 @@
 // Runs the model off the main thread, so the camera never freezes. Started by client.ts.
 /// <reference lib="webworker" />
 import * as ort from 'onnxruntime-web/wasm'
-import { cacheAvailable, type DiagnosisConfig, loadConfig, MODEL_CACHE, MODEL_DIR } from './config'
+import { cacheAvailable, type DiagnosisConfig, loadConfig, MODEL_CACHE, modelUrl } from './config'
 import { decide } from './decide'
 import { preprocessBitmap } from './preprocess'
 import type { WorkerRequest, WorkerResponse } from './messages'
@@ -11,7 +11,8 @@ const WASM_URL = `/ort/${ort.env.versions.web}/ort-wasm-simd-threaded.wasm`
 const post = (msg: WorkerResponse) => self.postMessage(msg)
 
 type Loaded = { session: ort.InferenceSession; config: DiagnosisConfig }
-let loaded: Promise<Loaded> | null = null
+// One crop's model at a time: a phone has little memory to spare for a second ~16 MB session.
+let loaded: { configUrl: string; model: Promise<Loaded> } | null = null
 
 // Real file sizes, written at build time by scripts/copy-ort.mjs. A compressed response has no
 // usable Content-Length, so this is what the progress bar measures against.
@@ -68,9 +69,9 @@ async function fetchAll(urls: string[]): Promise<ArrayBuffer[]> {
   )
 }
 
-async function load(): Promise<Loaded> {
-  const config = await loadConfig()
-  const [wasm, model] = await fetchAll([WASM_URL, MODEL_DIR + config.modelFile])
+async function load(configUrl: string): Promise<Loaded> {
+  const config = await loadConfig(configUrl)
+  const [wasm, model] = await fetchAll([WASM_URL, modelUrl(configUrl, config.modelFile)])
   // One thread needs no cross-origin isolation headers; the binary is passed in so ort never fetches it.
   ort.env.wasm.numThreads = 1
   ort.env.wasm.wasmBinary = wasm
@@ -91,22 +92,31 @@ async function diagnose(blob: Blob, { session, config }: Loaded) {
   return decide(output[config.outputName].data as Float32Array, config)
 }
 
+function modelFor(configUrl: string): Promise<Loaded> {
+  if (loaded?.configUrl !== configUrl) {
+    const previous = loaded?.model
+    loaded = { configUrl, model: load(configUrl) }
+    previous?.then((p) => p.session.release()).catch(() => {})
+  }
+  return loaded.model
+}
+
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   const msg = e.data
   if (msg.type === 'load') {
-    loaded ??= load()
     try {
-      const { config } = await loaded
-      post({ type: 'ready', config })
+      const { config } = await modelFor(msg.configUrl)
+      post({ type: 'ready', configUrl: msg.configUrl, config })
     } catch (err) {
-      loaded = null
-      post({ type: 'error', message: String(err), offline: !navigator.onLine })
+      if (loaded?.configUrl === msg.configUrl) loaded = null
+      post({ type: 'error', configUrl: msg.configUrl, message: String(err), offline: !navigator.onLine })
     }
     return
   }
   try {
-    if (!loaded) throw new Error('Model not loaded')
-    post({ type: 'result', id: msg.id, result: await diagnose(msg.blob, await loaded) })
+    // A photo is only ever diagnosed by the model it was taken for.
+    if (loaded?.configUrl !== msg.configUrl) throw new Error('Model not loaded')
+    post({ type: 'result', id: msg.id, result: await diagnose(msg.blob, await loaded.model) })
   } catch (err) {
     post({ type: 'failed', id: msg.id, message: String(err) })
   }

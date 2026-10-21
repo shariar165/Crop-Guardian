@@ -3,6 +3,7 @@
 import 'server-only'
 import type { AnswerRecord } from '@/lib/captureStore'
 import type { CaseUpload, Verdict } from '@/lib/cases'
+import type { CropId } from '@/lib/crops'
 import { db } from '@/lib/db'
 import type { Decision } from '@/lib/diagnosis/decide'
 
@@ -11,8 +12,8 @@ const PHOTO_COLUMN: Record<PhotoSlot, string> = { top: '"photoTop"', under: '"ph
 
 export async function insertCase(userId: string, c: CaseUpload, photos: Partial<Record<PhotoSlot, Buffer>>): Promise<number> {
   const { rows } = await db().query(
-    `INSERT INTO "case" ("userId", "unionId", "sentAt", "decision", "candidates", "finalId", "answers", "photoTop", "photoUnder")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, decode($8, 'base64'), decode($9, 'base64'))
+    `INSERT INTO "case" ("userId", "unionId", "sentAt", "decision", "candidates", "finalId", "answers", "photoTop", "photoUnder", "crop")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, decode($8, 'base64'), decode($9, 'base64'), $10)
      RETURNING "id"`,
     [
       userId,
@@ -24,6 +25,7 @@ export async function insertCase(userId: string, c: CaseUpload, photos: Partial<
       JSON.stringify(c.answers),
       photos.top?.toString('base64') ?? null,
       photos.under?.toString('base64') ?? null,
+      c.crop,
     ],
   )
   return Number(rows[0].id)
@@ -31,6 +33,7 @@ export async function insertCase(userId: string, c: CaseUpload, photos: Partial<
 
 export type OfficerCase = {
   id: number
+  crop: CropId
   phone: string | null
   unionId: string | null
   sentAt: Date
@@ -46,7 +49,7 @@ export type OfficerCase = {
 // The newest cases first.
 export async function listCases(limit = 50): Promise<OfficerCase[]> {
   const { rows } = await db().query(
-    `SELECT c."id", u."phoneNumber" AS phone, c."unionId", c."sentAt", c."decision", c."candidates", c."finalId",
+    `SELECT c."id", c."crop", u."phoneNumber" AS phone, c."unionId", c."sentAt", c."decision", c."candidates", c."finalId",
             c."answers", c."photoTop" IS NOT NULL AS "hasTop", c."photoUnder" IS NOT NULL AS "hasUnder", c."verdict"
        FROM "case" c JOIN "user" u ON u."id" = c."userId"
       ORDER BY c."sentAt" DESC
@@ -74,7 +77,7 @@ export async function getPhoto(id: number, slot: PhotoSlot): Promise<Buffer | nu
 export async function confirmedCounts(days: number): Promise<Map<string, number>> {
   const { rows } = await db().query(
     `SELECT "unionId", count(*)::int AS n FROM "case"
-      WHERE "verdict" = 'late_blight' AND "unionId" IS NOT NULL AND "sentAt" >= now() - make_interval(days => $1)
+      WHERE "crop" = 'potato' AND "verdict" = 'late_blight' AND "unionId" IS NOT NULL AND "sentAt" >= now() - make_interval(days => $1)
       GROUP BY "unionId"`,
     [days],
   )

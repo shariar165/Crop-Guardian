@@ -5,6 +5,7 @@ import { SEASONS } from '@/lib/crops'
 import { HUMID_RH, HUTTON_HUMID_HOURS, MIN_TEMP_C } from '@/lib/risk'
 import { EMERGENCE_DAYS, HARVEST_DAYS } from '@/lib/season'
 import { toBnDigits } from '@/lib/bn'
+import { canDiagnose } from '@/lib/diagnosis/crops'
 
 export type GuideIcon =
   | 'pin'
@@ -77,10 +78,13 @@ export const GUIDE: GuideSection[] = [
     icon: 'camera',
     lines: [
       '«পাতার ছবি তুলুন» চাপুন। সন্দেহের পাতাটা ফ্রেমের ভেতরে আনুন।',
-      'প্রথমে পাতার উপরের দিক, তারপর পাতা উল্টে নিচের দিকের ছবি তুলুন।',
+      'আলুতে: প্রথমে পাতার উপরের দিক, তারপর পাতা উল্টে নিচের দিকের ছবি তুলুন।',
+      ...(canDiagnose('paddy') ? ['ধানে: দাগওয়ালা দুটো আলাদা পাতার ছবি তুলুন, পারলে দুই গোছা থেকে।'] : []),
       'দিনের আলোয় তুলুন, ফোন স্থির রাখুন। «আলো কম» বা «আরো কাছে আনুন» লেখা এলে সেই মতো ঠিক করুন।',
       'প্রথমবার নেট লাগে, রোগ চেনার মডেল নামাতে। তারপর নেট ছাড়াও চলে।',
-      'এখন শুধু আলুর পাতা চেনে। ধানের পাতা চেনা পরে আসবে।',
+      canDiagnose('paddy')
+        ? 'আলু আর ধানের পাতা চেনে। ক্যামেরার নিচে কোন ফসল, তা বেছে নিন।'
+        : 'এখন শুধু আলুর পাতা চেনে। ধানের পাতা চেনা পরে আসবে।',
     ],
     link: { href: '/camera', label: 'পাতার ছবি তুলুন' },
   },

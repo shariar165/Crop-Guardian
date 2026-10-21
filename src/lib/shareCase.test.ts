@@ -39,12 +39,19 @@ it('uploads the result, the final answer and the union, not the probabilities', 
   const fields = uploadFields({ sentAt: 1, diagnosis, photos: [], via: 'share', unionId: 'kichak' })
   assert.deepEqual(fields, {
     sentAt: 1,
+    crop: 'potato',
     unionId: 'kichak',
     decision: 'uncertain',
     candidates: diagnosis.result.candidates,
     finalId: 'late_blight',
     answers: [{ question: 'rings', answer: 'no' }],
   })
+})
+
+it('titles a paddy case as paddy', () => {
+  const record = { ...fixtureDiagnosis('confident', realConfig), crop: 'paddy' as const }
+  assert.match(caseSummary(record, realConfig, DATE, PLACE), /^Crop Guardian — ধানের পাতা \(পরীক্ষামূলক অ্যাপ\)\n/)
+  assert.equal(uploadFields({ sentAt: 1, diagnosis: record, photos: [], via: 'share' }).crop, 'paddy')
 })
 
 it('puts the whole summary in the WhatsApp link', () => {

@@ -1,6 +1,7 @@
 // Kept on the device (IndexedDB): the current pair of leaf photos, their diagnosis, and the cases
 // sent to the agriculture officer.
 
+import type { CropId } from './crops'
 import type { CombinedResult } from './diagnosis/combine'
 import type { QualityReport } from './imageQuality'
 
@@ -17,6 +18,9 @@ export type AnswerRecord = { question: string; answer: Answer }
 
 export type DiagnosisRecord = {
   createdAt: number
+  // Which crop's model looked at the photos. Records saved before paddy have none: potato
+  // (read it with cropOfRecord).
+  crop?: CropId
   // The model's result for the two photos.
   result: CombinedResult
   // The farmer's answers on /questions, in the order asked.

@@ -2,18 +2,20 @@
 // Bangladeshi fields, to see how the model holds up outside the data it was calibrated on.
 // It uses the real ONNX model and the app's own preprocessing and decision (as parity.test.ts does).
 //
-//   <dir>/late_blight/*.jpg   <dir>/healthy/*.jpg   <dir>/early_blight/*.jpg   (the model's classes)
+//   <dir>/late_blight/*.jpg   <dir>/healthy/*.jpg   <dir>/early_blight/*.jpg   (the crop model's classes)
 //   <dir>/unseen/*.jpg        other diseases or pests the model never saw: it should say "unknown"
 //
-// Run: npx tsx scripts/eval-field-photos.ts <dir> [--write]   (--write saves docs/field-photo-test.md)
+// Run: npx tsx scripts/eval-field-photos.ts <dir> [--crop paddy] [--write]
+// (--write saves docs/field-photo-test.md, or docs/field-photo-test-paddy.md for paddy)
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseConfig } from '@/lib/diagnosis/config'
+import { isCropId } from '@/lib/crops'
+import { modelUrl, parseConfig } from '@/lib/diagnosis/config'
+import { configUrlOf } from '@/lib/diagnosis/crops'
 import { decide, type PhotoResult } from '@/lib/diagnosis/decide'
 import { resizeGeometry, toTensor } from '@/lib/diagnosis/preprocess'
 import { todayIn } from '@/lib/dates'
 
-const DOC = 'docs/field-photo-test.md'
 const UNSEEN = 'unseen'
 const IMAGE = /\.(jpe?g|png|webp)$/i
 
@@ -31,7 +33,7 @@ function verdict({ truth, result }: Outcome): 'right' | 'shortlist' | 'unknown' 
 
 const pct = (n: number, of: number) => (of === 0 ? '—' : `${Math.round((100 * n) / of)}%`)
 
-function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir: string): string {
+function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir: string, args: string): string {
   const rows = groups.map((g) => {
     const mine = outcomes.filter((o) => o.truth === g)
     const count = (v: ReturnType<typeof verdict>) => mine.filter((o) => verdict(o) === v).length
@@ -62,22 +64,27 @@ function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir
     '',
     `Accuracy of confident answers: ${pct(confident.filter((o) => o.result.candidates[0] === o.truth).length, confident.length)} of ${confident.length}.`,
     '',
-    `Generated on ${todayIn()} by \`npx tsx scripts/eval-field-photos.ts <dir> --write\`.`,
+    `Generated on ${todayIn()} by \`npx tsx scripts/eval-field-photos.ts <dir>${args} --write\`.`,
     '',
   ].join('\n')
 }
 
 async function main() {
-  const dir = process.argv.slice(2).find((a) => !a.startsWith('--'))
-  if (!dir) throw new Error('Usage: npx tsx scripts/eval-field-photos.ts <dir> [--write]')
-  const config = parseConfig(JSON.parse(readFileSync(join('public', 'model', 'crop_guardian_config.json'), 'utf8')))
+  const argv = process.argv.slice(2)
+  const cropAt = argv.indexOf('--crop')
+  const crop = cropAt >= 0 ? argv[cropAt + 1] : 'potato'
+  if (!isCropId(crop)) throw new Error(`--crop must be potato or paddy, not ${crop}`)
+  const dir = argv.find((a, i) => !a.startsWith('--') && (cropAt < 0 || i !== cropAt + 1))
+  if (!dir) throw new Error('Usage: npx tsx scripts/eval-field-photos.ts <dir> [--crop paddy] [--write]')
+  const configUrl = configUrlOf(crop)
+  const config = parseConfig(JSON.parse(readFileSync(join('public', configUrl), 'utf8')))
   const known = new Set([...config.diseases, UNSEEN])
   const groups = readdirSync(dir).filter((g) => statSync(join(dir, g)).isDirectory())
   const unknownGroups = groups.filter((g) => !known.has(g))
   if (unknownGroups.length) throw new Error(`Folders must be ${[...known].join(', ')}; not ${unknownGroups.join(', ')}`)
 
   const [{ default: sharp }, ort] = await Promise.all([import('sharp'), import('onnxruntime-node')])
-  const session = await ort.InferenceSession.create(join('public', 'model', config.modelFile))
+  const session = await ort.InferenceSession.create(join('public', modelUrl(configUrl, config.modelFile)))
   const outcomes: Outcome[] = []
   for (const truth of groups) {
     for (const file of readdirSync(join(dir, truth)).filter((f) => IMAGE.test(f))) {
@@ -101,9 +108,10 @@ async function main() {
   }
   if (outcomes.length === 0) throw new Error(`No photos found under ${dir}`)
 
-  const doc = markdown(outcomes, groups, config.diseases, dir)
+  const doc = markdown(outcomes, groups, config.diseases, dir, crop === 'potato' ? '' : ` --crop ${crop}`)
   console.log(`\n${doc}`)
-  if (process.argv.includes('--write')) {
+  if (argv.includes('--write')) {
+    const DOC = crop === 'potato' ? 'docs/field-photo-test.md' : `docs/field-photo-test-${crop}.md`
     writeFileSync(DOC, doc)
     console.log(`Wrote ${DOC}`)
   }

@@ -3,8 +3,10 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { type DiagnosisRecord, getDiagnosis } from '@/lib/captureStore'
+import type { CropId } from '@/lib/crops'
 import type { RiskAssessment } from '@/lib/risk'
 import { type DiagnosisConfig, loadConfig } from './config'
+import { configUrlOf, cropOfRecord } from './crops'
 import type { TodayRisk } from './explain'
 import { belongsOn, screenFor } from './flow'
 
@@ -12,7 +14,7 @@ export type DiagnosisView =
   | { status: 'loading' }
   // No photos diagnosed yet (or the config can't be read).
   | { status: 'empty' }
-  | { status: 'ready'; config: DiagnosisConfig; record: DiagnosisRecord }
+  | { status: 'ready'; crop: CropId; config: DiagnosisConfig; record: DiagnosisRecord }
 
 // The current diagnosis from the device.
 // On a screen it doesn't belong on (an old link, the back button), moves to the right one.
@@ -25,9 +27,14 @@ export function useDiagnosis(): DiagnosisView {
     let cancelled = false
     ;(async () => {
       try {
-        const config = await loadConfig()
         const record = await getDiagnosis()
-        if (!cancelled) setView(record ? { status: 'ready', config, record } : { status: 'empty' })
+        if (!record) {
+          if (!cancelled) setView({ status: 'empty' })
+          return
+        }
+        const crop = cropOfRecord(record)
+        const config = await loadConfig(configUrlOf(crop))
+        if (!cancelled) setView({ status: 'ready', crop, config, record })
       } catch (err) {
         console.error('Could not read the diagnosis', err)
         if (!cancelled) setView({ status: 'empty' })
@@ -55,12 +62,12 @@ export function useDiagnosisState() {
   return [current, setOverride] as const
 }
 
-// Today's weather risk from /api/risk; 'unavailable' when offline or the forecast fails.
-export function useTodayRisk(): TodayRisk | null {
+// Today's weather risk for the crop from /api/risk; 'unavailable' when offline or the forecast fails.
+export function useTodayRisk(crop: CropId): TodayRisk | null {
   const [risk, setRisk] = useState<TodayRisk | null>(null)
   useEffect(() => {
     let cancelled = false
-    fetch('/api/risk')
+    fetch(`/api/risk?crop=${crop}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then(
         (r: RiskAssessment) => {
@@ -73,6 +80,6 @@ export function useTodayRisk(): TodayRisk | null {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [crop])
   return risk
 }

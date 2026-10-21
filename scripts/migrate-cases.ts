@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS "case" (
 CREATE INDEX IF NOT EXISTS "case_sentAt_idx" ON "case" ("sentAt" DESC);
 CREATE INDEX IF NOT EXISTS "case_verdict_idx" ON "case" ("verdict", "sentAt");
 CREATE INDEX IF NOT EXISTS "case_unionId_idx" ON "case" ("unionId");
+-- Which crop's model looked at the photos. Cases from before paddy were all potato.
+ALTER TABLE "case" ADD COLUMN IF NOT EXISTS "crop" text NOT NULL DEFAULT 'potato' CHECK ("crop" IN ('potato', 'paddy'));
 -- Union ids were bare Shibganj (Bogura) names before more districts were added.
 UPDATE "case" SET "unionId" = 'bogura-shibganj.' || "unionId" WHERE "unionId" IS NOT NULL AND position('.' in "unionId") = 0;
 

@@ -31,7 +31,7 @@ export default function UnknownView() {
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
-  const { config, record } = view
+  const { crop, config, record } = view
   const known = `আমি শুধু চিনি: ${knownList(config)}`
   const photoNote =
     clear === null ? null : clear ? 'ছবি পরিষ্কার ছিল, তাই এটা অন্য কোনো সমস্যা হতে পারে' : 'ছবি পুরো পরিষ্কার ছিল না — আলোয় স্থির হাতে আবার তুলে দেখুন'
@@ -48,7 +48,7 @@ export default function UnknownView() {
       <div className="flex shrink-0 flex-col items-center gap-1.5 px-6 pt-2.5 text-center">
         <h1 className="m-0 font-display text-[30px] leading-[1.15] font-extrabold">এটা আমি চিনতে পারছি না</h1>
         <p className="m-0 text-base leading-[1.45] text-[#4A3B2F]">ভুল পরামর্শ দেওয়ার চেয়ে সৎভাবে না বলা ভালো।</p>
-        <ValidationBadge className="self-center" />
+        <ValidationBadge crop={crop} className="self-center" />
       </div>
 
       <section className="stitch-lg mx-4 mt-4 flex shrink-0 flex-col gap-2.5 rounded-[20px] px-4 py-3.5">
@@ -69,7 +69,7 @@ export default function UnknownView() {
         )}
       </section>
 
-      <WhyCard record={record} config={config} title={`ছবি আর আবহাওয়া · ${CONFIDENCE_WORD.unknown}`} />
+      <WhyCard crop={crop} record={record} config={config} title={`ছবি আর আবহাওয়া · ${CONFIDENCE_WORD.unknown}`} />
 
       <div className="min-h-4 flex-1" />
 

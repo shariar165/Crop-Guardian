@@ -1,6 +1,6 @@
 # Model card: Crop Guardian leaf diagnosis (v2)
 
-The on-device model that looks at potato leaf photos. It is one part of the app: the weather risk and the SMS alerts use no ML (see the [README](../README.md)).
+The on-device model that looks at potato leaf photos. The paddy model has its own card, `docs/model-card-paddy.md`, written by [`notebooks/paddy_training.ipynb`](../notebooks/paddy_training.ipynb) with every number from its own run (see [Paddy diagnosis](../README.md#paddy-diagnosis)); it is not trained yet. It is one part of the app: the weather risk and the SMS alerts use no ML (see the [README](../README.md)).
 
 > **Status: draft.** The sections marked **⏳ from the notebook** still need the training notebook's numbers. Nothing in this card is estimated; every number either comes from the files in this repo or will be copied from the notebook's output.
 

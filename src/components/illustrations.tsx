@@ -1,3 +1,5 @@
+import type { CropId } from '@/lib/crops'
+import type { AnswerArtKind } from '@/lib/diagnosis/questions'
 import type { RiskView } from '@/lib/data'
 
 /* Weather scene in the home header; layer opacities come from the risk state. */
@@ -135,8 +137,15 @@ export function PhotoLeaf() {
   )
 }
 
-/* Reference thumbnails for each class the model can name (by class id); other ids get a plain leaf. */
-export function CandidateThumb({ id }: { id: string }) {
+/* Reference thumbnails for each class the model can name (by crop and class id); other ids get a plain leaf. */
+export function CandidateThumb({ crop, id }: { crop: CropId; id: string }) {
+  if (crop === 'paddy') {
+    return (
+      <svg aria-hidden="true" viewBox="0 -15 150 150" className="size-14 shrink-0 rounded-[14px] bg-[#EEF3E6]">
+        <RiceArt kind={PADDY_THUMB[id] ?? 'riceClean'} />
+      </svg>
+    )
+  }
   return (
     <svg aria-hidden="true" viewBox="0 0 56 56" className="size-14 shrink-0 rounded-[14px] bg-[#EEF3E6]">
       {id === 'late_blight' && (
@@ -164,6 +173,120 @@ export function CandidateThumb({ id }: { id: string }) {
   )
 }
 
+type RiceKind = Extract<AnswerArtKind, `rice${string}`>
+
+const PADDY_THUMB: Record<string, RiceKind> = {
+  blast: 'riceEye',
+  brown_spot: 'riceRound',
+  bacterial_leaf_blight: 'riceTipDry',
+  tungro: 'riceStunted',
+  sheath_blight: 'riceSheath',
+  healthy: 'riceClean',
+}
+
+// A rice blade running from the bottom left to its tip at the top right of a 150 × 120 box.
+const RICE_BLADE = 'M6 106 Q 70 58 146 6 Q 88 72 22 118 Z'
+// A point `t` of the way along the blade's midrib, and the blade's angle there.
+const along = (t: number): [number, number] => [14 + 132 * t, 112 - 106 * t]
+const BLADE_ANGLE = -39
+
+function RiceArt({ kind }: { kind: RiceKind }) {
+  switch (kind) {
+    case 'riceClean':
+      return <path d={RICE_BLADE} fill="#4E8A3E" />
+    case 'riceSpots':
+      return (
+        <>
+          <path d={RICE_BLADE} fill="#4E8A3E" />
+          <path d="M146 6 Q 128 22 112 36 Q 124 20 146 6 Z" fill="#E3C873" />
+          {[0.3, 0.45, 0.6].map((t) => {
+            const [x, y] = along(t)
+            return <circle key={t} cx={x} cy={y} r="4" fill="#7A4A22" />
+          })}
+        </>
+      )
+    case 'riceEye':
+      return (
+        <>
+          <path d={RICE_BLADE} fill="#4E8A3E" />
+          {[0.32, 0.6].map((t) => {
+            const [x, y] = along(t)
+            return (
+              <ellipse
+                key={t}
+                cx={x}
+                cy={y}
+                rx="15"
+                ry="5"
+                transform={`rotate(${BLADE_ANGLE} ${x} ${y})`}
+                fill="#C9C3B3"
+                stroke="#6B3E1E"
+                strokeWidth="2"
+              />
+            )
+          })}
+        </>
+      )
+    case 'riceRound':
+      return (
+        <>
+          <path d={RICE_BLADE} fill="#4E8A3E" />
+          {[0.22, 0.34, 0.47, 0.58, 0.7].map((t, i) => {
+            const [x, y] = along(t)
+            return (
+              <g key={t}>
+                <circle cx={x + (i % 2 ? 2 : -2)} cy={y} r="4.5" fill="#8A4B23" />
+                <circle cx={x + (i % 2 ? 2 : -2)} cy={y} r="1.8" fill="#C7A27A" />
+              </g>
+            )
+          })}
+        </>
+      )
+    case 'riceTipDry':
+      return (
+        <>
+          <path d={RICE_BLADE} fill="#4E8A3E" />
+          {/* Straw-coloured from the tip down along the edge, with a wavy front. */}
+          <path d="M146 6 Q 110 30 84 50 Q 92 54 86 60 Q 108 44 146 6 Z" fill="#E6D9A2" />
+          <path d="M146 6 Q 104 34 70 60 Q 82 52 98 44 Q 120 26 146 6 Z" fill="#D9C37A" />
+        </>
+      )
+    case 'riceStunted':
+    case 'riceTall': {
+      const short = kind === 'riceStunted'
+      const top = short ? 62 : 14
+      const fill = short ? '#E0A23B' : '#4E8A3E'
+      return (
+        <>
+          <rect x="0" y="104" width="150" height="16" fill="#9BB7C4" />
+          {[-26, -12, 0, 12, 26].map((dx) => (
+            <path key={dx} d={`M75 108 Q ${75 + dx * 0.6} ${(108 + top) / 2} ${75 + dx * 1.6} ${top}`} stroke={fill} strokeWidth="5" fill="none" strokeLinecap="round" />
+          ))}
+          {short && <path d="M20 22 H 130" stroke="#6E8E5A" strokeWidth="2" strokeDasharray="5 5" />}
+        </>
+      )
+    }
+    case 'riceSheath':
+    case 'riceSheathClean':
+      return (
+        <>
+          <rect x="0" y="92" width="150" height="28" fill="#9BB7C4" />
+          {[56, 75, 94].map((x) => (
+            <rect key={x} x={x - 6} y="6" width="12" height="108" rx="6" fill="#5F9548" />
+          ))}
+          {kind === 'riceSheath' &&
+            [
+              [56, 74],
+              [75, 60],
+              [94, 78],
+            ].map(([x, y]) => (
+              <ellipse key={x} cx={x} cy={y} rx="7" ry="13" fill="#A9B39A" stroke="#6B3E1E" strokeWidth="2" />
+            ))}
+        </>
+      )
+  }
+}
+
 const ANSWER_LEAF = 'M10 104 C 20 34 100 12 142 14 C 142 72 100 114 10 104 Z'
 const ANSWER_LESION = 'M52 60 C 56 40 90 36 102 52 C 112 66 96 82 78 80 C 62 82 48 74 52 60 Z'
 const SPORE_DOTS: [number, number, number][] = [
@@ -171,10 +294,11 @@ const SPORE_DOTS: [number, number, number][] = [
   [104, 68, 5], [94, 80, 5.5], [78, 86, 5], [62, 82, 5.5], [50, 70, 5],
 ]
 
-/* Picture answers for the two narrowing questions. */
-export function AnswerArt({ kind }: { kind: 'rings' | 'plain' | 'spores' | 'noSpores' }) {
+/* Picture answers for the narrowing questions. */
+export function AnswerArt({ kind }: { kind: AnswerArtKind }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 150 120" className="h-[124px] w-full rounded-[14px] bg-[#EEF3E6]">
+      {kind.startsWith('rice') && <RiceArt kind={kind as RiceKind} />}
       {kind === 'rings' && (
         <>
           <path d={ANSWER_LEAF} fill="#4E8A3E" />

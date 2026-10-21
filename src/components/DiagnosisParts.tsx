@@ -7,16 +7,18 @@ import { PhotoChip } from '@/components/CapturedThumb'
 import { CameraIcon, ChatCheckIcon, MistCloudIcon, SearchIcon } from '@/components/icons'
 import TopBar from '@/components/TopBar'
 import type { DiagnosisRecord } from '@/lib/captureStore'
+import type { CropId } from '@/lib/crops'
 import type { DiagnosisConfig } from '@/lib/diagnosis/config'
+import { PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { photoLine, riskLine } from '@/lib/diagnosis/explain'
 import { useTodayRisk } from '@/lib/diagnosis/useDiagnosis'
 
 /** Honest about where the model was checked. */
-export function ValidationBadge({ className = '' }: { className?: string }) {
+export function ValidationBadge({ crop, className = '' }: { crop: CropId; className?: string }) {
   return (
     <span className={`flex items-center gap-1.5 self-start rounded-lg bg-sand px-2.5 py-1 text-[12px] font-semibold text-muted ${className}`}>
       <SearchIcon size={14} weight={2.2} />
-      পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা
+      {PHOTO_SPECS[crop].validation}
     </span>
   )
 }
@@ -25,26 +27,28 @@ type Row = { icon: React.ReactNode; text: string }
 
 /** "কেন মনে হলো?" from real inputs only: the photos, today's weather risk, and the farmer's answers. */
 export function WhyCard({
+  crop,
   record,
   config,
   answers = [],
   title = 'কেন মনে হলো?',
 }: {
+  crop: CropId
   record: DiagnosisRecord
   config: DiagnosisConfig
   answers?: string[]
   title?: string
 }) {
-  const risk = useTodayRisk()
+  const risk = useTodayRisk(crop)
   const rows: Row[] = [
-    { icon: <PhotoChip />, text: photoLine(record.result, config) },
+    { icon: <PhotoChip />, text: photoLine(record.result, config, crop) },
     {
       icon: (
         <span className="flex size-[46px] shrink-0 items-center justify-center rounded-xl bg-mist text-teal">
           <MistCloudIcon size={26} />
         </span>
       ),
-      text: risk ? riskLine(risk) : 'আজকের আবহাওয়া দেখছি…',
+      text: risk ? riskLine(risk, crop) : 'আজকের আবহাওয়া দেখছি…',
     },
     ...answers.map((text) => ({
       icon: (
@@ -77,7 +81,7 @@ export function NoDiagnosis() {
       <TopBar back="/" title="ফলাফল" right={<span className="size-11" />} />
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <span className="font-display text-[26px] font-extrabold">এখনো কোনো ছবি দেখা হয়নি</span>
-        <span className="text-base leading-[1.45] text-muted">পাতার উপরের আর নিচের দিকের ছবি তুললে ফলাফল এখানে দেখাব।</span>
+        <span className="text-base leading-[1.45] text-muted">পাতার দুটো ছবি তুললে ফলাফল এখানে দেখাব।</span>
         <Link href="/camera" className={`${primaryClass} min-h-[64px] w-full gap-2.5 font-display text-xl font-extrabold`}>
           <CameraIcon size={26} weight={2.2} />
           পাতার ছবি তুলুন
