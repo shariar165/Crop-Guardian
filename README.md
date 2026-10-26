@@ -46,6 +46,8 @@ npm run lint
 | `/planting` | "আমার জমি": the farmer's place (district → upazila → union, `?d=`/`?u=` are the steps), and their fields: crop (আলু, or ধান with বোরো/আমন) and planting date (`?season=` opens one) |
 | `/guide` | How to use the app, in plain Bengali, each part read aloud |
 | `/potato` | Potato growing advice for Bangladesh: planting, varieties, late blight, wilt, harvest, storage, stored-tuber diseases, with sources |
+| `/ask` | «কৃষি সহায়ক»: questions answered in Bengali from the app's own advice, with sources |
+| `/docs` | How it works, in English, for judges, partners and agronomists: the evidence and how AI is used |
 | `/sign-in` | Mobile number, then the SMS code (`?next=` is where to go after) |
 | `/account` | The signed-in number and role, SMS risk alerts on/off, sign out (from the person button on Home) |
 | `/officer` | Agriculture officers only: where farmers' cases will be listed |
@@ -240,6 +242,48 @@ npm run db:migrate
 
 `/guide` explains each part of the app in short Bengali, with a read-aloud button per section (`src/lib/guide.ts` holds the text; keep it in step with the screens). Home's "কীভাবে ব্যবহার করবেন" button opens it, "কেন এই পরামর্শ?" links to its risk section, and it is cached for offline use. The first time the app opens, `FirstRunIntro` shows four cards (risk colours, leaf photos, spray log, set up) and ends on `/planting`. It is not shown again on that phone.
 
+## Assistant (কৃষি সহায়ক)
+
+`/ask` answers a farmer's typed question in Bengali, **only from the advice the app already shows** (`src/lib/assistant/kb.ts`: the potato advice, the guide, the diagnosis advice and the risk colours, 23 passages). It is a faster way to find that advice, not a new source of it. It needs the network, so it is not cached offline. It is linked from Home.
+
+How a question is answered (`src/lib/assistant/answer.ts`), through the [Vercel AI Gateway](https://vercel.com/ai-gateway) (`src/lib/assistant/models.ts`):
+
+1. **Read the question.** Claude Haiku decides whether it is a greeting, off topic (a fixed reply, no further cost) or a question, and writes one to three Bengali search phrases with root words.
+2. **Search** (`retrieve.ts`): each phrase is searched by meaning (Gemini embeddings in pgvector, cosine distance) and by words (Postgres full-text search over Bengali stems from `tokens.ts`, since Postgres knows no Bengali grammar). The lists are fused by reciprocal rank and reranked by Cohere. Without embeddings it searches by words only; without the reranker it keeps the fused order.
+3. **Answer.** Claude Sonnet writes at most four sentences from those passages and returns `{ answer, sources, escalate }`. It can search again (`searchGuide`) or look up today's risk at the farmer's union (`todayRisk`, the same rule as Home). If Claude is down, the gateway falls back to Gemini.
+4. **Guard** (`guard.ts`), before the farmer sees anything (which is why answers aren't streamed): a sentence that gives a dose is dropped and «ওষুধের মাত্রা: বোতলের লেবেল অনুযায়ী» added; cited passages the model wasn't shown are dropped; an answer with no real source becomes "ask the officer". Every answer carries the পরীক্ষামূলক note.
+
+Also: phone numbers are removed from questions before they reach a model; only the last 3 turns go back as history; the chat is kept on the phone only; each device (hashed IP) gets 30 questions a day (`ask_rate`). The fixed instructions are marked for prompt caching, and the server logs each answer's prompt version, passages, tool calls and tokens (cached and not), but never the question.
+
+The prompts are versioned (`PROMPT_VERSION` in `prompts.ts`): an XML role and rules, few-shot Bengali examples (tested to contain no dose) and structured output. The regression set (`evalSet.ts`, 34 questions, 4 of them attacks or dose bait) runs through the real pipeline:
+
+```bash
+npm run db:migrate                          # adds the kb_chunk and ask_rate tables (and pgvector)
+npx tsx scripts/build-kb.ts                 # embeds the passages; run again when the advice changes
+npx tsx scripts/eval-assistant.ts --write   # fixed checks + a judge model → docs/assistant-eval.md
+```
+
+Gateway auth comes from `vercel env pull` (a `VERCEL_OIDC_TOKEN`, valid for about 12 hours; pull again when it expires) or an `AI_GATEWAY_API_KEY`.
+
+## MCP server
+
+`/api/mcp` serves Crop Guardian as an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP, `mcp-handler`), so an agriculture officer's AI assistant or a partner's agent can use the same engines as the app. Read-only tools: `find_union` (an id from a union, upazila or district name), `get_risk` (today's risk at a union), `get_season_risk` (every past day from a date), `search_guide` (the assistant's search) and `diagnosis_classes`; the advice is also a resource, `crop-guardian://advice`. With `MCP_SECRET` set, calls need `Authorization: Bearer $MCP_SECRET`. Set it in production, since `search_guide` costs gateway credit.
+
+```bash
+npx tsx scripts/mcp-client.ts http://localhost:3000/api/mcp          # lists and calls the tools
+npx tsx scripts/mcp-client.ts http://localhost:3000/api/mcp --ask "কিচক ইউনিয়নে আজ আলুর ধসার ঝুঁকি কেমন?"
+```
+
+`--ask` lets a model answer an officer's question using only the server's tools. Any MCP client works too, e.g. `{ "url": "https://<site>/api/mcp" }` in Claude or Cursor.
+
+## Docs page
+
+`/docs` is a one-screen explanation for judges, partners and agronomists, in English: what the app does, a chart of the alerts the rule would have sent each winter against weekly calendar spraying (Recharts, read from `docs/risk-backtest.md`), how AI is used, the assistant's eval summary (from `docs/assistant-eval.md`), safety and limits. It is built at build time from those reports, so it always matches them. In `next dev` the page keeps reloading (Recharts with Turbopack's hot reload); check it with `npm run build && npm start`.
+
+## Demo on a phone
+
+The camera and the service worker need HTTPS. To try a local build on a real phone, run it behind a tunnel: `npm run build && npm start`, then `cloudflared tunnel --url http://localhost:3000` (Cloudflare's quick tunnel, no account) or `ngrok http 3000`, and open the `https://` URL it prints. Set `BETTER_AUTH_URL` to that URL to sign in through it. The tunnel is public while it runs, so stop it after the demo.
+
 ## Limitations and next steps
 
 We say what isn't proven yet, in the app as well as here.
@@ -253,3 +297,4 @@ We say what isn't proven yet, in the app as well as here.
 | Pests aren't covered | A deliberate focus (see [Why potato late blight](#why-potato-late-blight)) | New crops and photo classes are registry and config changes |
 | SMS alerts go through **one SMS Gate phone** | Sent one at a time, behind sign-in codes, one SMS per run of danger days | A bulk SMS provider once more farmers sign up |
 | Bengali **read-aloud** depends on the phone having a Bengali voice | — | Test on low-cost Android phones, and hide the button when no voice is installed |
+| The **assistant** knows only the app's 23 advice passages, and its eval grades come partly from a judge model | Answers only from those passages with sources, dose filter, "ask the officer" when nothing fits, পরীক্ষামূলক note | Have an agronomist review real farmers' questions and answers, and add each miss to `evalSet.ts` |

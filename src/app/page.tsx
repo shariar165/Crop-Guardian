@@ -158,9 +158,14 @@ export default async function Home() {
           <BookIcon size={24} weight={2.2} />
           কীভাবে ব্যবহার করবেন
         </Link>
-        <Link href="/potato" className="self-center text-[15px] font-bold text-teal">
-          আলু চাষের পরামর্শ →
-        </Link>
+        <div className="flex justify-center gap-5">
+          <Link href="/potato" className="text-[15px] font-bold text-teal">
+            আলু চাষের পরামর্শ →
+          </Link>
+          <Link href="/ask" className="text-[15px] font-bold text-teal">
+            প্রশ্ন করুন →
+          </Link>
+        </div>
       </div>
 
       <BottomNav />

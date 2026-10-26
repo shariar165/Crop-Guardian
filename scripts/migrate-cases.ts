@@ -1,5 +1,5 @@
-// Creates the app's own tables: cases farmers send to the agriculture officer, and SMS risk alerts.
-// Safe to run again.
+// Creates the app's own tables: cases farmers send to the agriculture officer, SMS risk alerts, and
+// the assistant's knowledge base and question counts. Safe to run again.
 // Run after `npm run auth:migrate` (it references Better Auth's "user" table):
 //   npm run db:migrate   (DATABASE_URL from .env.local)
 import { existsSync } from 'node:fs'
@@ -46,6 +46,30 @@ CREATE TABLE IF NOT EXISTS "alert_state" (
   "lastSentAt" timestamptz,
   PRIMARY KEY ("userId", "crop")
 );
+
+-- The assistant's knowledge base (src/lib/assistant/kb.ts), filled by scripts/build-kb.ts.
+-- "embedding" is searched by meaning (cosine), "tsv" by stemmed Bengali words (src/lib/assistant/tokens.ts).
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE IF NOT EXISTS kb_chunk (
+  "id"        text PRIMARY KEY,
+  "title"     text NOT NULL,
+  "source"    text NOT NULL,
+  "href"      text NOT NULL,
+  "context"   text NOT NULL,
+  "text"      text NOT NULL,
+  "embedding" vector(768),
+  "tsv"       tsvector NOT NULL,
+  "updatedAt" timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS kb_chunk_embedding_idx ON kb_chunk USING hnsw ("embedding" vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS kb_chunk_tsv_idx ON kb_chunk USING gin ("tsv");
+-- Questions asked per hashed IP address and day, for the assistant's daily limit.
+CREATE TABLE IF NOT EXISTS ask_rate (
+  "key"   text NOT NULL,
+  "day"   date NOT NULL,
+  "count" integer NOT NULL,
+  PRIMARY KEY ("key", "day")
+);
 `
 
 async function main() {
@@ -53,7 +77,7 @@ async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
   try {
     await pool.query(SQL)
-    console.log('The "case", "alert" and "alert_state" tables are ready.')
+    console.log('The "case", "alert", "alert_state", "kb_chunk" and "ask_rate" tables are ready.')
   } finally {
     await pool.end()
   }
