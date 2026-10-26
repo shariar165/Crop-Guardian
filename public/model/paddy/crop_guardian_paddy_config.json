@@ -1,0 +1,57 @@
+{
+  "model_file": "crop_guardian_paddy_v1.onnx",
+  "input_name": "image",
+  "output_name": "logits",
+  "classes": [
+    "bacterial_leaf_blight",
+    "blast",
+    "brown_spot",
+    "healthy",
+    "sheath_blight",
+    "tungro",
+    "other"
+  ],
+  "labels_bn": {
+    "bacterial_leaf_blight": "পাতা পোড়া",
+    "blast": "ব্লাস্ট",
+    "brown_spot": "বাদামি দাগ",
+    "healthy": "সুস্থ",
+    "sheath_blight": "খোল পোড়া",
+    "tungro": "টুংরো",
+    "other": "অন্য রোগ"
+  },
+  "preprocess": {
+    "resize_shorter_side": 256,
+    "center_crop": 224,
+    "scale": 0.00392156862745098,
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "layout": "NCHW",
+    "dtype": "float32"
+  },
+  "temperature": 0.8393110036849976,
+  "conformal_qhat": 0.13090699911117554,
+  "conformal_alpha": 0.1,
+  "ood": {
+    "method": "p_other",
+    "threshold": 0.0206356979906559
+  },
+  "decision": [
+    "disease_logits = logits[0:6]",
+    "p = softmax(disease_logits / temperature)",
+    "ood_score = softmax(all logits)[6] if method == 'p_other'",
+    "set = [i for i in 0..5 if p[i] >= 1 - conformal_qhat]",
+    "if ood_score > threshold or set is empty -> 'unknown' (চিনি না)",
+    "elif len(set) == 1 -> 'confident' (নিশ্চিত), label = classes[set[0]]",
+    "else -> 'uncertain' (নিশ্চিত নই), candidates = set sorted by p desc"
+  ],
+  "provenance": "paddy_training.ipynb, 2026-10-26: EfficientNet-B0 + \"other\" (leaf_scald); datasets Dhan-Shomadhan, RiceLeafBD, RiceLeafDisease-BD5; group-aware split 70/10/10/10; thresholds fitted on the Bangladeshi field cal split; unseen test: narrow_brown_spot"
+}

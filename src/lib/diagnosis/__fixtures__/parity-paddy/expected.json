@@ -1,1 +1,318 @@
-[]
+[
+  {
+    "file": "healthy_0.jpg",
+    "group": "healthy",
+    "source": "RiceLeafBD/Original Images/Healthy Leaf/IMG20231027091001_01.jpg",
+    "logits": [
+      -1.89614,
+      -0.87484,
+      -2.30888,
+      4.75456,
+      -0.9553,
+      -0.75319,
+      -0.25477
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0004,
+      0.0012,
+      0.0002,
+      0.9957,
+      0.0011,
+      0.0014
+    ],
+    "ood_score": 0.0065
+  },
+  {
+    "file": "healthy_1.jpg",
+    "group": "healthy",
+    "source": "RiceLeafBD/Original Images/Healthy Leaf/IMG20231027092449_01.jpg",
+    "logits": [
+      -1.79884,
+      -0.93998,
+      -1.8213,
+      4.88554,
+      -0.20184,
+      -1.75337,
+      -1.38861
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0003,
+      0.001,
+      0.0003,
+      0.9957,
+      0.0023,
+      0.0004
+    ],
+    "ood_score": 0.0019
+  },
+  {
+    "file": "healthy_2.jpg",
+    "group": "healthy",
+    "source": "RiceLeafBD/Original Images/Healthy Leaf/IMG20231027090836_01.jpg",
+    "logits": [
+      -1.42637,
+      -1.24291,
+      -1.52821,
+      4.71762,
+      -1.00794,
+      -0.9561,
+      -0.89161
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0007,
+      0.0008,
+      0.0006,
+      0.9957,
+      0.0011,
+      0.0012
+    ],
+    "ood_score": 0.0036
+  },
+  {
+    "file": "healthy_3.jpg",
+    "group": "healthy",
+    "source": "RiceLeafBD/Original Images/Healthy Leaf/IMG20231027092141.jpg",
+    "logits": [
+      -1.92516,
+      -1.03957,
+      -2.01275,
+      4.67829,
+      -0.33152,
+      -1.57806,
+      -0.98785
+    ],
+    "decision": "confident",
+    "candidates": [
+      "healthy"
+    ],
+    "probs": [
+      0.0004,
+      0.0011,
+      0.0003,
+      0.9951,
+      0.0025,
+      0.0006
+    ],
+    "ood_score": 0.0034
+  },
+  {
+    "file": "disease_0.jpg",
+    "group": "tungro",
+    "source": "Dhan-Shomadhan/Dhan-Shomadhan/Field Background  /Rice Turgro/rtf_18.jpg",
+    "logits": [
+      0.25059,
+      -1.84078,
+      -1.78529,
+      -0.65087,
+      -0.88933,
+      5.19182,
+      -1.26615
+    ],
+    "decision": "confident",
+    "candidates": [
+      "tungro"
+    ],
+    "probs": [
+      0.0028,
+      0.0002,
+      0.0002,
+      0.0009,
+      0.0007,
+      0.9951
+    ],
+    "ood_score": 0.0015
+  },
+  {
+    "file": "disease_1.jpg",
+    "group": "bacterial_leaf_blight",
+    "source": "RiceLeafBD/Original Images/Bacterial Leaf Blight/311162571_5469448139777618_6986294095882567716_n.jpg",
+    "logits": [
+      5.27368,
+      -0.98019,
+      -2.07191,
+      -0.2178,
+      -0.9692,
+      -1.26093,
+      -0.62935
+    ],
+    "decision": "confident",
+    "candidates": [
+      "bacterial_leaf_blight"
+    ],
+    "probs": [
+      0.9968,
+      0.0006,
+      0.0002,
+      0.0014,
+      0.0006,
+      0.0004
+    ],
+    "ood_score": 0.0027
+  },
+  {
+    "file": "disease_2.jpg",
+    "group": "tungro",
+    "source": "Dhan-Shomadhan/Dhan-Shomadhan/Field Background  /Rice Turgro/rtf_17.jpg",
+    "logits": [
+      0.35803,
+      -1.41962,
+      -1.46531,
+      -0.68268,
+      -0.88725,
+      4.63805,
+      -1.08774
+    ],
+    "decision": "confident",
+    "candidates": [
+      "tungro"
+    ],
+    "probs": [
+      0.006,
+      0.0007,
+      0.0007,
+      0.0017,
+      0.0014,
+      0.9894
+    ],
+    "ood_score": 0.0032
+  },
+  {
+    "file": "disease_3.jpg",
+    "group": "bacterial_leaf_blight",
+    "source": "RiceLeafBD/Original Images/Bacterial Leaf Blight/312832518_549472323680260_2663611904166783782_n.jpg",
+    "logits": [
+      4.85544,
+      -0.9608,
+      -0.47408,
+      -0.77275,
+      -0.66992,
+      -1.58644,
+      -1.3371
+    ],
+    "decision": "confident",
+    "candidates": [
+      "bacterial_leaf_blight"
+    ],
+    "probs": [
+      0.9942,
+      0.001,
+      0.0017,
+      0.0012,
+      0.0014,
+      0.0005
+    ],
+    "ood_score": 0.002
+  },
+  {
+    "file": "unseen_disease_0.jpg",
+    "group": "narrow_brown_spot",
+    "source": "RiceLeafDisease-BD5/RiceLeafDisease-BD5 A Field-Collected Five-Class I/RiceLeafDisease-BD5/RiceLeafBD/Narrow_Brown_Spot/IMG_20241031_124328.jpg",
+    "logits": [
+      -1.90887,
+      2.31021,
+      -1.98425,
+      2.06547,
+      -1.74876,
+      1.70137,
+      -1.88258
+    ],
+    "decision": "unknown",
+    "candidates": [],
+    "probs": [
+      0.0029,
+      0.4441,
+      0.0027,
+      0.3318,
+      0.0035,
+      0.215
+    ],
+    "ood_score": 0.0063
+  },
+  {
+    "file": "unseen_disease_1.jpg",
+    "group": "narrow_brown_spot",
+    "source": "RiceLeafDisease-BD5/RiceLeafDisease-BD5 A Field-Collected Five-Class I/RiceLeafDisease-BD5/RiceLeafBD/Narrow_Brown_Spot/IMG_20241031_131045.jpg",
+    "logits": [
+      -2.33033,
+      1.80523,
+      -1.5053,
+      1.39666,
+      1.26776,
+      -0.44598,
+      -1.86946
+    ],
+    "decision": "unknown",
+    "candidates": [],
+    "probs": [
+      0.0032,
+      0.4471,
+      0.0087,
+      0.2748,
+      0.2357,
+      0.0306
+    ],
+    "ood_score": 0.0104
+  },
+  {
+    "file": "unseen_disease_2.jpg",
+    "group": "narrow_brown_spot",
+    "source": "RiceLeafDisease-BD5/RiceLeafDisease-BD5 A Field-Collected Five-Class I/RiceLeafDisease-BD5/RiceLeafBD/Narrow_Brown_Spot/IMG_20241031_124327.jpg",
+    "logits": [
+      -1.99437,
+      2.56005,
+      -2.06422,
+      2.0414,
+      -1.95229,
+      1.56513,
+      -1.79245
+    ],
+    "decision": "unknown",
+    "candidates": [],
+    "probs": [
+      0.0024,
+      0.5383,
+      0.0022,
+      0.2902,
+      0.0025,
+      0.1645
+    ],
+    "ood_score": 0.0064
+  },
+  {
+    "file": "unseen_disease_3.jpg",
+    "group": "narrow_brown_spot",
+    "source": "RiceLeafDisease-BD5/RiceLeafDisease-BD5 A Field-Collected Five-Class I/RiceLeafDisease-BD5/RiceLeafBD/Narrow_Brown_Spot/IMG_20241031_131640.jpg",
+    "logits": [
+      -2.0514,
+      0.2794,
+      -1.61339,
+      1.54486,
+      0.78686,
+      1.49265,
+      -1.87561
+    ],
+    "decision": "unknown",
+    "candidates": [],
+    "probs": [
+      0.0053,
+      0.085,
+      0.0089,
+      0.3841,
+      0.1557,
+      0.3609
+    ],
+    "ood_score": 0.0117
+  }
+]

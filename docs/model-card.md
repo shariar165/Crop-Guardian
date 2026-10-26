@@ -1,6 +1,6 @@
 # Model card: Crop Guardian leaf diagnosis (v2)
 
-The on-device model that looks at potato leaf photos. The paddy model has its own card, `docs/model-card-paddy.md`, written by [`notebooks/paddy_training.ipynb`](../notebooks/paddy_training.ipynb) with every number from its own run (see [Paddy diagnosis](../README.md#paddy-diagnosis)); it is not trained yet. It is one part of the app: the weather risk and the SMS alerts use no ML (see the [README](../README.md)).
+The on-device model that looks at potato leaf photos. The paddy model has its own card, `docs/model-card-paddy.md`, written by [`notebooks/paddy_training.ipynb`](../notebooks/paddy_training.ipynb) with every number from its own run (see [Paddy diagnosis](../README.md#paddy-diagnosis)). It is one part of the app: the weather risk and the SMS alerts use no ML (see the [README](../README.md)).
 
 > **Status: draft.** The sections marked **⏳ from the notebook** still need the training notebook's numbers. Nothing in this card is estimated; every number either comes from the files in this repo or will be copied from the notebook's output.
 
@@ -59,5 +59,5 @@ These are reproducible from the repo today.
 
 - **Thresholds fitted on Indonesian field photos, not Bangladeshi ones.** Every result in the app therefore says "পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা". The next step is 20–30 photos from Bangladeshi fields, labelled by an agriculture officer, run through `scripts/eval-field-photos.ts`.
 - **Only three classes.** Other diseases and pests should come out as unknown and go to an officer, but as the parity images show, some will not.
-- **Potato only.** Paddy leaves are not recognised; the app says so on paddy screens.
+- **Potato only.** This model sees potato leaves; paddy leaves go to the paddy model.
 - **One photo is decided at a time**, and two photos are combined by a fixed rule (`combine.ts`), not by a model calibrated on photo pairs.

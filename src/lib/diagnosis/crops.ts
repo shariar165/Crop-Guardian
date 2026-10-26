@@ -52,14 +52,16 @@ export const PHOTO_SPECS: Record<CropId, PhotoCropSpec> = {
       top: { title: 'দাগওয়ালা পাতাটা কাছ থেকে তুলুন', sub: 'দাগ পাতায় বা খোলে থাকলে সেটাই ফ্রেমে রাখুন', counter: 'প্রথম পাতা', name: 'প্রথম পাতা' },
       under: { title: 'এবার আরেকটা আক্রান্ত পাতা তুলুন', sub: 'অন্য গোছা থেকে নিলে ভালো', counter: 'প্রথম পাতা তোলা হয়েছে', name: 'দ্বিতীয় পাতা' },
     },
-    validation: 'পরীক্ষামূলক: বাংলাদেশের মাঠের ছবিতে যাচাই করা',
+    // Leave-one-dataset-out accuracy is 9–37% (docs/model-card-paddy.md): photos from a new area
+    // may well be misread, so the badge says so instead of claiming it was checked.
+    validation: 'পরীক্ষামূলক: নতুন এলাকার ছবিতে এখনো নির্ভরযোগ্য নয়',
     riskLabel: 'ব্লাস্টের আবহাওয়া-ঝুঁকি (পরীক্ষামূলক)',
   },
 }
 
 // Crops whose model and config are in public/model. Add a crop once the training notebook's export
 // is in place; the tests check the files, the classes, the advice and the questions.
-export const PHOTO_CROPS: CropId[] = ['potato']
+export const PHOTO_CROPS: CropId[] = ['potato', 'paddy']
 
 export const canDiagnose = (crop: CropId) => PHOTO_CROPS.includes(crop)
 
