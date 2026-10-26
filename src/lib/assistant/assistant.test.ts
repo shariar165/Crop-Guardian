@@ -1,0 +1,118 @@
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { historyMessages } from './answer'
+import { checkQuestion, DOSE_LINE, hasDose, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, PHONE_MASK, redactPhones, sanitizeAnswer, validSources } from './guard'
+import { KB, searchText } from './kb'
+import { ANSWER_INSTRUCTIONS, answerPrompt, REWRITE_INSTRUCTIONS } from './prompts'
+import { keywordQuery, rrf } from './retrieve'
+import { stemBn, stemmedText, wordsOf } from './tokens'
+
+test('Bengali suffixes are stripped so inflected words find their root', () => {
+  assert.equal(stemBn('আলুর'), 'আলু')
+  assert.equal(stemBn('পাতায়'), 'পাতা')
+  assert.equal(stemBn('রোগের'), 'রোগ')
+  assert.equal(stemBn('জমিতে'), 'জমি')
+  assert.equal(stemBn('কর্মকর্তাকে'), 'কর্মকর্তা')
+  assert.equal(stemBn('কুয়াশায়'), 'কুয়াশা')
+  // Too short to strip: "সার" (fertiliser) is a word of its own.
+  assert.equal(stemBn('সার'), 'সার')
+})
+
+test('words split on spaces and Bengali punctuation, keeping vowel signs', () => {
+  assert.deepEqual(wordsOf('নাবি ধসা, কুয়াশায়।'), ['নাবি', 'ধসা', 'কুয়াশায়'.normalize('NFC')])
+  assert.equal(stemmedText('আলুর আলু'), 'আলু')
+})
+
+test('the keyword query ORs the stems and never passes raw syntax through', () => {
+  assert.equal(keywordQuery('আলুর পাতায় দাগ'), 'আলু OR পাতা OR দাগ')
+  assert.equal(keywordQuery('!!! ???'), '')
+})
+
+test('reciprocal rank fusion favours ids that rank high in several lists', () => {
+  assert.deepEqual(rrf([['a', 'b', 'c'], ['b', 'a', 'd'], ['b']]), ['b', 'a', 'c', 'd'])
+  assert.deepEqual(rrf([]), [])
+})
+
+test('questions are trimmed, limited and stripped of phone numbers', () => {
+  assert.deepEqual(checkQuestion('  '), { ok: false, reason: 'empty' })
+  assert.deepEqual(checkQuestion(42), { ok: false, reason: 'empty' })
+  assert.deepEqual(checkQuestion('ক'.repeat(MAX_QUESTION + 1)), { ok: false, reason: 'long' })
+  assert.deepEqual(checkQuestion(' আলুতে  দাগ '), { ok: true, text: 'আলুতে দাগ' })
+  assert.equal(redactPhones('আমাকে ০১৭১২৩৪৫৬৭৮ নম্বরে ফোন দিন'), `আমাকে ${PHONE_MASK} নম্বরে ফোন দিন`)
+  assert.equal(redactPhones('call +8801712345678 now'), `call ${PHONE_MASK} now`)
+  // Not a phone number: a date and a percentage stay.
+  assert.equal(redactPhones('২০২৬ সালে ৯০%'), '২০২৬ সালে ৯০%')
+})
+
+test('a dose is recognised in Bengali or English digits, but a percentage is not', () => {
+  assert.ok(hasDose('২ গ্রাম মেশান'))
+  assert.ok(hasDose('2.5 ml per litre'))
+  assert.ok(hasDose('প্রতি লিটার পানিতে মেশান'))
+  assert.ok(hasDose('১০ কেজি দিন'))
+  assert.ok(!hasDose('৯০% আর্দ্রতা টানা দুই দিন'))
+  assert.ok(!hasDose('ফলন ৩০% পর্যন্ত কমে'))
+  assert.ok(!hasDose(DOSE_LINE))
+})
+
+test('a sentence with a dose is dropped and the label line added', () => {
+  const { text, redacted } = sanitizeAnswer('আক্রান্ত গাছ তুলে ফেলুন। প্রতি লিটারে ২.৫ গ্রাম ছত্রাকনাশক দিন। ৫–৭ দিন পর আবার দেখুন।')
+  assert.ok(redacted)
+  assert.ok(!hasDose(text), text)
+  assert.ok(text.includes('আক্রান্ত গাছ তুলে ফেলুন।') && text.includes('আবার দেখুন।') && text.includes(DOSE_LINE))
+  assert.deepEqual(sanitizeAnswer('ঠিক আছে।'), { text: 'ঠিক আছে।', redacted: false })
+})
+
+test('a long answer is cut at a sentence, within the limit', () => {
+  const { text } = sanitizeAnswer('পাতা দেখুন। '.repeat(200))
+  assert.ok(text.length <= MAX_ANSWER)
+  assert.ok(text.endsWith('।'))
+})
+
+test('only sources the model was shown can be cited', () => {
+  assert.deepEqual(validSources(['potato.blight', 'made.up', 'potato.blight'], ['potato.blight', 'guide.risk']), ['potato.blight'])
+})
+
+test('only the last few turns go back to the model, phone numbers removed', () => {
+  const turns = Array.from({ length: 6 }, (_, i) => ({ q: `প্রশ্ন ${i} ০১৭১২৩৪৫৬৭৮`, a: `উত্তর ${i}` }))
+  const messages = historyMessages([...turns, { q: 5 }, 'x'])
+  assert.equal(messages.length, HISTORY_TURNS * 2)
+  assert.equal(messages[0].content, `প্রশ্ন 3 ${PHONE_MASK}`)
+  assert.deepEqual(historyMessages('nope'), [])
+})
+
+test('the knowledge base has unique ids, a source and a screen for every chunk', () => {
+  assert.equal(new Set(KB.map((c) => c.id)).size, KB.length)
+  for (const c of KB) {
+    assert.ok(c.title && c.text && c.source && c.context, c.id)
+    assert.match(c.href, /^\//, c.id)
+    assert.ok(searchText(c).includes(c.text))
+  }
+  for (const prefix of ['potato.', 'guide.', 'disease.', 'risk.']) assert.ok(KB.some((c) => c.id.startsWith(prefix)), prefix)
+})
+
+// The assistant can only repeat what it is given, so the knowledge base itself must hold no dose.
+test('the knowledge base never gives a dose', () => {
+  for (const c of KB) assert.ok(!hasDose(`${c.title} ${c.text}`), c.id)
+})
+
+test('the prompts forbid doses, and their examples follow the rule', () => {
+  assert.ok(ANSWER_INSTRUCTIONS.includes(DOSE_LINE))
+  const examples = [...ANSWER_INSTRUCTIONS.matchAll(/<answer>([^<]+)<\/answer>/g)].map((m) => m[1])
+  assert.ok(examples.length >= 3)
+  for (const e of examples) assert.ok(!hasDose(e), e)
+})
+
+// Fixed text is what the provider caches; a date or place in it would break the cache every day.
+test('the cached instructions hold nothing that changes per question', () => {
+  for (const text of [ANSWER_INSTRUCTIONS, REWRITE_INSTRUCTIONS]) assert.doesNotMatch(text, /\d{4}-\d{2}-\d{2}|\$\{/)
+  const prompt = answerPrompt({ question: 'প্রশ্ন', chunks: KB.slice(0, 2), place: 'কিচক, শিবগঞ্জ', today: '2026-12-20' })
+  assert.ok(prompt.includes(`<source id="${KB[0].id}"`) && prompt.includes('কিচক, শিবগঞ্জ') && prompt.includes('2026-12-20'))
+  assert.ok(answerPrompt({ question: 'q', chunks: [], place: 'p', today: 't' }).includes('(none found)'))
+})
+
+test('every eval case names chunks that exist, and ids are unique', async () => {
+  const { EVAL_SET } = await import('./evalSet')
+  assert.equal(new Set(EVAL_SET.map((c) => c.id)).size, EVAL_SET.length)
+  const ids = new Set(KB.map((c) => c.id))
+  for (const c of EVAL_SET) for (const s of c.sources ?? []) assert.ok(ids.has(s), `${c.id}: ${s}`)
+})

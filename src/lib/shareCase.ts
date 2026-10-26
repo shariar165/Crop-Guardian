@@ -7,7 +7,7 @@ import type { DiagnosisConfig } from '@/lib/diagnosis/config'
 import { CONFIDENCE_WORD, labelOf, orList, photoLine } from '@/lib/diagnosis/explain'
 import { finalOf } from '@/lib/diagnosis/flow'
 import { answerLine } from '@/lib/diagnosis/questions'
-import { clientUnion, placeOf } from '@/lib/unions'
+import { clientPlace } from '@/lib/placeCookies'
 
 export const SHARE_TITLE = 'Crop Guardian — আলুর পাতা'
 
@@ -79,8 +79,8 @@ export async function syncCases(): Promise<void> {
 export type ShareOutcome = { via: 'share' | 'whatsapp'; upload: UploadOutcome } | 'cancelled'
 
 export async function shareCase(record: DiagnosisRecord, config: DiagnosisConfig, date: string): Promise<ShareOutcome> {
-  const union = clientUnion()
-  const text = caseSummary(record, config, date, placeOf(union).name)
+  const place = clientPlace()
+  const text = caseSummary(record, config, date, place.name)
   const captures = await Promise.all([getCapture('top'), getCapture('under')])
   const photos = captures.flatMap((c) => (c ? [c.blob] : []))
   const files = photos.map((blob, i) => new File([blob], i === 0 ? 'leaf-top.jpg' : 'leaf-under.jpg', { type: 'image/jpeg' }))
@@ -99,7 +99,7 @@ export async function shareCase(record: DiagnosisRecord, config: DiagnosisConfig
   }
   if (via === 'whatsapp') window.open(whatsappUrl(text), '_blank', 'noopener')
 
-  const saved: CaseRecord = { sentAt: Date.now(), diagnosis: record, photos, via, unionId: union?.id, uploaded: false }
+  const saved: CaseRecord = { sentAt: Date.now(), diagnosis: record, photos, via, unionId: place.unionId ?? undefined, uploaded: false }
   try {
     saved.id = await saveCase(saved)
   } catch (err) {

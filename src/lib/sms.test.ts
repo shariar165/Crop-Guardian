@@ -25,6 +25,15 @@ describe('sendSms', () => {
     })
   })
 
+  it('lets a message wait longer, behind sign-in codes', async () => {
+    const fetchMock = mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 202 }))
+    await sendSms('+8801712345678', 'hello', CREDS, { ttlS: 21_600, priority: 0 })
+    const [, init] = fetchMock.mock.calls[0].arguments as [string, RequestInit]
+    const body = JSON.parse(init.body as string)
+    assert.equal(body.ttl, 21_600)
+    assert.equal(body.priority, 0)
+  })
+
   it('throws when the gateway does not accept the message', async () => {
     mock.method(globalThis, 'fetch', async () => new Response('{"error":"unauthorized"}', { status: 401 }))
     await assert.rejects(sendSms('+8801712345678', 'hello', CREDS), /HTTP 401/)

@@ -4,15 +4,19 @@
 // emergence (planting + 15 days) is judged from the real weather and the sprays the farmer logged:
 // no danger day and no spray is one calendar spray saved; a danger day with a spray is a spray in
 // time. Nothing is counted for a week that isn't over yet, or that has no weather data.
+//
+// That baseline is a potato habit. For a crop without one (paddy: farmers spray for blast around
+// booting and heading, not weekly), a quiet week is just quiet and nothing is counted as saved.
+import { CROPS, SEASONS, type SeasonId } from '@/lib/crops'
 import type { Risk } from '@/lib/data'
 import { addDays, daysBetween } from '@/lib/dates'
 import type { StripDay } from '@/lib/risk'
-import { EMERGENCE_DAYS, HARVEST_DAYS } from '@/lib/season'
 
 export const WEEK_DAYS = 7
 
 export type WeekKind =
   | 'saved' // no danger, no spray: one calendar spray saved
+  | 'calm' // no danger, no spray, for a crop with no calendar habit to compare with
   | 'onTime' // danger, sprayed
   | 'missed' // danger, not sprayed
   | 'extra' // sprayed without danger
@@ -44,10 +48,10 @@ export type Ledger = {
 
 const RANK: Record<Risk, number> = { safe: 0, watch: 1, danger: 2 }
 
-// The days the ledger covers: emergence to harvest, cut at today. Null before emergence.
-export function ledgerSpan(planting: string, today: string): { from: string; to: string } | null {
-  const from = addDays(planting, EMERGENCE_DAYS)
-  const harvest = addDays(planting, HARVEST_DAYS)
+// The days the ledger covers: emergence (or establishment) to harvest, cut at today. Null before it starts.
+export function ledgerSpan(planting: string, today: string, season: SeasonId = 'potato'): { from: string; to: string } | null {
+  const from = addDays(planting, SEASONS[season].startDays)
+  const harvest = addDays(planting, SEASONS[season].endDays)
   const to = today < harvest ? today : harvest
   return from <= to ? { from, to } : null
 }
@@ -58,14 +62,17 @@ export function buildLedger({
   days,
   sprays,
   cost,
+  season = 'potato',
 }: {
   planting: string
   today: string
   days: StripDay[]
   sprays: string[]
   cost: number
+  season?: SeasonId
 }): Ledger {
-  const span = ledgerSpan(planting, today)
+  const span = ledgerSpan(planting, today, season)
+  const quietKind: WeekKind = CROPS[SEASONS[season].crop].calendarBaseline ? 'saved' : 'calm'
   const weeks: LedgerWeek[] = []
   if (span) {
     const riskOn = new Map(days.map((d) => [d.date, d.risk]))
@@ -86,7 +93,7 @@ export function buildLedger({
       else if (sprayed) kind = 'extra'
       else if (!over) kind = 'ongoing'
       // Only a week whose every day is known can be called safe.
-      else kind = risks.length === length ? 'saved' : 'noData'
+      else kind = risks.length === length ? quietKind : 'noData'
 
       weeks.push({
         start,

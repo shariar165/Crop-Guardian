@@ -3,18 +3,25 @@
 import Link from 'next/link'
 import { CheckIcon, LedgerIcon } from '@/components/icons'
 import { toBnDigits } from '@/lib/bn'
+import { cropOf } from '@/lib/crops'
 import { formatTaka } from '@/lib/data'
+import { todayIn } from '@/lib/dates'
+import { type Field, mainField, useChosenSeason, useFields } from '@/lib/fields'
 import { useLedger } from '@/lib/useLedger'
 
 const PILL =
   'mx-4 mt-2.5 flex min-h-[46px] shrink-0 items-center justify-between gap-2 rounded-full bg-mist px-3.5 text-[15px] font-semibold text-teal-deep no-underline'
 
-/** Home's link to the ledger, with this season's real savings once there are any. */
-export default function LedgerPill() {
-  const state = useLedger()
+/** Home's link to a field's ledger (the field Home shows, else the main one), with this season's real savings once there are any. */
+export default function LedgerPill({ field }: { field?: Field | null }) {
+  const fields = useFields()
+  const chosen = useChosenSeason()
+  const shown = field === undefined ? mainField(fields, todayIn(), chosen) : field
+  const state = useLedger(shown)
+  const href = shown ? `/ledger?field=${shown.season}` : '/ledger'
   if (state.status === 'ready' && state.ledger.savedCount > 0) {
     return (
-      <Link href="/ledger" className={PILL}>
+      <Link href={href} className={PILL}>
         <span className="flex items-center gap-2">
           <CheckIcon size={20} />
           এই মৌসুমে {toBnDigits(state.ledger.savedCount)}টা স্প্রে বাঁচিয়েছেন
@@ -27,10 +34,10 @@ export default function LedgerPill() {
     state.status === 'noPlanting'
       ? 'রোপণের তারিখ দিন, হিসাব শুরু হবে'
       : state.status === 'notYet'
-        ? 'চারা গজালে মৌসুমের হিসাব শুরু হবে'
+        ? `${cropOf(shown?.season ?? 'potato').startPhrase} মৌসুমের হিসাব শুরু হবে`
         : 'মৌসুমের হিসাব দেখুন'
   return (
-    <Link href={state.status === 'noPlanting' ? '/planting' : '/ledger'} className={PILL}>
+    <Link href={state.status === 'noPlanting' ? '/planting' : href} className={PILL}>
       <span className="flex items-center gap-2">
         <LedgerIcon size={20} />
         {text}

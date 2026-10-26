@@ -3,11 +3,15 @@
 import Link from 'next/link'
 import { useId, useState } from 'react'
 import { toBnDigits } from '@/lib/bn'
+import { type CropId, CROP_IDS, CROPS, SEASONS } from '@/lib/crops'
 import { DAY_STATE, type Risk } from '@/lib/data'
-import { MAP_VIEWBOX, UNIONS } from '@/lib/unions'
+import { todayIn } from '@/lib/dates'
+import { mainField, useChosenSeason, useFields } from '@/lib/fields'
 import { SyncIcon } from './icons'
 
 export type UnionRisk = { id: string; risk: Risk }
+// The upazila on the map: its name and its unions in the map's SVG coordinates.
+export type MapArea = { name: string; viewBox: string; unions: { id: string; nameBn: string; label: [number, number]; path: string }[] }
 // Officer-confirmed late blight per union id, sent in the last week and month.
 export type CaseCounts = Record<Period, Record<string, number>>
 
@@ -42,9 +46,27 @@ function LegendSwatch({ risk }: { risk: Risk }) {
   )
 }
 
-/** Shibganj's unions with today's weather risk at each, officer-confirmed cases, and the farmer's own union. */
-export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | null; counts: CaseCounts | null; mine: string | null }) {
+/** An upazila's unions with today's weather risk at each, officer-confirmed cases, and the farmer's own union. */
+export default function MapView({
+  area,
+  risksByCrop,
+  counts,
+  mine,
+}: {
+  area: MapArea
+  risksByCrop: Record<CropId, UnionRisk[]> | null
+  counts: CaseCounts | null
+  mine: string | null
+}) {
+  const unions = area.unions
   const [period, setPeriod] = useState<Period>('week')
+  const fields = useFields()
+  const chosen = useChosenSeason()
+  const [picked, setPicked] = useState<CropId | null>(null)
+  // Open on the crop of the field Home shows, until the farmer picks one here.
+  const main = mainField(fields, todayIn(), chosen)
+  const crop = picked ?? (main ? SEASONS[main.season].crop : 'potato')
+  const risks = risksByCrop?.[crop] ?? null
   const uid = useId().replace(/:/g, '')
   const hatch = `hatch-${uid}`
   const dots = `dots-${uid}`
@@ -52,20 +74,38 @@ export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | 
   const riskOf = (id: string) => risks?.find((r) => r.id === id)?.risk ?? null
   const fillFor = (risk: Risk | null) =>
     risk === 'danger' ? `url(#${hatch})` : risk === 'watch' ? `url(#${dots})` : risk === 'safe' ? '#D6E8D3' : '#E9E1D0'
-  const caseCount = (id: string) => counts?.[period][id] ?? 0
+  // Officers confirm late blight only, until paddy diagnosis sends paddy cases.
+  const casesShown = crop === 'potato'
+  const caseCount = (id: string) => (casesShown ? (counts?.[period][id] ?? 0) : 0)
 
-  const totalCases = counts ? UNIONS.reduce((n, u) => n + caseCount(u.id), 0) : null
+  const totalCases = counts && casesShown ? unions.reduce((n, u) => n + caseCount(u.id), 0) : null
   const dangerCount = risks ? risks.filter((r) => r.risk === 'danger').length : null
 
   const groups = ORDER.flatMap((r) => {
-    const names = UNIONS.filter((u) => riskOf(u.id) === r).map((u) => u.nameBn)
+    const names = unions.filter((u) => riskOf(u.id) === r).map((u) => u.nameBn)
     return names.length ? [`${DAY_STATE[r].word}: ${names.join(', ')}`] : []
   })
-  const ariaLabel = risks ? `ইউনিয়নভিত্তিক আজকের ঝুঁকির ম্যাপ: ${groups.join('; ')}` : 'শিবগঞ্জ উপজেলার ইউনিয়নের ম্যাপ, ঝুঁকির তথ্য নেই'
-  const mineUnion = UNIONS.find((u) => u.id === mine)
+  const ariaLabel = risks ? `ইউনিয়নভিত্তিক আজকের ঝুঁকির ম্যাপ: ${groups.join('; ')}` : `${area.name} উপজেলার ইউনিয়নের ম্যাপ, ঝুঁকির তথ্য নেই`
+  const mineUnion = unions.find((u) => u.id === mine)
 
   return (
     <>
+      <div role="group" aria-label="কোন ফসলের ঝুঁকি" className="mx-4 mt-3 flex shrink-0 gap-2">
+        {CROP_IDS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-pressed={c === crop}
+            onClick={() => setPicked(c)}
+            className={`h-11 flex-1 rounded-full border-2 px-3 text-base font-bold ${
+              c === crop ? 'border-ink bg-ink text-cream' : 'border-line bg-paper text-ink'
+            }`}
+          >
+            {CROPS[c].nameBn} · {CROPS[c].diseaseBn}
+          </button>
+        ))}
+      </div>
+
       <div role="tablist" aria-label="নিশ্চিত কেসের সময়" className="mx-4 mt-3 grid shrink-0 grid-cols-2 gap-1 rounded-2xl bg-sand p-1">
         {(Object.keys(PERIODS) as Period[]).map((t) => {
           const selected = t === period
@@ -93,7 +133,7 @@ export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | 
       )}
 
       <div role="tabpanel" className="stitch mx-4 mt-3 shrink-0 rounded-[20px] p-2.5">
-        <svg role="img" aria-label={ariaLabel} viewBox={MAP_VIEWBOX} className="block h-auto w-full rounded-xl bg-[#F3EEE2]">
+        <svg role="img" aria-label={ariaLabel} viewBox={area.viewBox} className="block h-auto w-full rounded-xl bg-[#F3EEE2]">
           <defs>
             <pattern id={hatch} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <rect width="8" height="8" fill="#F2C9BE" />
@@ -105,7 +145,7 @@ export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | 
             </pattern>
           </defs>
 
-          {UNIONS.map((u) => (
+          {unions.map((u) => (
             <path
               key={u.id}
               d={u.path}
@@ -118,7 +158,7 @@ export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | 
           ))}
 
           <g fontFamily="var(--font-hind), sans-serif" fontSize="11" fontWeight="700" fill="#2B1E16" textAnchor="middle">
-            {UNIONS.map((u) => {
+            {unions.map((u) => {
               const lines = u.nameBn.split(' ')
               const [x, y] = u.label
               return (
@@ -134,7 +174,7 @@ export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | 
           </g>
 
           <g fontFamily="var(--font-baloo), sans-serif" fontSize="12" fontWeight="800" textAnchor="middle">
-            {UNIONS.map((u) => {
+            {unions.map((u) => {
               const n = caseCount(u.id)
               if (!n) return null
               const [x, y] = u.label
@@ -161,7 +201,7 @@ export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | 
       </div>
 
       <div className="mx-[18px] mt-2.5 flex shrink-0 flex-wrap gap-3 text-[13px] font-semibold">
-        <span className="text-muted">আজকের ঝুঁকি:</span>
+        <span className="text-muted">আজকের {CROPS[crop].diseaseBn} ঝুঁকি:</span>
         {ORDER.map((r) => (
           <span key={r} className="flex items-center gap-[5px]">
             <LegendSwatch risk={r} />
@@ -179,7 +219,9 @@ export default function MapView({ risks, counts, mine }: { risks: UnionRisk[] | 
       <div className="mx-4 mt-3 grid shrink-0 grid-cols-2 gap-2.5">
         <div className="flex flex-col gap-0.5 rounded-[18px] border-[1.5px] border-line bg-paper px-3.5 py-3">
           <span className="font-display text-[30px] leading-[1.1] font-extrabold">{totalCases === null ? '—' : `${toBnDigits(totalCases)}টা`}</span>
-          <span className="text-sm leading-[1.35]">{totalCases === null ? 'কেসের তথ্য এখন আনা যায়নি' : PERIODS[period].caseLabel}</span>
+          <span className="text-sm leading-[1.35]">
+            {!casesShown ? 'ধানের কেস এখনো গোনা হয় না' : totalCases === null ? 'কেসের তথ্য এখন আনা যায়নি' : PERIODS[period].caseLabel}
+          </span>
         </div>
         <div className="flex flex-col gap-0.5 rounded-[18px] border-[1.5px] border-line bg-paper px-3.5 py-3">
           <span className="font-display text-[30px] leading-[1.1] font-extrabold text-danger-deep">

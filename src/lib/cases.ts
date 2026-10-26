@@ -1,7 +1,7 @@
 // What a farmer's phone may upload as a case (POST /api/cases), checked before it reaches the database.
 import type { Answer, AnswerRecord } from '@/lib/captureStore'
 import type { Decision } from '@/lib/diagnosis/decide'
-import { unionById } from '@/lib/unions'
+import { unionById } from '@/lib/areas'
 
 export const MAX_PHOTO_BYTES = 1_500_000
 const DECISIONS: Decision[] = ['confident', 'uncertain', 'unknown']
@@ -32,8 +32,10 @@ export function parseCaseUpload(json: unknown, now = Date.now()): CaseUpload | {
   const sentAt = typeof c.sentAt === 'number' ? c.sentAt : NaN
   if (!Number.isFinite(sentAt) || sentAt < now - MAX_AGE_MS || sentAt > now + MAX_SKEW_MS) return { error: 'bad sentAt' }
 
-  const unionId = c.unionId ?? null
-  if (unionId !== null && !(typeof unionId === 'string' && unionById(unionId))) return { error: 'unknown unionId' }
+  // Stored by its full id, also when the phone still has an old bare Shibganj one.
+  const union = typeof c.unionId === 'string' ? unionById(c.unionId) : undefined
+  if (c.unionId != null && !union) return { error: 'unknown unionId' }
+  const unionId = union?.id ?? null
 
   if (!DECISIONS.includes(c.decision as Decision)) return { error: 'bad decision' }
   const decision = c.decision as Decision
@@ -59,7 +61,7 @@ export function parseCaseUpload(json: unknown, now = Date.now()): CaseUpload | {
 
   return {
     sentAt: new Date(sentAt),
-    unionId: unionId as string | null,
+    unionId,
     decision,
     candidates: candidates as string[],
     finalId: finalId as string | null,

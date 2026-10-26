@@ -2,14 +2,14 @@
 // The model, its config and the wasm runtime are cached by the model worker itself (Cache API
 // 'crop-guardian-model'), so this worker leaves /model/ and /ort/ alone.
 
-const SHELL = 'crop-guardian-shell-v2'
+const SHELL = 'crop-guardian-shell-v4'
 // Hashed build files never change, so they are kept across versions.
 const STATIC = 'crop-guardian-static'
 const KEEP = [SHELL, STATIC, 'crop-guardian-model']
 
-// The screens of the diagnosis flow and the guide, which must open with no internet. Home is not
-// here: its weather risk would be stale, so offline it shows /offline instead.
-const PAGES = ['/camera', '/result', '/result/uncertain', '/questions', '/unknown', '/offline', '/guide']
+// The screens of the diagnosis flow, the guide and the potato advice, which must open with no
+// internet. Home is not here: its weather risk would be stale, so offline it shows /offline instead.
+const PAGES = ['/camera', '/result', '/result/uncertain', '/questions', '/unknown', '/offline', '/guide', '/potato']
 
 const ASSET = /\/_next\/static\/[^"'\s\\)]+/g
 

@@ -1,5 +1,5 @@
 import type { GuideIcon as Kind } from '@/lib/guide'
-import { CameraIcon, ChatQuestionIcon, LedgerIcon, MapIcon, OfflineIcon, PinIcon, SendIcon, WarnIcon } from './icons'
+import { BasketIcon, BoxIcon, CameraIcon, ChatQuestionIcon, DocIcon, FogCloudIcon, LedgerIcon, MapIcon, OfflineIcon, PinIcon, SendIcon, SproutIcon, WarnIcon } from './icons'
 import { DayGlyph } from './illustrations'
 
 /** The round picture for a guide section or intro card. */
@@ -21,6 +21,11 @@ export default function GuideIcon({ kind, size = 'md' }: { kind: Kind; size?: 'm
       {kind === 'map' && <MapIcon size={icon} />}
       {kind === 'offline' && <OfflineIcon size={icon} />}
       {kind === 'warn' && <WarnIcon size={icon} weight={2.2} />}
+      {kind === 'sprout' && <SproutIcon size={icon} />}
+      {kind === 'fog' && <FogCloudIcon size={icon} />}
+      {kind === 'harvest' && <BasketIcon size={icon} />}
+      {kind === 'store' && <BoxIcon size={icon} />}
+      {kind === 'doc' && <DocIcon size={icon} />}
     </span>
   )
 }
