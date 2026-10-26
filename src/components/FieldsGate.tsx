@@ -6,6 +6,7 @@ import { bnDate } from '@/lib/bn'
 import { type CropId, CROPS, cropOf, SEASONS, type SeasonId } from '@/lib/crops'
 import { type Risk, RISK_VIEW } from '@/lib/data'
 import { useHydrated } from '@/lib/deviceStore'
+import { canDiagnose } from '@/lib/diagnosis/crops'
 import { chooseSeason, type Field, mainField, useChosenSeason, useFields } from '@/lib/fields'
 import { rememberPlaceName } from '@/lib/placeCookies'
 import { offSeasonMessage, riskActive, seasonFor } from '@/lib/season'
@@ -132,7 +133,8 @@ function FieldNote({ field, many, hasUnion }: { field: Field | null; many: boole
 // Under a decision: "পরীক্ষামূলক" while the crop's rule is not checked against real outbreaks, and
 // a word that leaf photos can't diagnose this crop yet.
 export function ExperimentalNote({ crop }: { crop: CropId }) {
-  const { experimental, diseaseBn, photoNote } = CROPS[crop]
+  const { experimental, diseaseBn } = CROPS[crop]
+  const photoNote = canDiagnose(crop) ? null : CROPS[crop].photoNote
   if (!experimental && !photoNote) return null
   return (
     <p className="m-0 text-[13px] leading-[1.4] font-semibold text-amber">

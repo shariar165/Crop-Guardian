@@ -1,13 +1,25 @@
 // Shared test inputs: the real exported config, a small synthetic one, and the parity fixtures.
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { DiagnosisRecord } from '../../captureStore'
+import type { CropId } from '../../crops'
 import { combine } from '../combine'
-import { type DiagnosisConfig, parseConfig } from '../config'
+import { type DiagnosisConfig, modelUrl, parseConfig } from '../config'
+import { configUrlOf } from '../crops'
 import type { Decision, PhotoResult } from '../decide'
 
-export const CONFIG_PATH = join(process.cwd(), 'public', 'model', 'crop_guardian_config.json')
-export const PARITY_DIR = join(process.cwd(), 'src', 'lib', 'diagnosis', '__fixtures__', 'parity')
+// A crop's exported files on disk, as the app serves them from public/.
+export const configPathOf = (crop: CropId) => join(process.cwd(), 'public', configUrlOf(crop))
+export const modelPathOf = (crop: CropId, config: DiagnosisConfig) => join(process.cwd(), 'public', modelUrl(configUrlOf(crop), config.modelFile))
+// The crop's config, or null before its model has been exported.
+export const configOf = (crop: CropId): DiagnosisConfig | null =>
+  existsSync(configPathOf(crop)) ? parseConfig(JSON.parse(readFileSync(configPathOf(crop), 'utf8'))) : null
+
+export const CONFIG_PATH = configPathOf('potato')
+// Potato's parity images keep the folder they had before paddy.
+export const parityDirOf = (crop: CropId) =>
+  join(process.cwd(), 'src', 'lib', 'diagnosis', '__fixtures__', crop === 'potato' ? 'parity' : `parity-${crop}`)
+export const PARITY_DIR = parityDirOf('potato')
 
 export const rawConfig = (): Record<string, unknown> => JSON.parse(readFileSync(CONFIG_PATH, 'utf8'))
 export const realConfig: DiagnosisConfig = parseConfig(rawConfig())
@@ -42,7 +54,12 @@ export type ParityFixture = {
   ood_score?: number
 }
 
-export const parityFixtures: ParityFixture[] = JSON.parse(readFileSync(join(PARITY_DIR, 'expected.json'), 'utf8'))
+export function parityFixturesOf(crop: CropId): ParityFixture[] {
+  const file = join(parityDirOf(crop), 'expected.json')
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : []
+}
+
+export const parityFixtures: ParityFixture[] = parityFixturesOf('potato')
 
 export const PARITY_SKIP = parityFixtures.length === 0 ? 'parity fixtures not exported yet (see __fixtures__/parity/README.md)' : false
 

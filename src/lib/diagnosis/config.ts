@@ -1,8 +1,5 @@
-// The calibrated config exported with the model (public/model/crop_guardian_config.json).
+// The calibrated config exported with each crop's model (its URL is in diagnosis/crops.ts).
 // Classes, labels, preprocessing, temperature and thresholds all come from that file; none are copied here.
-
-export const CONFIG_URL = '/model/crop_guardian_config.json'
-export const MODEL_DIR = '/model/'
 
 export type OodMethod = 'p_other' | 'energy' | 'msp'
 const OOD_METHODS: OodMethod[] = ['p_other', 'energy', 'msp']
@@ -108,8 +105,11 @@ export const MODEL_CACHE = 'crop-guardian-model'
 
 export const cacheAvailable = () => typeof caches !== 'undefined'
 
+// The model sits next to its config.
+export const modelUrl = (configUrl: string, modelFile: string) => configUrl.slice(0, configUrl.lastIndexOf('/') + 1) + modelFile
+
 // The latest config when online, else the copy cached last time.
-export async function loadConfig(url = CONFIG_URL): Promise<DiagnosisConfig> {
+export async function loadConfig(url: string): Promise<DiagnosisConfig> {
   try {
     const res = await fetch(url, { cache: 'no-cache' })
     if (!res.ok) throw new Error(`Diagnosis config: HTTP ${res.status}`)

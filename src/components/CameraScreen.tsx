@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import CameraControls from '@/components/CameraControls'
 import { CameraIcon, CheckIcon, ClockIcon, OfflineIcon, RestartIcon, WarnIcon } from '@/components/icons'
 import { ViewfinderBackdrop, ViewfinderOutline } from '@/components/illustrations'
@@ -10,9 +10,14 @@ import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { clearCaptures, saveCapture, saveDiagnosis } from '@/lib/captureStore'
 import type { Capture } from '@/lib/captureStore'
+import { type CropId, CROPS } from '@/lib/crops'
+import { todayIn } from '@/lib/dates'
 import { diagnose, loadModel, type ModelState, whenReady } from '@/lib/diagnosis/client'
 import { combine } from '@/lib/diagnosis/combine'
+import { configUrlOf, PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { RESULT_PATH } from '@/lib/diagnosis/flow'
+import { cropFromParam, defaultPhotoCrop } from '@/lib/diagnosis/pickCrop'
+import { useChosenSeason, useFields } from '@/lib/fields'
 import { ANALYSIS_WIDTH, assessQuality, confirmText, coverSourceRect, isAcceptable, topHint } from '@/lib/imageQuality'
 import type { QualityReport } from '@/lib/imageQuality'
 
@@ -24,11 +29,6 @@ const ANALYSIS_INTERVAL_MS = 300
 type Status = 'starting' | 'live' | 'denied' | 'unsupported'
 type Step = 1 | 2
 type Crop = { sx: number; sy: number; sw: number; sh: number }
-
-const STEPS: Record<Step, { title: string; sub: string; counter: string }> = {
-  1: { title: 'পাতার উপরের দিকটা তুলুন', sub: 'পুরো পাতা ফ্রেমের ভেতরে রাখুন', counter: 'পাতার উপরের দিক' },
-  2: { title: 'এবার পাতার নিচের দিকটা তুলুন', sub: 'দাগ চিনতে নিচের দিকটা জরুরি', counter: 'উপরের দিক তোলা হয়েছে' },
-}
 
 const LIGHT_LABEL = { ok: 'আলো ভালো', dark: 'আলো কম', bright: 'আলো বেশি' }
 const LEAF_LABEL = { ok: 'দূরত্ব ঠিক', far: 'কাছে আনুন', absent: 'পাতা নেই' }
@@ -43,6 +43,41 @@ function pills(r: QualityReport | null): Pill[] {
     { label: LEAF_LABEL[r.leaf], state: r.leaf === 'ok' ? 'ok' : 'warn' },
     { label: FOCUS_LABEL[r.focus], state: r.focus === 'ok' ? 'ok' : 'warn' },
   ]
+}
+
+const noSubscribe = () => () => {}
+
+// A query parameter, read after hydration (null before), so the page stays static and works offline.
+function useLinkParam(name: string): string | null {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => new URLSearchParams(window.location.search).get(name),
+    () => null,
+  )
+}
+
+// Shown only once more than one crop has a model. Switching starts a fresh pair of photos.
+function CropSwitch({ crop, onPick, disabled }: { crop: CropId; onPick: (c: CropId) => void; disabled: boolean }) {
+  if (PHOTO_CROPS.length < 2) return null
+  return (
+    <div role="radiogroup" aria-label="কোন ফসলের পাতা" className="flex justify-center gap-2">
+      {PHOTO_CROPS.map((c) => (
+        <button
+          key={c}
+          type="button"
+          role="radio"
+          aria-checked={c === crop}
+          disabled={disabled}
+          onClick={() => c !== crop && onPick(c)}
+          className={`h-10 min-w-20 rounded-full px-4 text-base font-bold ${
+            c === crop ? 'border-0 bg-sun text-ink' : 'border-2 border-cream/50 bg-transparent text-cream'
+          }`}
+        >
+          {CROPS[c].nameBn}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 function ModelStatus({ state, onRetry }: { state: ModelState; onRetry: () => void }) {
@@ -123,8 +158,24 @@ export default function CameraScreen() {
   const [analysis, setAnalysis] = useState<'idle' | 'running' | 'failed'>('idle')
   const photos = useRef<Partial<Record<'top' | 'under', Capture>>>({})
 
-  // Load (or download, the first time) the model while the farmer takes the photos.
-  useEffect(() => loadModel(setModel), [])
+  // The crop: picked here, else asked for in the link, else from the farmer's fields.
+  const fields = useFields()
+  const chosenSeason = useChosenSeason()
+  const [picked, setPicked] = useState<CropId | null>(null)
+  const asked = cropFromParam(useLinkParam('crop'))
+  const crop = picked ?? asked ?? defaultPhotoCrop(fields, chosenSeason, todayIn())
+  const configUrl = configUrlOf(crop)
+
+  // Load (or download, the first time) the crop's model while the farmer takes the photos.
+  useEffect(() => loadModel(configUrl, setModel), [configUrl])
+
+  function pickCrop(c: CropId) {
+    setPicked(c)
+    photos.current = {}
+    setStep(1)
+    setPending(null)
+    clearCaptures().catch(() => {})
+  }
 
   // Each visit starts a fresh pair of photos.
   useEffect(() => {
@@ -191,9 +242,9 @@ export default function CameraScreen() {
     if (!top || !under) return
     setAnalysis('running')
     try {
-      const config = await whenReady()
-      const result = combine(await diagnose(top.blob), await diagnose(under.blob), config)
-      await saveDiagnosis({ createdAt: Date.now(), result, answers: [] })
+      const config = await whenReady(configUrl)
+      const result = combine(await diagnose(configUrl, top.blob), await diagnose(configUrl, under.blob), config)
+      await saveDiagnosis({ createdAt: Date.now(), crop, result, answers: [] })
       router.push(RESULT_PATH[result.decision])
     } catch (err) {
       console.error('Diagnosis failed', err)
@@ -211,6 +262,8 @@ export default function CameraScreen() {
       console.error('Could not save the photo', err)
     }
     if (step === 1) {
+      // The pair is this crop's now, even if the farmer's fields finish loading later.
+      setPicked(crop)
       setStep(2)
       setBusy(false)
     } else {
@@ -257,7 +310,7 @@ export default function CameraScreen() {
   }
 
   const live = status === 'live'
-  const { title: stepTitle, sub, counter } = STEPS[step]
+  const { title: stepTitle, sub, counter } = PHOTO_SPECS[crop].photos[step === 1 ? 'top' : 'under']
   const hint = live && report ? topHint(report) : null
   const title = hint ?? stepTitle
   const HintGlyph = hint ? WarnIcon : step === 2 ? RestartIcon : CameraIcon
@@ -420,6 +473,7 @@ export default function CameraScreen() {
       </div>
 
       <div className="flex flex-1 flex-col justify-center gap-3 px-6 pt-3 pb-2.5">
+        <CropSwitch crop={crop} onPick={pickCrop} disabled={busy || analysis === 'running'} />
         <div className="flex items-center justify-center gap-2 text-[15px] font-semibold">
           {([1, 2] as const).map((n) => (
             <span
@@ -433,7 +487,7 @@ export default function CameraScreen() {
           </span>
         </div>
         <CameraControls onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
-        <ModelStatus state={model} onRetry={() => loadModel(setModel)} />
+        <ModelStatus state={model} onRetry={() => loadModel(configUrl, setModel)} />
       </div>
     </div>
   )

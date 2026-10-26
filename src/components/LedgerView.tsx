@@ -12,7 +12,7 @@ import { getCases } from '@/lib/captureStore'
 import { cropOf, isSeasonId, SEASONS, type SeasonId } from '@/lib/crops'
 import { DAY_STATE, formatTaka } from '@/lib/data'
 import { LOCAL_TZ, todayIn } from '@/lib/dates'
-import { loadConfig } from '@/lib/diagnosis/config'
+import { cropOfRecord, PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { mainField, useChosenSeason, useFields } from '@/lib/fields'
 import type { Ledger, LedgerWeek, WeekKind } from '@/lib/ledger'
 import { caseVerdict } from '@/lib/shareCase'
@@ -124,13 +124,13 @@ function useSentCases(): SentCase[] {
   const [cases, setCases] = useState<SentCase[]>([])
   useEffect(() => {
     let cancelled = false
-    Promise.all([getCases(), loadConfig()])
-      .then(([records, config]) => {
+    getCases()
+      .then((records) => {
         if (cancelled) return
         const day = new Intl.DateTimeFormat('en-CA', { timeZone: LOCAL_TZ })
         setCases(
           records
-            .map((r) => ({ id: r.id ?? r.sentAt, date: day.format(new Date(r.sentAt)), verdict: caseVerdict(r.diagnosis, config), uploaded: r.uploaded }))
+            .map((r) => ({ id: r.id ?? r.sentAt, date: day.format(new Date(r.sentAt)), verdict: caseVerdict(r.diagnosis, PHOTO_SPECS[cropOfRecord(r.diagnosis)]), uploaded: r.uploaded }))
             .reverse(),
         )
       })

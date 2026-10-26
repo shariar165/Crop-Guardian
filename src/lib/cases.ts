@@ -2,6 +2,7 @@
 import type { Answer, AnswerRecord } from '@/lib/captureStore'
 import type { Decision } from '@/lib/diagnosis/decide'
 import { unionById } from '@/lib/areas'
+import { type CropId, isCropId } from '@/lib/crops'
 
 export const MAX_PHOTO_BYTES = 1_500_000
 const DECISIONS: Decision[] = ['confident', 'uncertain', 'unknown']
@@ -13,6 +14,7 @@ const MAX_SKEW_MS = 86_400_000
 
 export type CaseUpload = {
   sentAt: Date
+  crop: CropId
   unionId: string | null
   decision: Decision
   candidates: string[]
@@ -20,6 +22,7 @@ export type CaseUpload = {
   answers: AnswerRecord[]
 }
 
+// The officer's check, so far for potato cases only: the map counts confirmed late blight.
 export type Verdict = 'late_blight' | 'not_late_blight'
 export const VERDICTS: Verdict[] = ['late_blight', 'not_late_blight']
 export const isVerdict = (v: unknown): v is Verdict => VERDICTS.includes(v as Verdict)
@@ -31,6 +34,10 @@ export function parseCaseUpload(json: unknown, now = Date.now()): CaseUpload | {
 
   const sentAt = typeof c.sentAt === 'number' ? c.sentAt : NaN
   if (!Number.isFinite(sentAt) || sentAt < now - MAX_AGE_MS || sentAt > now + MAX_SKEW_MS) return { error: 'bad sentAt' }
+
+  // Phones from before paddy send no crop: theirs are potato cases.
+  const crop = c.crop ?? 'potato'
+  if (!isCropId(crop)) return { error: 'bad crop' }
 
   // Stored by its full id, also when the phone still has an old bare Shibganj one.
   const union = typeof c.unionId === 'string' ? unionById(c.unionId) : undefined
@@ -61,6 +68,7 @@ export function parseCaseUpload(json: unknown, now = Date.now()): CaseUpload | {
 
   return {
     sentAt: new Date(sentAt),
+    crop,
     unionId,
     decision,
     candidates: candidates as string[],

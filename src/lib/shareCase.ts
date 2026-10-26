@@ -3,16 +3,19 @@
 // the device for the ledger, and uploaded for the officer's list and the map when signed in.
 import { bnDate } from '@/lib/bn'
 import { type CaseRecord, type DiagnosisRecord, getCapture, getCases, putCase, saveCase } from '@/lib/captureStore'
+import { CROPS, type CropId } from '@/lib/crops'
 import type { DiagnosisConfig } from '@/lib/diagnosis/config'
+import { cropOfRecord } from '@/lib/diagnosis/crops'
 import { CONFIDENCE_WORD, labelOf, orList, photoLine } from '@/lib/diagnosis/explain'
 import { finalOf } from '@/lib/diagnosis/flow'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { clientPlace } from '@/lib/placeCookies'
 
-export const SHARE_TITLE = 'Crop Guardian — আলুর পাতা'
+// "Crop Guardian — আলুর পাতা"
+export const shareTitle = (crop: CropId) => `Crop Guardian — ${CROPS[crop].ofBn} পাতা`
 
 // The app's result in a few words, e.g. "নিশ্চিত — নাবি ধসা".
-export function caseVerdict({ result }: DiagnosisRecord, config: DiagnosisConfig): string {
+export function caseVerdict({ result }: DiagnosisRecord, config: Pick<DiagnosisConfig, 'labelsBn'>): string {
   return result.decision === 'confident'
     ? `${CONFIDENCE_WORD.confident} — ${labelOf(result.candidates[0], config)}`
     : result.decision === 'uncertain'
@@ -22,13 +25,14 @@ export function caseVerdict({ result }: DiagnosisRecord, config: DiagnosisConfig
 
 export function caseSummary(record: DiagnosisRecord, config: DiagnosisConfig, date: string, place: string): string {
   const final = finalOf(record)
+  const crop = cropOfRecord(record)
   return [
-    `${SHARE_TITLE} (পরীক্ষামূলক অ্যাপ)`,
+    `${shareTitle(crop)} (পরীক্ষামূলক অ্যাপ)`,
     `তারিখ: ${bnDate(date)}`,
     `এলাকা: ${place}`,
     `অ্যাপের ফল: ${caseVerdict(record, config)}`,
-    photoLine(record.result, config),
-    ...record.answers.flatMap((a) => answerLine(a) ?? []),
+    photoLine(record.result, config, crop),
+    ...record.answers.flatMap((a) => answerLine(a, crop) ?? []),
     ...(final?.via === 'questions' ? [`উত্তর মিলিয়ে বাকি: ${labelOf(final.id, config)}`] : []),
     'দয়া করে দেখে পরামর্শ দিন।',
   ].join('\n')
@@ -41,6 +45,7 @@ export function uploadFields(record: CaseRecord) {
   const { result, answers } = record.diagnosis
   return {
     sentAt: record.sentAt,
+    crop: cropOfRecord(record.diagnosis),
     unionId: record.unionId ?? null,
     decision: result.decision,
     candidates: result.candidates,
@@ -81,6 +86,7 @@ export type ShareOutcome = { via: 'share' | 'whatsapp'; upload: UploadOutcome } 
 export async function shareCase(record: DiagnosisRecord, config: DiagnosisConfig, date: string): Promise<ShareOutcome> {
   const place = clientPlace()
   const text = caseSummary(record, config, date, place.name)
+  const title = shareTitle(cropOfRecord(record))
   const captures = await Promise.all([getCapture('top'), getCapture('under')])
   const photos = captures.flatMap((c) => (c ? [c.blob] : []))
   const files = photos.map((blob, i) => new File([blob], i === 0 ? 'leaf-top.jpg' : 'leaf-under.jpg', { type: 'image/jpeg' }))
@@ -89,7 +95,7 @@ export async function shareCase(record: DiagnosisRecord, config: DiagnosisConfig
   if (typeof navigator.share === 'function') {
     const withFiles = files.length > 0 && navigator.canShare?.({ files })
     try {
-      await navigator.share(withFiles ? { title: SHARE_TITLE, text, files } : { title: SHARE_TITLE, text })
+      await navigator.share(withFiles ? { title, text, files } : { title, text })
       via = 'share'
     } catch (err) {
       // The farmer closed the share sheet: nothing was sent.

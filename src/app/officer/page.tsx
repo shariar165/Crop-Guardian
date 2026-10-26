@@ -4,22 +4,21 @@ import { requireOfficer } from '@/lib/auth/session'
 import { bnDate } from '@/lib/bn'
 import { listCases, type OfficerCase } from '@/lib/caseDb'
 import type { Verdict } from '@/lib/cases'
+import { CROPS } from '@/lib/crops'
 import { LOCAL_TZ } from '@/lib/dates'
-import { parseConfig } from '@/lib/diagnosis/config'
+import { PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { CONFIDENCE_WORD, labelOf, orList } from '@/lib/diagnosis/explain'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { formatBdPhone } from '@/lib/phone'
 import { fullName, unionById } from '@/lib/areas'
-import rawConfig from '../../../public/model/crop_guardian_config.json'
 import { reviewCase } from './actions'
 
 export const metadata = { title: 'কৃষি কর্মকর্তা — Crop Guardian' }
 
-const config = parseConfig(rawConfig)
-
 const VERDICT_LABEL: Record<Verdict, string> = { late_blight: 'নাবি ধসা নিশ্চিত', not_late_blight: 'নাবি ধসা নয়' }
 
 function appResult(c: OfficerCase): string {
+  const config = PHOTO_SPECS[c.crop]
   if (c.decision === 'confident') return `${CONFIDENCE_WORD.confident} — ${labelOf(c.candidates[0], config)}`
   if (c.decision === 'uncertain') {
     const narrowed = c.finalId ? ` (উত্তর মিলিয়ে: ${labelOf(c.finalId, config)})` : ''
@@ -33,11 +32,14 @@ const sentOn = (d: Date) => bnDate(new Intl.DateTimeFormat('en-CA', { timeZone: 
 function CaseCard({ c }: { c: OfficerCase }) {
   const union = unionById(c.unionId)
   const photos = (['top', 'under'] as const).filter((slot) => (slot === 'top' ? c.hasTop : c.hasUnder))
+  const spec = PHOTO_SPECS[c.crop]
   return (
     <li className="stitch flex flex-col gap-2.5 rounded-[20px] p-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="font-display text-lg font-extrabold">{union ? fullName(union) : 'ইউনিয়ন জানা নেই'}</span>
-        <span className="text-[13px] font-semibold text-muted">{sentOn(c.sentAt)}</span>
+        <span className="text-[13px] font-semibold text-muted">
+          {CROPS[c.crop].nameBn} · {sentOn(c.sentAt)}
+        </span>
       </div>
       {c.phone && (
         <a href={`tel:${c.phone}`} className="self-start text-[15px] font-bold text-teal">
@@ -51,7 +53,7 @@ function CaseCard({ c }: { c: OfficerCase }) {
       {c.answers.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-sm leading-[1.4]">
           {c.answers.map((a) => (
-            <li key={a.question}>{answerLine(a)}</li>
+            <li key={a.question}>{answerLine(a, c.crop)}</li>
           ))}
         </ul>
       )}
@@ -63,7 +65,7 @@ function CaseCard({ c }: { c: OfficerCase }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/api/cases/${c.id}/photo/${slot}`}
-                alt={slot === 'top' ? 'পাতার উপরের দিক' : 'পাতার নিচের দিক'}
+                alt={spec.photos[slot].name}
                 loading="lazy"
                 className="aspect-square w-full rounded-xl bg-[#1F2A17] object-cover"
               />
@@ -71,7 +73,10 @@ function CaseCard({ c }: { c: OfficerCase }) {
           ))}
         </div>
       )}
-      {c.verdict ? (
+      {c.crop !== 'potato' ? (
+        // The map counts confirmed late blight only; paddy cases are for reading and calling back.
+        <p className="m-0 text-sm leading-[1.4] text-muted">ধানের কেস: দেখে কৃষককে ফোন করুন। ম্যাপে এখনো শুধু আলুর নাবি ধসা গোনা হয়।</p>
+      ) : c.verdict ? (
         <form action={reviewCase} className="flex items-center justify-between gap-2">
           <input type="hidden" name="id" value={c.id} />
           <input type="hidden" name="verdict" value="" />

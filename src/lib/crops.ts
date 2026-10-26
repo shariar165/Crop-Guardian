@@ -47,7 +47,7 @@ export type CropSpec = {
   afterHarvest: string
   // Shown as "পরীক্ষামূলক" until the rule is validated against real outbreaks.
   experimental: boolean
-  // Under the decision when leaf photos can't diagnose this crop yet.
+  // Under the decision while leaf photos can't diagnose this crop (no model in diagnosis/crops.ts).
   photoNote: string | null
   // Whether the ledger may count weeks without danger as calendar sprays saved. Only where the
   // farmers' usual habit is known to be one spray a week.
