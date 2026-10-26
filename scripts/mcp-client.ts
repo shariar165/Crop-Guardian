@@ -9,7 +9,7 @@
 import { existsSync } from 'node:fs'
 import { createMCPClient } from '@ai-sdk/mcp'
 import { generateText, isStepCount } from 'ai'
-import { MODELS } from '@/lib/assistant/models'
+import { withFallback } from '@/lib/assistant/models'
 
 // The text parts of a tool result (a legacy "toolResult" answer has none).
 const text = (result: object): string =>
@@ -31,13 +31,19 @@ async function main() {
     console.log(`Resources: ${resources.map((r) => r.uri).join(', ')}`)
 
     if (question) {
-      const result = await generateText({
-        model: MODELS.answer,
-        instructions: 'You help a Bangladeshi agriculture officer. Use the Crop Guardian tools; answer in short Bengali. Never give a pesticide dose.',
-        prompt: question,
-        tools: await client.tools(),
-        stopWhen: isStepCount(6),
-      })
+      const tools = await client.tools()
+      const { result, modelUsed } = await withFallback('answer', (model, abortSignal) =>
+        generateText({
+          model,
+          instructions: 'You help a Bangladeshi agriculture officer. Use the Crop Guardian tools; answer in short Bengali. Never give a pesticide dose.',
+          prompt: question,
+          tools,
+          stopWhen: isStepCount(6),
+          maxRetries: 0,
+          abortSignal,
+        }),
+      )
+      console.log(`\nModel: ${modelUsed}`)
       console.log(`\nTools used: ${result.steps.flatMap((s) => s.toolCalls.map((c) => c.toolName)).join(' → ') || 'none'}`)
       console.log(`\n${result.text}`)
       return

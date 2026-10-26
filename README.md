@@ -261,16 +261,16 @@ npm run db:migrate
 
 `/ask` answers a farmer's typed question in Bengali, **only from the advice the app already shows** (`src/lib/assistant/kb.ts`: the potato advice, the guide, the diagnosis advice and the risk colours, 23 passages). It is a faster way to find that advice, not a new source of it. It needs the network, so it is not cached offline. It is linked from Home.
 
-How a question is answered (`src/lib/assistant/answer.ts`), through the [Vercel AI Gateway](https://vercel.com/ai-gateway) (`src/lib/assistant/models.ts`):
+How a question is answered (`src/lib/assistant/answer.ts`). The models are called directly with free API keys that need no card (`src/lib/assistant/models.ts`):
 
-1. **Read the question.** Claude Haiku decides whether it is a greeting, off topic (a fixed reply, no further cost) or a question, and writes one to three Bengali search phrases with root words.
-2. **Search** (`retrieve.ts`): each phrase is searched by meaning (Gemini embeddings in pgvector, cosine distance) and by words (Postgres full-text search over Bengali stems from `tokens.ts`, since Postgres knows no Bengali grammar). The lists are fused by reciprocal rank and reranked by Cohere. Without embeddings it searches by words only; without the reranker it keeps the fused order.
-3. **Answer.** Claude Sonnet writes at most four sentences from those passages and returns `{ answer, sources, escalate }`. It can search again (`searchGuide`) or look up today's risk at the farmer's union (`todayRisk`, the same rule as Home). If Claude is down, the gateway falls back to Gemini.
+1. **Read the question.** Qwen 3.8 (on Groq) decides whether it is a greeting, off topic (a fixed reply, no further cost) or a question, and writes one to three Bengali search phrases with root words.
+2. **Search** (`retrieve.ts`): each phrase is searched by meaning (Gemini embeddings in pgvector, cosine distance) and by words (Postgres full-text search over Bengali stems from `tokens.ts`, since Postgres knows no Bengali grammar). The lists are fused by reciprocal rank and reranked by Cohere (when `COHERE_API_KEY` is set). Without embeddings it searches by words only; without the reranker it keeps the fused order.
+3. **Answer.** Qwen 3.8 writes at most four sentences from those passages and returns `{ answer, sources, escalate }`. It can search again (`searchGuide`) or look up today's risk at the farmer's union (`todayRisk`, the same rule as Home). Each step has a chain of models (`models.ts`): if one fails or takes over 30 seconds (a free tier's rate limit, or Gemini Flash's frequent "high demand"), the next is tried: Gemini Flash, Gemma 4 on OpenRouter, gpt-oss-120b on Groq, Gemini Flash-Lite. A provider without a key is skipped. Qwen leads because, in a test of tool use with structured output in Bengali, it answered in under a second while Gemini Flash-Lite took about 20. A question is never treated as a greeting, whatever the model says (`looksLikeQuestion`).
 4. **Guard** (`guard.ts`), before the farmer sees anything (which is why answers aren't streamed): a sentence that gives a dose is dropped and «ওষুধের মাত্রা: বোতলের লেবেল অনুযায়ী» added; cited passages the model wasn't shown are dropped; an answer with no real source becomes "ask the officer". Every answer carries the পরীক্ষামূলক note.
 
-Also: phone numbers are removed from questions before they reach a model; only the last 3 turns go back as history; the chat is kept on the phone only; each device (hashed IP) gets 30 questions a day (`ask_rate`). The fixed instructions are marked for prompt caching, and the server logs each answer's prompt version, passages, tool calls and tokens (cached and not), but never the question.
+Also: phone numbers are removed from questions before they reach a model; only the last 3 turns go back as history; the chat is kept on the phone only; each device (hashed IP) gets 30 questions a day (`ask_rate`). The fixed instructions always come first and never change, so the providers' prompt caches can reuse them, and the server logs each answer's prompt version, passages, tool calls and tokens (cached and not), but never the question.
 
-The prompts are versioned (`PROMPT_VERSION` in `prompts.ts`): an XML role and rules, few-shot Bengali examples (tested to contain no dose) and structured output. The regression set (`evalSet.ts`, 34 questions, 4 of them attacks or dose bait) runs through the real pipeline:
+The prompts are versioned (`PROMPT_VERSION` in `prompts.ts`): an XML role and rules, few-shot Bengali examples (tested to contain no dose) and structured output. The regression set (`evalSet.ts`, 33 questions, 4 of them attacks or dose bait) runs through the real pipeline:
 
 ```bash
 npm run db:migrate                          # adds the kb_chunk and ask_rate tables (and pgvector)
@@ -278,11 +278,20 @@ npx tsx scripts/build-kb.ts                 # embeds the passages; run again whe
 npx tsx scripts/eval-assistant.ts --write   # fixed checks + a judge model → docs/assistant-eval.md
 ```
 
-Gateway auth comes from `vercel env pull` (a `VERCEL_OIDC_TOKEN`, valid for about 12 hours; pull again when it expires) or an `AI_GATEWAY_API_KEY`.
+The keys go in `.env.local` (and in Vercel with `vercel env add`):
+
+| Variable | Needed | Where (free, no card) |
+|---|---|---|
+| `GROQ_API_KEY` | Yes: reads and answers (Qwen 3.8, gpt-oss-120b) | [Groq console](https://console.groq.com/keys) |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Yes: embeddings, fallbacks, the eval's judge | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `OPENROUTER_API_KEY` | No, one more fallback (Gemma 4, a `:free` model) | [OpenRouter](https://openrouter.ai/keys) |
+| `COHERE_API_KEY` | No, reranker | [Cohere dashboard](https://dashboard.cohere.com/api-keys) (trial key) |
+
+The free tiers have rate limits, enough for a demo and the eval but not for many farmers, and Google may use free-tier prompts to improve its products. That is one more reason phone numbers are removed before a question is sent. Moving to paid keys, or to the Vercel AI Gateway, is a change to `models.ts` only.
 
 ## MCP server
 
-`/api/mcp` serves Crop Guardian as an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP, `mcp-handler`), so an agriculture officer's AI assistant or a partner's agent can use the same engines as the app. Read-only tools: `find_union` (an id from a union, upazila or district name), `get_risk` (today's risk at a union), `get_season_risk` (every past day from a date), `search_guide` (the assistant's search) and `diagnosis_classes`; the advice is also a resource, `crop-guardian://advice`. With `MCP_SECRET` set, calls need `Authorization: Bearer $MCP_SECRET`. Set it in production, since `search_guide` costs gateway credit.
+`/api/mcp` serves Crop Guardian as an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP, `mcp-handler`), so an agriculture officer's AI assistant or a partner's agent can use the same engines as the app. Read-only tools: `find_union` (an id from a union, upazila or district name), `get_risk` (today's risk at a union), `get_season_risk` (every past day from a date), `search_guide` (the assistant's search) and `diagnosis_classes`; the advice is also a resource, `crop-guardian://advice`. With `MCP_SECRET` set, calls need `Authorization: Bearer $MCP_SECRET`. Set it in production, since `search_guide` uses the assistant's free-tier quota.
 
 ```bash
 npx tsx scripts/mcp-client.ts http://localhost:3000/api/mcp          # lists and calls the tools

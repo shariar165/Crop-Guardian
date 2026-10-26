@@ -116,3 +116,9 @@ test('every eval case names chunks that exist, and ids are unique', async () => 
   const ids = new Set(KB.map((c) => c.id))
   for (const c of EVAL_SET) for (const s of c.sources ?? []) assert.ok(ids.has(s), `${c.id}: ${s}`)
 })
+
+test('a question is never mistaken for a greeting', async () => {
+  const { looksLikeQuestion } = await import('./guard')
+  for (const q of ['ছত্রাকনাশক প্রতি লিটারে কত গ্রাম দেব?', 'আলু কখন লাগাব', 'পাতায় দাগ কেন', 'নমস্কার, আমার আলুর পাতা সব হলুদ হয়ে যাচ্ছে দেখছি']) assert.ok(looksLikeQuestion(q), q)
+  for (const g of ['আসসালামু আলাইকুম', 'নমস্কার', 'ধন্যবাদ', 'hello']) assert.ok(!looksLikeQuestion(g), g)
+})

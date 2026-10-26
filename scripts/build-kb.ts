@@ -1,20 +1,20 @@
 // Fills the assistant's knowledge base (the "kb_chunk" table) from src/lib/assistant/kb.ts: embeds
-// each chunk through the AI Gateway and stores its stemmed words for the keyword search. Chunks no
+// each chunk with Gemini and stores its stemmed words for the keyword search. Chunks no
 // longer in kb.ts are deleted. Run again whenever the advice text changes.
 //
-// Run: npm run db:migrate, then npx tsx scripts/build-kb.ts   (DATABASE_URL and gateway auth from .env.local)
+// Run: npm run db:migrate, then npx tsx scripts/build-kb.ts   (DATABASE_URL and GOOGLE_GENERATIVE_AI_API_KEY from .env.local)
 import { existsSync } from 'node:fs'
 import { Pool } from '@neondatabase/serverless'
-import { embedMany, gateway } from 'ai'
+import { embedMany } from 'ai'
 import { KB, searchText } from '@/lib/assistant/kb'
-import { embedOptions, MODELS } from '@/lib/assistant/models'
+import { embeddingModel, embedOptions, MODELS } from '@/lib/assistant/models'
 import { toVector } from '@/lib/assistant/retrieve'
 import { stemmedText } from '@/lib/assistant/tokens'
 
 async function main() {
   if (existsSync('.env.local')) process.loadEnvFile('.env.local')
   const texts = KB.map(searchText)
-  const { embeddings, usage } = await embedMany({ model: gateway.embeddingModel(MODELS.embedding), values: texts, providerOptions: embedOptions })
+  const { embeddings, usage } = await embedMany({ model: embeddingModel(), values: texts, providerOptions: embedOptions('RETRIEVAL_DOCUMENT') })
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
   try {
@@ -28,7 +28,7 @@ async function main() {
       )
     }
     const { rowCount } = await pool.query('DELETE FROM kb_chunk WHERE NOT ("id" = ANY($1))', [KB.map((c) => c.id)])
-    console.log(`${KB.length} chunks embedded (${usage.tokens} tokens, ${MODELS.embedding}); ${rowCount ?? 0} old chunks removed.`)
+    console.log(`${KB.length} chunks embedded (${Number.isFinite(usage.tokens) ? `${usage.tokens} tokens, ` : ''}${MODELS.embedding}); ${rowCount ?? 0} old chunks removed.`)
   } finally {
     await pool.end()
   }

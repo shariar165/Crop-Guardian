@@ -1,10 +1,11 @@
 // Finds the knowledge-base chunks for a question: each search phrase runs twice in Postgres, by
 // meaning (pgvector cosine distance) and by words (full-text search over stemmed Bengali), the
 // lists are fused by reciprocal rank, and a reranker orders what is left against the question.
-// Every step degrades rather than fails: no embeddings → words only; no reranker → fused order.
-import { embedMany, gateway, rerank } from 'ai'
+// Every step degrades rather than fails: no embeddings → words only; no reranker (or no Cohere key)
+// → fused order.
+import { embedMany, rerank } from 'ai'
 import type { KbChunk } from './kb'
-import { embedOptions, MODELS } from './models'
+import { embeddingModel, embedOptions, rerankingModel } from './models'
 import { stemmedText } from './tokens'
 
 // Any Postgres client's query(); the app passes its Neon pool, scripts their own.
@@ -32,7 +33,7 @@ export const toVector = (v: number[]): string => `[${v.join(',')}]`
 
 async function embedPhrases(phrases: string[]): Promise<number[][] | null> {
   try {
-    const { embeddings } = await embedMany({ model: gateway.embeddingModel(MODELS.embedding), values: phrases, providerOptions: embedOptions })
+    const { embeddings } = await embedMany({ model: embeddingModel(), values: phrases, providerOptions: embedOptions('RETRIEVAL_QUERY') })
     return embeddings
   } catch (err) {
     console.error('Assistant embeddings failed, searching by words only:', err)
@@ -77,9 +78,11 @@ export async function searchKb(query: Query, question: string, phrases: string[]
   const byId = new Map(rows.map((r) => [String(r.id), toChunk(r)]))
   const candidates = fused.flatMap((id) => byId.get(id) ?? [])
 
+  const reranker = rerankingModel()
+  if (!reranker) return candidates.slice(0, TOP_K)
   try {
     const { ranking } = await rerank({
-      model: gateway.rerankingModel(MODELS.rerank),
+      model: reranker,
       query: question,
       documents: candidates.map((c) => `${c.title}\n${c.text}`),
       topN: TOP_K,

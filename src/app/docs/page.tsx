@@ -4,7 +4,7 @@ import Link from 'next/link'
 import BacktestChart from '@/components/BacktestChart'
 import TopBar from '@/components/TopBar'
 import { KB } from '@/lib/assistant/kb'
-import { FALLBACKS, MODELS } from '@/lib/assistant/models'
+import { MODELS } from '@/lib/assistant/models'
 import { PROMPT_VERSION } from '@/lib/assistant/prompts'
 import { DIVISIONS } from '@/lib/areas'
 import { parseBacktest, parseEvalSummary } from '@/lib/docsData'
@@ -26,7 +26,7 @@ const unions = districts.flatMap((d) => d.upazilas.flatMap((u) => u.unions))
 const AI_STACK: { part: string; how: string; where: string }[] = [
   { part: 'Leaf diagnosis', how: 'EfficientNet-B0 fine-tuned on field photos, exported to ONNX; temperature scaling, a conformal prediction set (α = 0.1) and an out-of-distribution score', where: 'On the phone (onnxruntime-web in a Web Worker), offline. Photos never leave the phone.' },
   { part: 'Weather risk', how: 'Hutton criteria for potato late blight, a draft rule for rice blast; no ML, so every alert can be explained', where: 'Server, Open-Meteo forecast per union' },
-  { part: 'কৃষি সহায়ক (assistant)', how: `RAG over the app's own advice: ${MODELS.rewrite} reads the question, hybrid search (pgvector + Bengali full-text, fused by reciprocal rank), ${MODELS.rerank} reranks, ${MODELS.answer} answers with tools and a structured output`, where: `Server, Vercel AI Gateway, falls back to ${FALLBACKS.answer[0]}` },
+  { part: 'কৃষি সহায়ক (assistant)', how: `RAG over the app's own advice: ${MODELS.rewrite} reads the question, hybrid search (pgvector + Bengali full-text, fused by reciprocal rank), ${MODELS.rerank} reranks, ${MODELS.answer} answers with tools and a structured output`, where: `Server, free-tier provider APIs (Groq, Google, OpenRouter); falls back to ${MODELS.fallbacks.join(', ')}` },
   { part: 'MCP server', how: 'find_union, get_risk, get_season_risk, search_guide, diagnosis_classes and the advice as a resource, over Streamable HTTP', where: '/api/mcp, for an officer’s or partner’s AI tools' },
 ]
 

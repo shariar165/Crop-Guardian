@@ -23,6 +23,11 @@ export function checkQuestion(raw: unknown): QuestionCheck {
   return { ok: true, text: redactPhones(text) }
 }
 
+// A model may call a short question a greeting and skip it; a farmer's question must never get the
+// welcome text instead of an answer. A greeting is short and asks nothing.
+const QUESTION_WORD = /[?？]|কী|কি\b|কত|কেন|কীভাবে|কিভাবে|কখন|কোন|কোথায়|কে\b|নাকি|দেব|করব|how|what|why|when|which/i
+export const looksLikeQuestion = (text: string): boolean => text.length > 40 || QUESTION_WORD.test(text)
+
 // A farmer may type their number ("আমাকে ০১৭… নম্বরে ফোন দিন"); it never goes to a model provider.
 const PHONE = /(?:\+?88)?01[3-9]\d{8}/g
 export const PHONE_MASK = '[ফোন নম্বর]'
