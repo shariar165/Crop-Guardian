@@ -1,9 +1,9 @@
 // The parts of the MCP server (src/app/api/mcp) that don't need the network: finding a union by
 // name and describing what the photo diagnosis can name. Kept here so they can be tested.
 import { DIVISIONS, fullName } from '@/lib/areas'
-import { CLASS_CONTENT } from '@/lib/diagnosis/content'
-import { parseConfig } from '@/lib/diagnosis/config'
-import configJson from '../../public/model/crop_guardian_config.json'
+import { CROPS } from '@/lib/crops'
+import { contentOf } from '@/lib/diagnosis/content'
+import { classesOf, PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
 
 export const MAX_MATCHES = 10
 
@@ -24,14 +24,18 @@ export function findUnions(query: string): { id: string; name: string; nameEn: s
   return [...exact, ...partial].slice(0, MAX_MATCHES).map((u) => ({ id: u.id, name: fullName(u), nameEn: u.nameEn }))
 }
 
-// What the on-device model can say about a potato leaf, with the app's advice for each.
+// What the on-device models can say about a potato or paddy leaf, with the app's advice for each.
+// The labels in PHOTO_SPECS are tested against each crop's model config.
 export function diagnosisClasses() {
-  const config = parseConfig(configJson)
   return {
-    note: 'The model runs only on the phone; this server never sees photos. Every result is experimental and doses always follow the label.',
-    classes: config.diseases
-      .filter((id) => CLASS_CONTENT[id])
-      .map((id) => ({ id, nameBn: config.labelsBn[id] ?? id, nameEn: CLASS_CONTENT[id].en, sign: CLASS_CONTENT[id].sign, steps: CLASS_CONTENT[id].steps })),
+    note: 'The models run only on the phone; this server never sees photos. Every result is experimental and doses always follow the label.',
+    classes: PHOTO_CROPS.flatMap((crop) =>
+      classesOf(crop).flatMap((id) => {
+        const c = contentOf(crop, id)
+        if (!c) return []
+        return [{ crop, experimental: CROPS[crop].experimental, id, nameBn: PHOTO_SPECS[crop].labelsBn[id], nameEn: c.en, sign: c.sign, steps: c.steps }]
+      }),
+    ),
     unknown: 'When a photo looks like nothing the model knows, the app says «চিনতে পারিনি» and suggests sending it to the agriculture officer.',
   }
 }
