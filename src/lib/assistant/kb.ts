@@ -4,11 +4,10 @@
 // retrieval), which is embedded and searched along with the text.
 import { CROPS, CROP_IDS } from '@/lib/crops'
 import { DAY_STATE } from '@/lib/data'
-import { ADVICE_SOURCE, CLASS_CONTENT } from '@/lib/diagnosis/content'
-import { parseConfig } from '@/lib/diagnosis/config'
+import { CLASS_CONTENT, sourceOf } from '@/lib/diagnosis/content'
+import { PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { GUIDE, RISK_MEANING } from '@/lib/guide'
 import { POTATO_GUIDE } from '@/lib/potatoGuide'
-import configJson from '../../../public/model/crop_guardian_config.json'
 
 export type KbChunk = {
   id: string
@@ -41,18 +40,21 @@ const guide: KbChunk[] = GUIDE.map((s) => ({
   text: s.lines.join(' '),
 }))
 
-const labels = parseConfig(configJson).labelsBn
-
-const disease: KbChunk[] = Object.entries(CLASS_CONTENT).map(([id, c]) => {
-  const name = labels[id] ?? c.en
-  return {
-    id: `disease.${id}`,
-    title: id === 'healthy' ? 'সুস্থ আলুর পাতা' : `আলুর ${name}`,
-    source: ADVICE_SOURCE.label.replace(/^সূত্র:\s*/, ''),
-    href: '/camera',
-    context: `পাতার ছবি দেখে অ্যাপ «${name}» বললে যে পরামর্শ দেখায়।`,
-    text: `চেনার উপায়: ${c.sign}। ${c.banner.text}। করণীয়: ${c.steps.join('; ')}।`,
-  }
+// The labels in PHOTO_SPECS are tested against each crop's model config.
+const disease: KbChunk[] = PHOTO_CROPS.flatMap((crop) => {
+  const spec = CROPS[crop]
+  return Object.entries(CLASS_CONTENT[crop]).map(([id, c]) => {
+    const name = PHOTO_SPECS[crop].labelsBn[id] ?? c.en
+    return {
+      // Potato's ids predate paddy and are named by the prompts and the eval set.
+      id: crop === 'potato' ? `disease.${id}` : `disease.${crop}.${id}`,
+      title: `${id === 'healthy' ? `সুস্থ ${spec.ofBn} পাতা` : `${spec.ofBn} ${name}`}${spec.experimental ? ' (পরীক্ষামূলক)' : ''}`,
+      source: sourceOf(crop, id).label.replace(/^সূত্র:\s*/, ''),
+      href: '/camera',
+      context: `${spec.ofBn} পাতার ছবি দেখে অ্যাপ «${name}» বললে যে পরামর্শ দেখায়।`,
+      text: `চেনার উপায়: ${c.sign}। ${c.banner.text}। করণীয়: ${c.steps.join('; ')}।`,
+    }
+  })
 })
 
 const risk: KbChunk[] = CROP_IDS.map((crop) => {

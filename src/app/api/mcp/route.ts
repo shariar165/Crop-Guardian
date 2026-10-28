@@ -98,7 +98,7 @@ const handler = createMcpHandler(
       'diagnosis_classes',
       {
         title: 'What the photo diagnosis can name',
-        description: "The potato leaf diseases the app's on-device model recognises, how a farmer can see each, and the app's steps.",
+        description: "The potato and paddy leaf diseases the app's on-device models recognise (paddy is experimental), how a farmer can see each, and the app's steps.",
         inputSchema: z.object({}),
         annotations: { readOnlyHint: true },
       },

@@ -9,7 +9,7 @@ import ListenButton from '@/components/ListenButton'
 import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
-import { CLASS_CONTENT } from '@/lib/diagnosis/content'
+import { contentOf } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
 import { questionCount } from '@/lib/diagnosis/questions'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
@@ -19,10 +19,10 @@ export default function UncertainView() {
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
-  const { config, record } = view
+  const { crop, config, record } = view
   const candidates = record.result.candidates
   const heading = `${toBnDigits(candidates.length)}টার যেকোনোটা হতে পারে`
-  const asks = questionCount(candidates, [])
+  const asks = questionCount(candidates, [], crop)
   const speech =
     `${CONFIDENCE_WORD.uncertain}। ${heading}: ` +
     candidates.map((id) => labelOf(id, config)).join(', ') +
@@ -46,28 +46,28 @@ export default function UncertainView() {
           <p className="m-0 text-[15px] leading-[1.45]">ভুল ওষুধ এড়াতে আমি আন্দাজে একটা নাম বলব না।</p>
         </div>
       </div>
-      <ValidationBadge className="mx-4 mt-2.5" />
+      <ValidationBadge crop={crop} className="mx-4 mt-2.5" />
 
       <SectionRule label="সম্ভাব্য তালিকা" className="mx-4 mt-4 mb-2.5" />
 
       <ul className="m-0 flex shrink-0 list-none flex-col gap-2.5 px-4">
         {candidates.map((id) => (
           <li key={id} className="stitch flex items-center gap-3 rounded-[18px] px-3.5 py-3">
-            <CandidateThumb id={id} />
+            <CandidateThumb crop={crop} id={id} />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex flex-wrap items-baseline gap-1.5">
                 <span className="font-display text-xl font-extrabold">{labelOf(id, config)}</span>
                 <span className="text-[13px] text-muted" lang="en">
-                  {CLASS_CONTENT[id]?.en}
+                  {contentOf(crop, id)?.en}
                 </span>
               </div>
-              <span className="text-sm leading-[1.4]">{CLASS_CONTENT[id]?.sign}</span>
+              <span className="text-sm leading-[1.4]">{contentOf(crop, id)?.sign}</span>
             </div>
           </li>
         ))}
       </ul>
 
-      <WhyCard record={record} config={config} title="ছবি আর আবহাওয়া" />
+      <WhyCard crop={crop} record={record} config={config} title="ছবি আর আবহাওয়া" />
 
       <div className="min-h-4 flex-1" />
 

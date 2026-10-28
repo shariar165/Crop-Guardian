@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { historyMessages } from './answer'
-import { checkQuestion, DOSE_LINE, hasDose, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, PHONE_MASK, redactPhones, sanitizeAnswer, validSources } from './guard'
+import { BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasDose, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, PHONE_MASK, redactPhones, sanitizeAnswer, validSources } from './guard'
 import { KB, searchText } from './kb'
 import { ANSWER_INSTRUCTIONS, answerPrompt, REWRITE_INSTRUCTIONS } from './prompts'
 import { keywordQuery, rrf } from './retrieve'
@@ -59,7 +59,25 @@ test('a sentence with a dose is dropped and the label line added', () => {
   assert.ok(redacted)
   assert.ok(!hasDose(text), text)
   assert.ok(text.includes('আক্রান্ত গাছ তুলে ফেলুন।') && text.includes('আবার দেখুন।') && text.includes(DOSE_LINE))
-  assert.deepEqual(sanitizeAnswer('ঠিক আছে।'), { text: 'ঠিক আছে।', redacted: false })
+  assert.deepEqual(sanitizeAnswer('ঠিক আছে।'), { text: 'ঠিক আছে।', redacted: false, named: false })
+})
+
+test('a brand is recognised in English, Bengali and their variants, but a chemical group is not', () => {
+  assert.ok(hasBrand('Ridomil Gold দিন'))
+  assert.ok(hasBrand('DITHANE M-45'))
+  assert.ok(hasBrand('melody  duo'))
+  assert.ok(hasBrand('ডায়থেন দিন'))
+  assert.ok(hasBrand('সিকিউর ভালো'))
+  assert.ok(hasBrand('রিডো\u200cমিল দিন'), 'a zero-width non-joiner inside the name')
+  assert.ok(!hasBrand('অনুমোদিত ছত্রাকনাশক স্প্রে করুন'))
+  assert.ok(!hasBrand('ট্রাইসাইক্লাজোল বা স্ট্রোবিলুরিন গ্রুপের ছত্রাকনাশক'))
+  assert.ok(!hasBrand('a secure score, a tilt'))
+  assert.ok(!hasBrand(BRAND_REFERRAL))
+})
+
+test('an answer that names a brand becomes the officer referral', () => {
+  assert.deepEqual(sanitizeAnswer('আক্রান্ত গাছ তুলে ফেলুন। রিডোমিল গোল্ড স্প্রে করুন।'), { text: BRAND_REFERRAL, redacted: false, named: true })
+  assert.ok(!hasDose(BRAND_REFERRAL) && BRAND_REFERRAL.includes('লেবেল অনুযায়ী'))
 })
 
 test('a long answer is cut at a sentence, within the limit', () => {
@@ -95,11 +113,16 @@ test('the knowledge base never gives a dose', () => {
   for (const c of KB) assert.ok(!hasDose(`${c.title} ${c.text}`), c.id)
 })
 
+// Built only from screen text, so this also covers the guides, diagnosis advice and crop decisions.
+test('the knowledge base never names a medicine brand', () => {
+  for (const c of KB) assert.ok(!hasBrand(`${c.title} ${c.text}`), c.id)
+})
+
 test('the prompts forbid doses, and their examples follow the rule', () => {
   assert.ok(ANSWER_INSTRUCTIONS.includes(DOSE_LINE))
   const examples = [...ANSWER_INSTRUCTIONS.matchAll(/<answer>([^<]+)<\/answer>/g)].map((m) => m[1])
   assert.ok(examples.length >= 3)
-  for (const e of examples) assert.ok(!hasDose(e), e)
+  for (const e of examples) assert.ok(!hasDose(e) && !hasBrand(e), e)
 })
 
 // Fixed text is what the provider caches; a date or place in it would break the cache every day.
@@ -115,4 +138,10 @@ test('every eval case names chunks that exist, and ids are unique', async () => 
   assert.equal(new Set(EVAL_SET.map((c) => c.id)).size, EVAL_SET.length)
   const ids = new Set(KB.map((c) => c.id))
   for (const c of EVAL_SET) for (const s of c.sources ?? []) assert.ok(ids.has(s), `${c.id}: ${s}`)
+})
+
+test('a question is never mistaken for a greeting', async () => {
+  const { looksLikeQuestion } = await import('./guard')
+  for (const q of ['ছত্রাকনাশক প্রতি লিটারে কত গ্রাম দেব?', 'আলু কখন লাগাব', 'পাতায় দাগ কেন', 'নমস্কার, আমার আলুর পাতা সব হলুদ হয়ে যাচ্ছে দেখছি']) assert.ok(looksLikeQuestion(q), q)
+  for (const g of ['আসসালামু আলাইকুম', 'নমস্কার', 'ধন্যবাদ', 'hello']) assert.ok(!looksLikeQuestion(g), g)
 })

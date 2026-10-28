@@ -1,6 +1,6 @@
 # Crop-Guardian
 
-**মাঠের সৎ ডাক্তার** — a Bengali, mobile-first UI for advising potato farmers on late blight, and paddy farmers on rice blast: daily risk from the weather, leaf photo diagnosis (potato only, for now) that admits uncertainty, an area risk map, and a season ledger. Every number on screen comes from a real source: the weather forecast, the farmer's own records on the phone, or cases an agriculture officer has confirmed. There is no sample or demo data.
+**মাঠের সৎ ডাক্তার** — a Bengali, mobile-first UI for advising potato farmers on late blight, and paddy farmers on rice blast: daily risk from the weather, leaf photo diagnosis that admits uncertainty (potato, and paddy as an experiment, see [Paddy diagnosis](#paddy-diagnosis)), an area risk map, and a season ledger. Every number on screen comes from a real source: the weather forecast, the farmer's own records on the phone, or cases an agriculture officer has confirmed. There is no sample or demo data.
 
 Built with Next.js (App Router), TypeScript and Tailwind CSS v4.
 
@@ -15,7 +15,7 @@ This is a deliberate focus: one crop and one disease done honestly, rather than 
 **Pests are not covered.** The challenge asks for pests and diseases. We chose to cover one disease end to end (forecast, SMS alert, photo check, officer review, ledger) first. The pieces are built to grow:
 
 - **More crops and diseases.** Crops are a registry (`src/lib/crops.ts`), and paddy blast already runs on it as a draft rule (experimental).
-- **More photo classes.** The photo model's classes and thresholds come from its config, so new classes (rice leaves, common pests such as potato tuber moth or aphids) need retraining but no app changes.
+- **More photo classes and crops.** Each crop's photo model, classes and thresholds come from its own exported config (`src/lib/diagnosis/crops.ts`). Paddy diagnosis runs end to end on a model trained by [`notebooks/paddy_training.ipynb`](notebooks/paddy_training.ipynb), labelled experimental; pests such as potato tuber moth or aphids would be new classes the same way.
 - **More places.** The area list already covers the 17 potato districts of Rangpur and Rajshahi divisions and Munshiganj, down to unions.
 
 See [Limitations and next steps](#limitations-and-next-steps) for what is not yet validated.
@@ -30,6 +30,8 @@ npm test         # unit tests (node:test)
 npm run typecheck
 npm run lint
 ```
+
+On a locked-down network `npm install` can fail because `onnxruntime-node` (used only by the parity test) downloads its GPU files from NuGet. Set `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` first.
 
 ## Screens
 
@@ -100,7 +102,7 @@ npx tsx scripts/find-blast-periods.ts             # add --write to update docs/b
 - **Focus**: variance of the Laplacian below `BLUR_THRESHOLD` (100) → "ফোন স্থির রাখুন". In dev the values are logged to the console as `[quality]` for tuning.
 - **Leaf**: share of Excess-Green (2G − R − B) pixels inside the leaf frame: almost none → "পাতা ফ্রেমের ভেতরে আনুন", too few → "আরো কাছে আনুন".
 
-The farmer takes two photos (top of the leaf, then the underside). A photo that fails the checks asks "… তবুও রাখবেন?" before it is kept. Photos are saved on the device as JPEGs (≤ 1024 px, quality 0.85) in IndexedDB (`src/lib/captureStore.ts`) for a future diagnosis upload, and the top photo is shown on `/result/uncertain`.
+The farmer takes two photos: for potato, the top of the leaf, then the underside; for paddy, two different affected leaves (the paddy training photos are single leaves from above). Which crop the camera diagnoses comes from `?crop=` in the link, else the field Home last showed, else the first field in season (`src/lib/diagnosis/pickCrop.ts`); once more than one crop has a model, an আলু / ধান switch under the viewfinder changes it and starts a fresh pair. A photo that fails the checks asks "… তবুও রাখবেন?" before it is kept. Photos are saved on the device as JPEGs (≤ 1024 px, quality 0.85) in IndexedDB (`src/lib/captureStore.ts`) for a future diagnosis upload, and the top photo is shown on `/result/uncertain`.
 
 **The camera needs a secure context: HTTPS, or `http://localhost`.** Opening the dev server from a phone over `http://<LAN-IP>:3000` has no `getUserMedia`, so the screen falls back to the phone's own camera app via a file picker. To test the live camera on a real phone, use `next dev --experimental-https` or an HTTPS tunnel. If camera permission is denied, the screen shows "ক্যামেরার অনুমতি দিন" with a retry button.
 
@@ -124,14 +126,14 @@ The server can't read localStorage, so Home is rendered as if no field is set, a
 
 ## Diagnosis
 
-The leaf photos are diagnosed on the phone, with no server. The model (EfficientNet-B0, `public/model/crop_guardian_v2.onnx`) and its calibrated config (`crop_guardian_config.json`) come from the training notebook's export. Classes, Bengali labels, preprocessing, temperature and thresholds are all read from the config; none are written in the code. The model's data, test metrics, calibration, conformal coverage and OOD results are in the **[model card](docs/model-card.md)**.
+The leaf photos are diagnosed on the phone, with no server. Each crop has its own model and calibrated config, exported by a training notebook and listed in `src/lib/diagnosis/crops.ts` (potato: EfficientNet-B0, `public/model/crop_guardian_v2.onnx` and `crop_guardian_config.json`; paddy: `public/model/paddy/`). The worker holds one crop's model at a time, and a diagnosis record keeps its crop, so the result screens, questions, advice and the officer's summary all follow it (records saved before paddy are potato). Classes, Bengali labels, preprocessing, temperature and thresholds are all read from the config; none are written in the code. The model's data, test metrics, calibration, conformal coverage and OOD results are in the **[model card](docs/model-card.md)**.
 
 - `src/lib/diagnosis/worker.ts` runs [onnxruntime-web](https://onnxruntime.ai/docs/get-started/with-javascript/web.html) (wasm, one thread) in a Web Worker, so the camera never freezes. The camera screen starts it; the first time it downloads the model and the wasm (about 30 MB, "মডেল নামাচ্ছি… একবারই লাগবে") and keeps them in the Cache API. The wasm is copied from `node_modules` into `public/ort/<version>/` by `scripts/copy-ort.mjs` on install, dev and build: nothing comes from a CDN.
 - `preprocess.ts`: shorter side to 255, centre crop 224, scale, mean/std, NCHW float32, with torchvision's rounding.
 - `decide.ts` follows `decision` in the config exactly: softmax of the disease logits at temperature T, the conformal set `p ≥ 1 − qhat`, and the OOD score. A photo is **unknown** if the OOD score is over the threshold or the set is empty, **confident** if the set has one class, otherwise **uncertain**. With the current config (`1 − qhat ≈ 0.89`), one photo is never uncertain.
 - `combine.ts` decides each photo on its own (the thresholds were calibrated per photo) and keeps the more cautious result: unknown > uncertain > confident. Two confident photos that disagree become uncertain with both classes.
 
-Confident opens `/result`, uncertain `/result/uncertain`, unknown `/unknown`. From uncertain, `/questions` asks only the questions that split the candidates left (`src/lib/diagnosis/questions.ts`): rings inside the spots, and white growth under the leaf. "জানি না" rules nothing out. If one class is left, `/result` shows it as "ছবি আর আপনার উত্তর মিলিয়ে", not "নিশ্চিত", because the answers aren't calibrated like the model. The result is kept on the device (IndexedDB) with the photos. "কেন মনে হলো?" lists only real inputs: what each photo gave, today's weather risk from `/api/risk`, and the farmer's answers. Advice per class is fixed text in `content.ts` that never gives a dose (always "লেবেল অনুযায়ী") and should be reviewed by an agronomist. Every result says "পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা": the thresholds were fitted on Indonesian field photos, not Bangladeshi ones.
+Confident opens `/result`, uncertain `/result/uncertain`, unknown `/unknown`. From uncertain, `/questions` asks only the questions that split the candidates left (`src/lib/diagnosis/questions.ts`): rings inside the spots, and white growth under the leaf. "জানি না" rules nothing out. If one class is left, `/result` shows it as "ছবি আর আপনার উত্তর মিলিয়ে", not "নিশ্চিত", because the answers aren't calibrated like the model. The result is kept on the device (IndexedDB) with the photos. "কেন মনে হলো?" lists only real inputs: what each photo gave, today's weather risk from `/api/risk`, and the farmer's answers. Advice per class is fixed text in `content.ts` that never gives a dose (always "লেবেল অনুযায়ী") or a brand (the officer chooses the medicine; tested) and should be reviewed by an agronomist. Every potato result says "পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা": its thresholds were fitted on Indonesian field photos, not Bangladeshi ones.
 
 "কৃষি কর্মকর্তাকে পাঠান / দেখান" (on every result screen and at the end of the questions) uses the phone's share sheet (Web Share API) with both leaf photos and a short Bengali summary: date, place, the app's result and candidates, and the farmer's answers (`src/lib/shareCase.ts`). Where sharing isn't available it opens a WhatsApp link with the text only. Each sent case is kept on the device (IndexedDB `cases`), and uploaded to the server when the farmer is signed in (see [Cases](#cases)).
 
@@ -222,9 +224,24 @@ The risk is only useful if the farmer hears it in time, and most won't open the 
 
 To try it locally: run `npm run db:migrate`, sign in, choose a union on `/planting`, turn SMS on at `/account`, then `curl localhost:3000/api/cron/alerts`. The JSON says how many farmers were checked, texted, skipped (already warned) or failed. A text only goes out on a real danger day, so most days it sends nothing.
 
+### Paddy diagnosis
+
+Paddy diagnosis is on, as an experiment: the camera's two-leaf flow, results, questions, advice, sharing and cases, with the model in `public/model/paddy/` (EfficientNet-B0, 16 MB). Its numbers are in the **[paddy model card](docs/model-card-paddy.md)**, and they say two different things:
+
+- **On photos like its training photos it is very good**: 98.4% accuracy, macro-F1 0.979 on the held-out test split, calibration error 0.022, and the conformal set holds the true disease for 99.2% of the photos it answers.
+- **On photos from a dataset it never trained on it is not**: 9–37% accuracy leave-one-dataset-out, with up to 43% confident wrong answers, and only 40% of narrow brown spot (a disease it never saw) called "unknown". Each disease comes mostly from one dataset, so the model partly learned each dataset's camera, background and light. A farmer's phone in a new district is that case.
+
+So every paddy result says "পরীক্ষামূলক: নতুন এলাকার ছবিতে এখনো নির্ভরযোগ্য নয়", and the officer button is on every result. The fix is data, not more tuning: 20–30 photos per disease from the farmers' own fields, labelled by an officer, added to training and checked with `npx tsx scripts/eval-field-photos.ts <dir> --crop paddy --write`.
+
+To retrain: run [`notebooks/paddy_training.ipynb`](notebooks/paddy_training.ipynb) in Google Colab (T4 GPU, about an hour) with the three Bangladeshi field datasets, [RiceLeafBD](https://data.mendeley.com/datasets/kx9rx8p2mz) (Sylhet and Dhaka), [RiceLeafDisease-BD5](https://data.mendeley.com/datasets/sjkptpgv79) (Savar) and [Dhan-Shomadhan](https://data.mendeley.com/datasets/znsxdctwtt), then unzip its `paddy_export.zip` at the repo root (it replaces `public/model/paddy/`, the parity images in `src/lib/diagnosis/__fixtures__/parity-paddy/` and `docs/model-card-paddy.md`) and run `npm test`.
+
+The notebook pools the datasets (reading the authors' own folder names, typos included, and the .rar inside BD5's zip), maps them to six classes (ব্লাস্ট, বাদামি দাগ, পাতা পোড়া, টুংরো, খোল পোড়া, সুস্থ), groups near-duplicate photos by perceptual hash so no photo or near copy sits on both sides of a split, and splits by group 70/10/10/10. Training samples every class, and every dataset within a class, equally often. It fine-tunes EfficientNet-B0 with an "other" output trained on leaf scald, and calibrates on Bangladeshi field photos the same three things the potato config has: temperature, a conformal set at α = 0.1, and the "other" threshold. It tests on the held-out split, on narrow brown spot (never trained, so it should come out "unknown"), and leave-one-dataset-out, which is the closest it gets to a new district. Its export is in the app's own format, so `config.ts`, `decide.ts` and `combine.ts` don't change. The tests check that the config names the classes and Bengali labels the advice was written for, that the model file is there, and that the app reaches the notebook's decisions on its 12 parity images.
+
+Paddy questions (`questions.ts`) each ask for one disease's hallmark, and are asked only while that disease is a candidate: any symptom at all (healthy), eye-shaped spots with ash-grey centres (blast), straw-coloured drying from the tip along the edges (BLB), a stunted plant with orange-yellow leaves (tungro), and grey-green blotches on the sheath just above the water (sheath blight). Paddy advice (`content.ts`) cites its source per disease: BRRI's 2023 blast and BLB alert for those two, and the Rice Doctor fact sheets (with IRRI) for brown spot, sheath blight and tungro. It names fungicide groups only where BRRI does, never a dose, and should be reviewed by BRRI or an agronomist. A paddy result next to the weather shows the blast rule's risk, labelled পরীক্ষামূলক.
+
 ## Cases
 
-After sharing, the phone also sends the case to `POST /api/cases` (multipart: a `case` JSON part checked by `src/lib/cases.ts`, and the two JPEGs, each up to 1.5 MB). Only signed-in users can upload, so the officer knows whom to call; signed out, the button says "মোবাইল নম্বর দিয়ে ঢুকুন". A case that couldn't be uploaded (offline, signed out, or no database) stays on the phone with `uploaded: false`, and `src/components/CaseSync.tsx` retries when the app opens or the phone comes back online.
+After sharing, the phone also sends the case to `POST /api/cases` (multipart: a `case` JSON part checked by `src/lib/cases.ts`, with its crop, and the two JPEGs, each up to 1.5 MB). Only signed-in users can upload, so the officer knows whom to call; signed out, the button says "মোবাইল নম্বর দিয়ে ঢুকুন". A case that couldn't be uploaded (offline, signed out, or no database) stays on the phone with `uploaded: false`, and `src/components/CaseSync.tsx` retries when the app opens or the phone comes back online.
 
 Cases are kept in the `"case"` table in Postgres, photos included as `bytea` (`src/lib/caseDb.ts`). Create it once, after `npm run auth:migrate`:
 
@@ -232,7 +249,7 @@ Cases are kept in the `"case"` table in Postgres, photos included as `bytea` (`s
 npm run db:migrate
 ```
 
-`/officer` lists the cases newest first: union, upazila and district, date, the farmer's number (tap to call), the app's result and answers, and both photos (`/api/cases/[id]/photo/[slot]`, officers only). The officer marks each one **নাবি ধসা নিশ্চিত** or **নাবি ধসা নয়** (and can change it). The map counts only cases marked late blight, per union of the upazila shown, in the last 7 or 30 days. Its crop toggle (opening on the crop of the field Home shows) switches the weather colouring between late blight and rice blast; paddy has no case counts until paddy diagnosis sends paddy cases. Without the database the map still shows the weather risk and says the case counts are unavailable.
+`/officer` lists the cases newest first: union, upazila and district, date, the farmer's number (tap to call), the app's result and answers, and both photos (`/api/cases/[id]/photo/[slot]`, officers only). Each case shows its crop. The officer marks each potato case **নাবি ধসা নিশ্চিত** or **নাবি ধসা নয়** (and can change it); paddy cases are for reading and calling back, with no verdict yet. `npm run db:migrate` adds the `crop` column to an existing table, with older cases as potato. The map counts only cases marked late blight, per union of the upazila shown, in the last 7 or 30 days. Its crop toggle (opening on the crop of the field Home shows) switches the weather colouring between late blight and rice blast; paddy has no case counts until paddy diagnosis sends paddy cases. Without the database the map still shows the weather risk and says the case counts are unavailable.
 
 ## Potato advice
 
@@ -246,16 +263,16 @@ npm run db:migrate
 
 `/ask` answers a farmer's typed question in Bengali, **only from the advice the app already shows** (`src/lib/assistant/kb.ts`: the potato advice, the guide, the diagnosis advice and the risk colours, 23 passages). It is a faster way to find that advice, not a new source of it. It needs the network, so it is not cached offline. It is linked from Home.
 
-How a question is answered (`src/lib/assistant/answer.ts`), through the [Vercel AI Gateway](https://vercel.com/ai-gateway) (`src/lib/assistant/models.ts`):
+How a question is answered (`src/lib/assistant/answer.ts`). The models are called directly with free API keys that need no card (`src/lib/assistant/models.ts`):
 
-1. **Read the question.** Claude Haiku decides whether it is a greeting, off topic (a fixed reply, no further cost) or a question, and writes one to three Bengali search phrases with root words.
-2. **Search** (`retrieve.ts`): each phrase is searched by meaning (Gemini embeddings in pgvector, cosine distance) and by words (Postgres full-text search over Bengali stems from `tokens.ts`, since Postgres knows no Bengali grammar). The lists are fused by reciprocal rank and reranked by Cohere. Without embeddings it searches by words only; without the reranker it keeps the fused order.
-3. **Answer.** Claude Sonnet writes at most four sentences from those passages and returns `{ answer, sources, escalate }`. It can search again (`searchGuide`) or look up today's risk at the farmer's union (`todayRisk`, the same rule as Home). If Claude is down, the gateway falls back to Gemini.
-4. **Guard** (`guard.ts`), before the farmer sees anything (which is why answers aren't streamed): a sentence that gives a dose is dropped and «ওষুধের মাত্রা: বোতলের লেবেল অনুযায়ী» added; cited passages the model wasn't shown are dropped; an answer with no real source becomes "ask the officer". Every answer carries the পরীক্ষামূলক note.
+1. **Read the question.** Qwen 3.8 (on Groq) decides whether it is a greeting, off topic (a fixed reply, no further cost) or a question, and writes one to three Bengali search phrases with root words.
+2. **Search** (`retrieve.ts`): each phrase is searched by meaning (Gemini embeddings in pgvector, cosine distance) and by words (Postgres full-text search over Bengali stems from `tokens.ts`, since Postgres knows no Bengali grammar). The lists are fused by reciprocal rank and reranked by Cohere (when `COHERE_API_KEY` is set). Without embeddings it searches by words only; without the reranker it keeps the fused order.
+3. **Answer.** Qwen 3.8 writes at most four sentences from those passages and returns `{ answer, sources, escalate }`. It can search again (`searchGuide`) or look up today's risk at the farmer's union (`todayRisk`, the same rule as Home). Each step has a chain of models (`models.ts`): if one fails or takes over 30 seconds (a free tier's rate limit, or Gemini Flash's frequent "high demand"), the next is tried: Gemini Flash, Gemma 4 on OpenRouter, gpt-oss-120b on Groq, Gemini Flash-Lite. A provider without a key is skipped. Qwen leads because, in a test of tool use with structured output in Bengali, it answered in under a second while Gemini Flash-Lite took about 20. A question is never treated as a greeting, whatever the model says (`looksLikeQuestion`).
+4. **Guard** (`guard.ts`), before the farmer sees anything (which is why answers aren't streamed): an answer that names a fungicide brand (`BRANDS_EN`/`BRANDS_BN`, English and Bengali spellings) is replaced by «কোন ওষুধ দেবেন, উপসহকারী কৃষি কর্মকর্তার কাছে জেনে নিন», since the officer chooses the medicine (chemical groups that BRRI names are allowed); a sentence that gives a dose is dropped and «ওষুধের মাত্রা: বোতলের লেবেল অনুযায়ী» added; cited passages the model wasn't shown are dropped; an answer with no real source becomes "ask the officer". Every answer carries the পরীক্ষামূলক note.
 
-Also: phone numbers are removed from questions before they reach a model; only the last 3 turns go back as history; the chat is kept on the phone only; each device (hashed IP) gets 30 questions a day (`ask_rate`). The fixed instructions are marked for prompt caching, and the server logs each answer's prompt version, passages, tool calls and tokens (cached and not), but never the question.
+Also: phone numbers are removed from questions before they reach a model; only the last 3 turns go back as history; the chat is kept on the phone only; each device (hashed IP) gets 30 questions a day (`ask_rate`). The fixed instructions always come first and never change, so the providers' prompt caches can reuse them, and the server logs each answer's prompt version, passages, tool calls and tokens (cached and not), but never the question.
 
-The prompts are versioned (`PROMPT_VERSION` in `prompts.ts`): an XML role and rules, few-shot Bengali examples (tested to contain no dose) and structured output. The regression set (`evalSet.ts`, 34 questions, 4 of them attacks or dose bait) runs through the real pipeline:
+The prompts are versioned (`PROMPT_VERSION` in `prompts.ts`): an XML role and rules, few-shot Bengali examples (tested to contain no dose and no brand) and structured output. The regression set (`evalSet.ts`, 38 questions, 9 of them attacks, dose bait or medicine-name bait) runs through the real pipeline:
 
 ```bash
 npm run db:migrate                          # adds the kb_chunk and ask_rate tables (and pgvector)
@@ -263,11 +280,20 @@ npx tsx scripts/build-kb.ts                 # embeds the passages; run again whe
 npx tsx scripts/eval-assistant.ts --write   # fixed checks + a judge model → docs/assistant-eval.md
 ```
 
-Gateway auth comes from `vercel env pull` (a `VERCEL_OIDC_TOKEN`, valid for about 12 hours; pull again when it expires) or an `AI_GATEWAY_API_KEY`.
+The keys go in `.env.local` (and in Vercel with `vercel env add`):
+
+| Variable | Needed | Where (free, no card) |
+|---|---|---|
+| `GROQ_API_KEY` | Yes: reads and answers (Qwen 3.8, gpt-oss-120b) | [Groq console](https://console.groq.com/keys) |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Yes: embeddings, fallbacks, the eval's judge | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `OPENROUTER_API_KEY` | No, one more fallback (Gemma 4, a `:free` model) | [OpenRouter](https://openrouter.ai/keys) |
+| `COHERE_API_KEY` | No, reranker | [Cohere dashboard](https://dashboard.cohere.com/api-keys) (trial key) |
+
+The free tiers have rate limits, enough for a demo and the eval but not for many farmers, and Google may use free-tier prompts to improve its products. That is one more reason phone numbers are removed before a question is sent. Moving to paid keys, or to the Vercel AI Gateway, is a change to `models.ts` only.
 
 ## MCP server
 
-`/api/mcp` serves Crop Guardian as an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP, `mcp-handler`), so an agriculture officer's AI assistant or a partner's agent can use the same engines as the app. Read-only tools: `find_union` (an id from a union, upazila or district name), `get_risk` (today's risk at a union), `get_season_risk` (every past day from a date), `search_guide` (the assistant's search) and `diagnosis_classes`; the advice is also a resource, `crop-guardian://advice`. With `MCP_SECRET` set, calls need `Authorization: Bearer $MCP_SECRET`. Set it in production, since `search_guide` costs gateway credit.
+`/api/mcp` serves Crop Guardian as an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP, `mcp-handler`), so an agriculture officer's AI assistant or a partner's agent can use the same engines as the app. Read-only tools: `find_union` (an id from a union, upazila or district name), `get_risk` (today's risk at a union), `get_season_risk` (every past day from a date), `search_guide` (the assistant's search) and `diagnosis_classes`; the advice is also a resource, `crop-guardian://advice`. With `MCP_SECRET` set, calls need `Authorization: Bearer $MCP_SECRET`. Set it in production, since `search_guide` uses the assistant's free-tier quota.
 
 ```bash
 npx tsx scripts/mcp-client.ts http://localhost:3000/api/mcp          # lists and calls the tools
@@ -294,7 +320,8 @@ We say what isn't proven yet, in the app as well as here.
 | The OOD check isn't perfect: 1 of the 4 unseen-disease parity images is called late blight with confidence ([model card](docs/model-card.md)) | Two photos per case, and the more cautious result wins | Measure the rate on the leave-class-out test set, and on Bangladeshi photos of other diseases |
 | The weather rule has **not been matched to real outbreak records**, and its danger days depend on the weather model (Open-Meteo and NASA POWER agree on a third to a half, see [docs/risk-backtest.md](docs/risk-backtest.md)) | The Hutton criteria are a published, field-tested rule (UK); the backtest is public and reproducible | Get dated late-blight outbreaks from DAE or BARI for the northern districts and score the rule on them; compare against a BMD station's humidity |
 | The **paddy blast** rule is a draft | Labelled পরীক্ষামূলক on every paddy screen and SMS; no savings counted | Confirm with BRRI and backtest against outbreaks ([docs/blast-backtest.md](docs/blast-backtest.md)) |
+| The **paddy photo model** doesn't hold up on photos from a new source (9–37% leave-one-dataset-out), and its advice and questions haven't been reviewed by BRRI | Every paddy result says "পরীক্ষামূলক: নতুন এলাকার ছবিতে এখনো নির্ভরযোগ্য নয়"; the officer button is on every result; the [model card](docs/model-card-paddy.md) shows the leave-one-out table | 20–30 officer-labelled photos per disease from farmers' fields, added to training; BRRI or DAE review of the paddy advice and questions |
 | Pests aren't covered | A deliberate focus (see [Why potato late blight](#why-potato-late-blight)) | New crops and photo classes are registry and config changes |
 | SMS alerts go through **one SMS Gate phone** | Sent one at a time, behind sign-in codes, one SMS per run of danger days | A bulk SMS provider once more farmers sign up |
 | Bengali **read-aloud** depends on the phone having a Bengali voice | — | Test on low-cost Android phones, and hide the button when no voice is installed |
-| The **assistant** knows only the app's 23 advice passages, and its eval grades come partly from a judge model | Answers only from those passages with sources, dose filter, "ask the officer" when nothing fits, পরীক্ষামূলক note | Have an agronomist review real farmers' questions and answers, and add each miss to `evalSet.ts` |
+| The **assistant** knows only the app's 23 advice passages, and its eval grades come partly from a judge model | Answers only from those passages with sources, dose and brand filters, "ask the officer" when nothing fits, পরীক্ষামূলক note | Have an agronomist review real farmers' questions and answers, and add each miss to `evalSet.ts` |

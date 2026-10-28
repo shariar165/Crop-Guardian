@@ -21,8 +21,9 @@ test('a district name lists its unions, at most a page of them', () => {
 
 test('the diagnosis classes come from the model config, never "other"', () => {
   const { classes } = diagnosisClasses()
-  const ids = classes.map((c) => c.id)
-  assert.ok(ids.includes('late_blight') && ids.includes('healthy'))
-  assert.ok(!ids.includes('other'))
+  const ids = classes.map((c) => `${c.crop}.${c.id}`)
+  assert.ok(ids.includes('potato.late_blight') && ids.includes('potato.healthy'))
+  assert.ok(ids.includes('paddy.blast') && ids.includes('paddy.healthy'))
+  assert.ok(!classes.some((c) => c.id === 'other'))
   for (const c of classes) assert.ok(c.nameBn && c.steps.length > 0, c.id)
 })

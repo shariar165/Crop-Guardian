@@ -7,7 +7,8 @@ import ListenButton from '@/components/ListenButton'
 import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar, { RoundLink } from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
-import { ADVICE_SOURCE, CLASS_CONTENT } from '@/lib/diagnosis/content'
+import { CROPS } from '@/lib/crops'
+import { contentOf, sourceOf } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
 import { finalOf } from '@/lib/diagnosis/flow'
 import { answerLine } from '@/lib/diagnosis/questions'
@@ -24,11 +25,13 @@ export default function ResultView() {
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
-  const { config, record } = view
+  const { crop, config, record } = view
   // useDiagnosis only shows this screen when there is a final answer.
   const final = finalOf(record)!
   const name = labelOf(final.id, config)
-  const content = CLASS_CONTENT[final.id]
+  // The tests check every class of every diagnosable crop has advice.
+  const content = contentOf(crop, final.id)!
+  const source = sourceOf(crop, final.id)
   // Narrowing by the farmer's answers isn't calibrated like the model, so it isn't called "sure".
   const word = final.via === 'model' ? CONFIDENCE_WORD.confident : 'ছবি আর আপনার উত্তর মিলিয়ে'
   const speech =
@@ -58,7 +61,7 @@ export default function ResultView() {
           {word}
         </span>
         <h1 className="m-0 font-display text-[42px] leading-[1.05] font-extrabold">{name}</h1>
-        <span className="text-[15px] font-medium text-muted">{content.en} · আলু</span>
+        <span className="text-[15px] font-medium text-muted">{content.en} · {CROPS[crop].nameBn}</span>
         <div
           role={content.banner.tone === 'ok' ? 'status' : 'alert'}
           className={`mt-1 flex items-center gap-2 rounded-[14px] px-3 py-[9px] text-[15px] font-bold ${BANNER[content.banner.tone]}`}
@@ -66,13 +69,14 @@ export default function ResultView() {
           {content.banner.tone === 'ok' ? <CheckIcon size={22} weight={2.4} /> : <WarnIcon size={22} weight={2.2} />}
           {content.banner.text}
         </div>
-        <ValidationBadge className="mt-1" />
+        <ValidationBadge crop={crop} className="mt-1" />
       </div>
 
       <WhyCard
+        crop={crop}
         record={record}
         config={config}
-        answers={record.answers.flatMap((a) => answerLine(a) ?? [])}
+        answers={record.answers.flatMap((a) => answerLine(a, crop) ?? [])}
       />
 
       <section className="mx-4 mt-4 flex shrink-0 flex-col gap-2.5">
@@ -90,13 +94,13 @@ export default function ResultView() {
       </section>
 
       <a
-        href={ADVICE_SOURCE.href}
+        href={source.href}
         target="_blank"
         rel="noreferrer"
         className="mx-4 mt-3.5 flex min-h-11 shrink-0 items-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-stitch px-3 text-sm font-semibold text-teal no-underline"
       >
         <DocIcon size={20} />
-        {ADVICE_SOURCE.label}
+        {source.label}
       </a>
 
       <div className="min-h-4 flex-1" />

@@ -19,12 +19,12 @@ export default function QuestionFlow() {
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
-  const { config, record } = view
+  const { crop, config, record } = view
   const candidates = record.result.candidates
   const answers = record.answers
-  const left = remainingAfter(candidates, answers)
-  const q = nextQuestion(candidates, answers)
-  const total = questionCount(candidates, answers)
+  const left = remainingAfter(candidates, answers, crop)
+  const q = nextQuestion(candidates, answers, crop)
+  const total = questionCount(candidates, answers, crop)
   const outcome = q ? null : left.length === 1 ? 'one' : left.length === 0 ? 'none' : 'many'
   const stepLabel = q ? `প্রশ্ন ${toBnDigits(answers.length + 1)} / ${toBnDigits(total)}` : 'শেষ'
 

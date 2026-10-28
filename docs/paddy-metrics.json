@@ -1,0 +1,217 @@
+{
+ "n": {
+  "train": 3172,
+  "val": 441,
+  "cal": 463,
+  "test": 445,
+  "unseen": 473
+ },
+ "n_by_class_test": {
+  "tungro": 112,
+  "healthy": 106,
+  "blast": 75,
+  "sheath_blight": 65,
+  "brown_spot": 42,
+  "bacterial_leaf_blight": 37,
+  "leaf_scald": 8
+ },
+ "accuracy": 0.9839816933638444,
+ "macro_f1": 0.9790041559258134,
+ "ece_before": 0.04128370636933451,
+ "ece_after": 0.02195451093211049,
+ "temperature": 0.8393110036849976,
+ "qhat": 0.13090699911117554,
+ "ood_threshold": 0.0206356979906559,
+ "alpha": 0.1,
+ "per_class": {
+  "bacterial_leaf_blight": {
+   "precision": 0.923,
+   "recall": 0.973,
+   "f1-score": 0.947,
+   "support": 37.0
+  },
+  "blast": {
+   "precision": 0.974,
+   "recall": 0.987,
+   "f1-score": 0.98,
+   "support": 75.0
+  },
+  "brown_spot": {
+   "precision": 0.953,
+   "recall": 0.976,
+   "f1-score": 0.965,
+   "support": 42.0
+  },
+  "healthy": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1-score": 1.0,
+   "support": 106.0
+  },
+  "sheath_blight": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1-score": 1.0,
+   "support": 65.0
+  },
+  "tungro": {
+   "precision": 1.0,
+   "recall": 0.964,
+   "f1-score": 0.982,
+   "support": 112.0
+  }
+ },
+ "confusion": [
+  [
+   36,
+   0,
+   1,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   74,
+   1,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   1,
+   41,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   106,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   65,
+   0
+  ],
+  [
+   3,
+   1,
+   0,
+   0,
+   0,
+   108
+  ]
+ ],
+ "coverage": 0.9924242424242424,
+ "coverage_counting_unknown_as_miss": 0.8993135011441648,
+ "avg_set_size": 1.0,
+ "decisions_known": {
+  "unknown": 41,
+  "confident": 396
+ },
+ "app_outcomes": {
+  "bacterial_leaf_blight": {
+   "misleading": 0,
+   "right": 32,
+   "unknown": 5
+  },
+  "blast": {
+   "misleading": 1,
+   "right": 72,
+   "unknown": 2
+  },
+  "brown_spot": {
+   "misleading": 0,
+   "right": 39,
+   "unknown": 3
+  },
+  "healthy": {
+   "misleading": 0,
+   "right": 93,
+   "unknown": 13
+  },
+  "leaf_scald": {
+   "misleading": 1,
+   "right": 7,
+   "unknown": 0
+  },
+  "sheath_blight": {
+   "misleading": 0,
+   "right": 63,
+   "unknown": 2
+  },
+  "tungro": {
+   "misleading": 2,
+   "right": 94,
+   "unknown": 16
+  }
+ },
+ "by_dataset": {
+  "Dhan-Shomadhan": 0.8846153846153846,
+  "RiceLeafBD": 0.9745222929936306,
+  "RiceLeafDisease-BD5": 1.0
+ },
+ "ood": {
+  "false_unknown_on_known": 0.09382151029748284,
+  "unseen_n": 473,
+  "auroc_known_vs_unseen": 0.6695178059128888,
+  "unseen_called_unknown": 0.40169133192389006,
+  "unseen_called_confident": {
+   "healthy": 122,
+   "sheath_blight": 85,
+   "blast": 76
+  },
+  "other_n": 8,
+  "auroc_known_vs_other": 0.9676773455377574,
+  "other_called_unknown": 0.875
+ },
+ "leave_one_dataset_out": {
+  "Dhan-Shomadhan": {
+   "n": 263,
+   "classes": [
+    "blast",
+    "brown_spot",
+    "sheath_blight",
+    "tungro"
+   ],
+   "accuracy": 0.08745247148288973,
+   "macro_f1": 0.07232704402515723,
+   "misleading": 0.2813688212927757,
+   "unknown": 0.7034220532319392
+  },
+  "RiceLeafBD": {
+   "n": 1114,
+   "classes": [
+    "brown_spot",
+    "healthy",
+    "tungro"
+   ],
+   "accuracy": 0.374326750448833,
+   "macro_f1": 0.2339763442888188,
+   "misleading": 0.04129263913824058,
+   "unknown": 0.8967684021543986
+  },
+  "RiceLeafDisease-BD5": {
+   "n": 2670,
+   "classes": [
+    "blast",
+    "healthy",
+    "sheath_blight",
+    "tungro"
+   ],
+   "accuracy": 0.29812734082397,
+   "macro_f1": 0.1955276787600405,
+   "misleading": 0.4303370786516854,
+   "unknown": 0.3644194756554307
+  }
+ }
+}

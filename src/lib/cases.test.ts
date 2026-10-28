@@ -29,6 +29,16 @@ describe('parseCaseUpload', () => {
     assert.equal(full.unionId, 'bogura-shibganj.kichak')
   })
 
+  it('takes a case without a crop, from an older phone, as potato', () => {
+    const c = parseCaseUpload(GOOD, NOW)
+    assert.ok(!('error' in c))
+    assert.equal(c.crop, 'potato')
+    const paddy = parseCaseUpload({ ...GOOD, crop: 'paddy' }, NOW)
+    assert.ok(!('error' in paddy))
+    assert.equal(paddy.crop, 'paddy')
+    assert.deepEqual(parseCaseUpload({ ...GOOD, crop: 'wheat' }, NOW), { error: 'bad crop' })
+  })
+
   it('allows no union and no final answer', () => {
     assert.ok(!('error' in parseCaseUpload({ ...GOOD, unionId: null, finalId: null }, NOW)))
   })

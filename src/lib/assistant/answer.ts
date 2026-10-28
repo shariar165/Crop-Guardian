@@ -9,9 +9,9 @@ import { generateText, isStepCount, type ModelMessage, Output, tool } from 'ai'
 import { z } from 'zod'
 import { type CropId } from '@/lib/crops'
 import { DAY_STATE, type Risk } from '@/lib/data'
-import { EXPERIMENTAL_NOTE, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, NO_SOURCE, OUT_OF_SCOPE, redactPhones, sanitizeAnswer, validSources } from './guard'
+import { EXPERIMENTAL_NOTE, HISTORY_TURNS, looksLikeQuestion, MAX_ANSWER, MAX_QUESTION, NO_SOURCE, OUT_OF_SCOPE, redactPhones, sanitizeAnswer, validSources } from './guard'
 import type { KbChunk } from './kb'
-import { FALLBACKS, MODELS } from './models'
+import { withFallback } from './models'
 import { ANSWER_INSTRUCTIONS, answerPrompt, PROMPT_VERSION, REWRITE_INSTRUCTIONS } from './prompts'
 import { type Query, searchKb } from './retrieve'
 
@@ -39,8 +39,12 @@ export type AskResult = {
   meta: {
     promptVersion: string
     redacted: boolean
+    // The guard replaced the answer because it named a medicine brand.
+    named: boolean
     shown: string[]
     toolCalls: string[]
+    // Which model in each fallback chain answered.
+    models: string[]
     inputTokens: number
     cachedInputTokens: number
     outputTokens: number
@@ -58,14 +62,6 @@ const answerSchema = z.object({
   answer: z.string().describe('The Bengali answer, at most four sentences'),
   sources: z.array(z.string()).describe('Ids of the <source> blocks actually used'),
   escalate: z.boolean().describe('True when the farmer should contact the officer or send a leaf photo'),
-})
-
-// The fixed instructions get a cache breakpoint: they are the same for every farmer, so after the
-// first question the provider reads them from cache at a tenth of the price.
-const cached = (content: string) => ({
-  role: 'system' as const,
-  content,
-  providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' as const } } },
 })
 
 // Only the last few turns go back to the model, each cut to the same limits as a new question.
@@ -86,7 +82,7 @@ const fixed = (kind: AskResult['kind'], answer: string): AskResult => ({
   escalate: false,
   kind,
   note: null,
-  meta: { promptVersion: PROMPT_VERSION, redacted: false, shown: [], toolCalls: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+  meta: { promptVersion: PROMPT_VERSION, redacted: false, named: false, shown: [], toolCalls: [], models: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
 })
 
 export async function ask(
@@ -95,16 +91,24 @@ export async function ask(
 ): Promise<AskResult> {
   const past = historyMessages(history)
 
-  const read = await generateText({
-    model: MODELS.rewrite,
-    instructions: cached(REWRITE_INSTRUCTIONS),
-    messages: [...past, { role: 'user', content: question }],
-    output: Output.object({ schema: rewriteSchema }),
-    providerOptions: { gateway: { models: [...FALLBACKS.rewrite], tags: ['ask', 'rewrite'] } },
-  })
+  // The instructions come first and never change, so the providers' prompt caches can reuse them.
+  const { result: read, modelUsed: readBy } = await withFallback('rewrite', (model, abortSignal) =>
+    generateText({
+      model,
+      instructions: REWRITE_INSTRUCTIONS,
+      messages: [...past, { role: 'user', content: question }],
+      output: Output.object({ schema: rewriteSchema }),
+      maxRetries: 0,
+      abortSignal,
+    }),
+  )
   const plan = read.output
-  if (plan.kind === 'greeting') return fixed('greeting', GREETING)
-  if (plan.kind === 'off_topic') return fixed('off_topic', OUT_OF_SCOPE)
+  const early = (kind: 'greeting' | 'off_topic', text: string) => {
+    const r = fixed(kind, text)
+    return { ...r, meta: { ...r.meta, models: [readBy] } }
+  }
+  if (plan.kind === 'greeting' && !looksLikeQuestion(question)) return early('greeting', GREETING)
+  if (plan.kind === 'off_topic') return early('off_topic', OUT_OF_SCOPE)
 
   const chunks = await searchKb(deps.query, question, plan.queries)
   // Every chunk the model is shown, from the first search or its own; it may cite only these.
@@ -131,17 +135,21 @@ export async function ask(
     }),
   }
 
-  const result = await generateText({
-    model: MODELS.answer,
-    instructions: cached(ANSWER_INSTRUCTIONS),
-    messages: [...past, { role: 'user', content: answerPrompt({ question, chunks, place, today }) }],
-    tools,
-    // Up to two tool rounds, then the structured answer (which is a step of its own).
-    stopWhen: isStepCount(4),
-    output: Output.object({ schema: answerSchema }),
-    maxOutputTokens: 800,
-    providerOptions: { gateway: { models: [...FALLBACKS.answer], tags: ['ask', 'answer'] } },
-  })
+  // A failed model isn't retried on itself: the next one in the chain is tried instead.
+  const { result, modelUsed: answeredBy } = await withFallback('answer', (model, abortSignal) =>
+    generateText({
+      model,
+      instructions: ANSWER_INSTRUCTIONS,
+      messages: [...past, { role: 'user', content: answerPrompt({ question, chunks, place, today }) }],
+      tools,
+      // Up to two tool rounds, then the structured answer (which is a step of its own).
+      stopWhen: isStepCount(4),
+      output: Output.object({ schema: answerSchema }),
+      maxOutputTokens: 800,
+      maxRetries: 0,
+      abortSignal,
+    }),
+  )
 
   const toolCalls = result.steps.flatMap((s) => s.toolCalls.map((c) => c.toolName))
   const usage = {
@@ -149,17 +157,17 @@ export async function ask(
     cachedInputTokens: (read.usage.inputTokenDetails?.cacheReadTokens ?? 0) + (result.usage.inputTokenDetails?.cacheReadTokens ?? 0),
     outputTokens: (read.usage.outputTokens ?? 0) + (result.usage.outputTokens ?? 0),
   }
-  const meta = { promptVersion: PROMPT_VERSION, shown: [...shown.keys()], toolCalls, ...usage }
+  const meta = { promptVersion: PROMPT_VERSION, shown: [...shown.keys()], toolCalls, models: [readBy, answeredBy], ...usage }
 
   const out = result.output
-  if (out.answer.trim() === OUT_OF_SCOPE) return { ...fixed('off_topic', OUT_OF_SCOPE), meta: { ...meta, redacted: false } }
+  if (out.answer.trim() === OUT_OF_SCOPE) return { ...fixed('off_topic', OUT_OF_SCOPE), meta: { ...meta, redacted: false, named: false } }
 
   const sourceIds = validSources(out.sources, [...shown.keys()])
   // A risk answer is grounded in the forecast tool even when no advice chunk was used.
   const grounded = sourceIds.length > 0 || toolCalls.includes('todayRisk')
-  if (!grounded) return { ...fixed('question', NO_SOURCE), escalate: true, meta: { ...meta, redacted: false } }
+  if (!grounded) return { ...fixed('question', NO_SOURCE), escalate: true, meta: { ...meta, redacted: false, named: false } }
 
-  const { text, redacted } = sanitizeAnswer(out.answer)
+  const { text, redacted, named } = sanitizeAnswer(out.answer)
   return {
     answer: text,
     sources: sourceIds.map((id) => {
@@ -169,6 +177,6 @@ export async function ask(
     escalate: out.escalate,
     kind: 'question',
     note: EXPERIMENTAL_NOTE,
-    meta: { ...meta, redacted },
+    meta: { ...meta, redacted, named },
   }
 }
