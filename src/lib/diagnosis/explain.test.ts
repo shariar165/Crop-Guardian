@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { hasBrand } from '@/lib/assistant/guard'
 import { CROP_IDS } from '@/lib/crops'
 import { CLASS_CONTENT, sourceOf } from '@/lib/diagnosis/content'
 import { classesOf } from '@/lib/diagnosis/crops'
@@ -17,6 +18,8 @@ describe('class content', () => {
       for (const [id, c] of Object.entries(CLASS_CONTENT[crop])) {
         for (const step of c.steps) {
           assert.doesNotMatch(step, /[০-৯0-9]+\s*(মিলি|গ্রাম|কেজি|ml|g\b|kg)/i, `${crop} ${id}`)
+          // The officer chooses the medicine, so no step names a brand.
+          assert.ok(!hasBrand(step), `${crop} ${id}: ${step}`)
           // A step that names something to apply says who sets the amount.
           if (/ছত্রাকনাশক|ট্রাইসাইক্লাজোল|স্ট্রোবিলুরিন|পটাশ|জিপসাম/.test(step) && !/দেবেন না/.test(step)) {
             assert.match(step, /লেবেল অনুযায়ী|কর্মকর্তা/, `${crop} ${id}: ${step}`)

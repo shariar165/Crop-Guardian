@@ -39,6 +39,8 @@ export type AskResult = {
   meta: {
     promptVersion: string
     redacted: boolean
+    // The guard replaced the answer because it named a medicine brand.
+    named: boolean
     shown: string[]
     toolCalls: string[]
     // Which model in each fallback chain answered.
@@ -80,7 +82,7 @@ const fixed = (kind: AskResult['kind'], answer: string): AskResult => ({
   escalate: false,
   kind,
   note: null,
-  meta: { promptVersion: PROMPT_VERSION, redacted: false, shown: [], toolCalls: [], models: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+  meta: { promptVersion: PROMPT_VERSION, redacted: false, named: false, shown: [], toolCalls: [], models: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
 })
 
 export async function ask(
@@ -158,14 +160,14 @@ export async function ask(
   const meta = { promptVersion: PROMPT_VERSION, shown: [...shown.keys()], toolCalls, models: [readBy, answeredBy], ...usage }
 
   const out = result.output
-  if (out.answer.trim() === OUT_OF_SCOPE) return { ...fixed('off_topic', OUT_OF_SCOPE), meta: { ...meta, redacted: false } }
+  if (out.answer.trim() === OUT_OF_SCOPE) return { ...fixed('off_topic', OUT_OF_SCOPE), meta: { ...meta, redacted: false, named: false } }
 
   const sourceIds = validSources(out.sources, [...shown.keys()])
   // A risk answer is grounded in the forecast tool even when no advice chunk was used.
   const grounded = sourceIds.length > 0 || toolCalls.includes('todayRisk')
-  if (!grounded) return { ...fixed('question', NO_SOURCE), escalate: true, meta: { ...meta, redacted: false } }
+  if (!grounded) return { ...fixed('question', NO_SOURCE), escalate: true, meta: { ...meta, redacted: false, named: false } }
 
-  const { text, redacted } = sanitizeAnswer(out.answer)
+  const { text, redacted, named } = sanitizeAnswer(out.answer)
   return {
     answer: text,
     sources: sourceIds.map((id) => {
@@ -175,6 +177,6 @@ export async function ask(
     escalate: out.escalate,
     kind: 'question',
     note: EXPERIMENTAL_NOTE,
-    meta: { ...meta, redacted },
+    meta: { ...meta, redacted, named },
   }
 }

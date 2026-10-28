@@ -51,6 +51,32 @@ const PER = /(?:প্রতি|per)\s*(?:লিটার|বিঘা|শতক
 
 export const hasDose = (text: string): boolean => AMOUNT.test(text) || PER.test(text)
 
+// Fungicide brands sold in Bangladesh. The app leaves the choice of medicine to the officer, so an
+// answer naming one is never shown, whatever it says about it. Chemical groups that BRRI or BARI name
+// (ট্রাইসাইক্লাজোল) are allowed. Add names as officers report them.
+const BRANDS_EN = [
+  'dithane', 'ridomil', 'indofil', 'autostin', 'bavistin', 'curzate', 'antracol', 'amistar', 'nativo',
+  'folicur', 'melody duo', 'acrobat', 'cabrio', 'sunvit', 'trooper', 'filia', 'contaf', 'rovral',
+]
+// Bengali spellings, with the common variants. Secure, Score, Tilt and Companion are everyday
+// English words, so only their Bengali spellings are matched.
+const BRANDS_BN = [
+  'ডাইথেন', 'ডায়থেন', 'রিডোমিল', 'রিডমিল', 'ইন্ডোফিল', 'ইনডোফিল', 'অটোস্টিন', 'ব্যাভিস্টিন', 'বাভিস্টিন',
+  'কারজেট', 'এন্ট্রাকল', 'অ্যান্ট্রাকল', 'এমিস্টার', 'অ্যামিস্টার', 'নাটিভো', 'নেটিভো', 'ফলিকুর',
+  'মেলোডি ডুও', 'অ্যাক্রোব্যাট', 'এক্রোবেট', 'ক্যাব্রিও', 'সানভিট', 'ট্রুপার', 'ফিলিয়া', 'কম্প্যানিয়ন',
+  'কনটাফ', 'রোভরাল', 'সিকিউর', 'স্কোর', 'টিল্ট',
+]
+const BRAND_EN = new RegExp(`\\b(?:${BRANDS_EN.map((b) => b.replace(/ /g, '\\s*')).join('|')})\\b`, 'i')
+// A zero-width joiner or non-joiner can sit inside a Bengali word without changing how it looks.
+const ZERO_WIDTH = new RegExp('[\\u200c\\u200d]', 'g')
+
+export const hasBrand = (text: string): boolean => {
+  const plain = text.replace(ZERO_WIDTH, '')
+  return BRAND_EN.test(plain) || BRANDS_BN.some((b) => plain.includes(b))
+}
+
+export const BRAND_REFERRAL = 'কোন ওষুধ দেবেন, উপসহকারী কৃষি কর্মকর্তার কাছে জেনে নিন। মাত্রা: বোতলের লেবেল অনুযায়ী।'
+
 // Sentences end at the dari, a full stop, ! or ? followed by a space, or at a line break; so "২.৫"
 // stays one number.
 const sentencesOf = (text: string): string[] =>
@@ -59,9 +85,11 @@ const sentencesOf = (text: string): string[] =>
     .map((s) => s.trim())
     .filter(Boolean)
 
-// Drops any sentence that gives a dose and says to follow the label instead, then caps the length
-// at a sentence boundary.
-export function sanitizeAnswer(answer: string): { text: string; redacted: boolean } {
+// An answer that names a brand becomes the officer referral: the sentences around a name are about
+// that product too. Otherwise drops any sentence that gives a dose and says to follow the label
+// instead, then caps the length at a sentence boundary.
+export function sanitizeAnswer(answer: string): { text: string; redacted: boolean; named: boolean } {
+  if (hasBrand(answer)) return { text: BRAND_REFERRAL, redacted: false, named: true }
   const sentences = sentencesOf(answer)
   const kept = sentences.filter((s) => !hasDose(s))
   const redacted = kept.length < sentences.length
@@ -72,7 +100,7 @@ export function sanitizeAnswer(answer: string): { text: string; redacted: boolea
     if (text.length + s.length + 1 > MAX_ANSWER) break
     text += (text ? ' ' : '') + s
   }
-  return { text, redacted }
+  return { text, redacted, named: false }
 }
 
 // The model may only cite chunks it was shown; anything else is dropped as invented.

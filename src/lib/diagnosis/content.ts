@@ -17,7 +17,7 @@ export type ClassContent = {
 
 const RECHECK = '৫–৭ দিন পর আবার পাতার ছবি তুলুন'
 const LABEL = 'মাত্রা: বোতলের লেবেল অনুযায়ী'
-const SPRAY = `অনুমোদিত ছত্রাকনাশক স্প্রে করুন। ${LABEL}`
+const SPRAY = `অনুমোদিত ছত্রাকনাশক স্প্রে করুন। কোন ওষুধ দেবেন, উপসহকারী কৃষি কর্মকর্তার কাছে জেনে নিন। ${LABEL}`
 
 const POTATO: Record<string, ClassContent> = {
   late_blight: {
