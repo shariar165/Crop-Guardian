@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { historyMessages } from './answer'
-import { BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasDose, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, PHONE_MASK, redactPhones, sanitizeAnswer, validSources } from './guard'
+import { afterEach, mock, test } from 'node:test'
+import { ask, historyMessages } from './answer'
+import { aboutMedicine, answerProblem, BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasBrokenBengali, hasDose, hasForeignText, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, NO_SOURCE, neverOffTopic, PHONE_MASK, redactPhones, OUT_OF_SCOPE, sanitizeAnswer, validSources } from './guard'
 import { KB, searchText } from './kb'
 import { ANSWER_INSTRUCTIONS, answerPrompt, REWRITE_INSTRUCTIONS } from './prompts'
 import { keywordQuery, rrf } from './retrieve'
@@ -116,6 +116,106 @@ test('the knowledge base never gives a dose', () => {
 // Built only from screen text, so this also covers the guides, diagnosis advice and crop decisions.
 test('the knowledge base never names a medicine brand', () => {
   for (const c of KB) assert.ok(!hasBrand(`${c.title} ${c.text}`), c.id)
+})
+
+// Each of these came out of a real eval run, and the judge model passed all but the garbled one.
+test('an answer in another script or with prompt words is refused', () => {
+  assert.ok(hasForeignText('পৌষ-মাঘ মাসে,也就 ডিসেম্বর-জানুয়ারি।'))
+  assert.ok(hasForeignText('সOURCES-এ লাল রঙের কোনো বর্ণনা দেওয়া নেই।'))
+  assert.ok(!hasForeignText('«আমার অ্যাকাউন্ট»-এ SMS চালু করুন, ছবি WhatsApp-এ পাঠান।'))
+  assert.ok(!hasForeignText('বারি আলু-৭৭ সবচেয়ে ভালো।'))
+})
+
+test('garbled Bengali is found by its spelling, never in text the app itself shows', () => {
+  for (const s of ['নতুনটা দেখিতে গেলে চিত্র তিুলুন।', 'শুুয কেবল দেখুন।', 'বেরকরাে ছচায়ায় রাথবং।']) assert.ok(hasBrokenBengali(s), s)
+  for (const s of ['পৌষ-মাঘের কৌশল, বোতল আর মৌসুম।', 'পৌষ-মাঘের কৌশল, বোতল আর মৌসুম।'.normalize('NFD')]) assert.ok(!hasBrokenBengali(s), s)
+  for (const c of KB) assert.ok(!hasBrokenBengali(`${c.title} ${c.text}`), c.id)
+})
+
+test('an answer may not say photos are uploaded unless a source does', () => {
+  assert.equal(answerProblem('ধানের পাতা আপলোড করে রোগ চেনা যায়।', 'ফোনেই রোগ চেনা যায়।'), 'unsupported_claim')
+  assert.equal(answerProblem('ছবি আপলোড হবে।', 'নেট এলে ছবি আপলোড হয়।'), null)
+})
+
+test('a question about medicine is never turned away as off topic', () => {
+  for (const q of ['ডাইথেন না সিকিউর, কোনটা ভালো?', 'দোকানদার রিডোমিল দিতে চায়, এটা কি ভালো?', 'কোন কোম্পানির ওষুধ সবচেয়ে ভালো?', 'Which fungicide is best?']) assert.ok(aboutMedicine(q), q)
+  for (const q of ['আজ ঢাকায় আলুর দাম কত?', 'শেয়ার বাজারে কোন শেয়ার কিনব?']) assert.ok(!aboutMedicine(q), q)
+})
+
+test("the app's own words are never off topic, and everyday questions still can be", () => {
+  for (const q of ['হোমে লাল রং মানে কী?', 'আজ ঝুঁকি কেমন?', 'অ্যাপ কীভাবে চালাব?']) assert.ok(neverOffTopic(q), q)
+  for (const q of ['আজ ঢাকায় আলুর দাম কত?', 'শেয়ার বাজারে কোন শেয়ার কিনব?']) assert.ok(!neverOffTopic(q), q)
+})
+
+// Every model the keys allow refuses or is refused: this is what a day of used-up free tiers looks
+// like, and the farmer must get the officer, not an error.
+function fakeGroq(answer: object, kind = 'question') {
+  process.env.GROQ_API_KEY = 'test'
+  delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  delete process.env.OPENROUTER_API_KEY
+  delete process.env.COHERE_API_KEY
+  mock.method(console, 'error', () => {})
+  mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body))
+    // With tools in the request, structured output arrives as a call to one more tool.
+    const outputTool = body.tools?.map((t: { function: { name: string } }) => t.function.name).find((n: string) => n !== 'searchGuide' && n !== 'todayRisk')
+    const message = outputTool
+      ? { role: 'assistant', content: null, tool_calls: [{ id: 't', type: 'function', function: { name: outputTool, arguments: JSON.stringify(answer) } }] }
+      : { role: 'assistant', content: JSON.stringify({ kind, queries: ['ওষুধ'], crop: null, wantsRisk: false }) }
+    return Response.json({ id: 'x', created: 1, model: 'm', choices: [{ index: 0, finish_reason: outputTool ? 'tool_calls' : 'stop', message }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })
+  })
+}
+const askDeps = { query: async () => ({ rows: [] }), risk: async () => { throw new Error('unused') } }
+const askIt = (question: string) => ask({ question, place: 'p', today: '2026-11-05' }, askDeps as never)
+
+afterEach(() => mock.restoreAll())
+
+test('when every model is refused the farmer is sent to the officer, not shown an error', async () => {
+  fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false })
+  const plain = await askIt('পাতা হলুদ হচ্ছে কেন?')
+  assert.equal(plain.answer, NO_SOURCE)
+  assert.equal(plain.escalate, true)
+  assert.deepEqual(plain.meta.rejected, ['no_source', 'no_source'])
+
+  mock.restoreAll()
+  fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false })
+  assert.equal((await askIt('কোন কোম্পানির ওষুধ সবচেয়ে ভালো?')).answer, BRAND_REFERRAL)
+})
+
+test('a model calling a medicine question off topic does not turn the farmer away', async () => {
+  fakeGroq({ answer: OUT_OF_SCOPE, sources: [], escalate: false }, 'off_topic')
+  const r = await askIt('ডাইথেন না সিকিউর, কোনটা ভালো?')
+  assert.equal(r.answer, BRAND_REFERRAL)
+  assert.equal(r.kind, 'question')
+})
+
+test('a real off-topic question still gets the fixed reply, with no answer model called', async () => {
+  fakeGroq({ answer: 'never', sources: [], escalate: false }, 'off_topic')
+  const r = await askIt('শেয়ার বাজারে কোন শেয়ার কিনব?')
+  assert.equal(r.answer, OUT_OF_SCOPE)
+  assert.equal(r.kind, 'off_topic')
+})
+
+test("Latin is allowed when the farmer's sources use the word", () => {
+  assert.ok(hasForeignText('BADC থেকে বীজ নিন।'))
+  assert.ok(!hasForeignText('BADC থেকে বীজ নিন।', 'বীজের জন্য BADC অফিসে যান।'))
+})
+
+test("an answer's numbers must come from what it cites, so one crop's rule can't be given for the other", () => {
+  const paddy = KB.filter((c) => c.id === 'risk.paddy' || c.id === 'guide.paddy').map((c) => `${c.title} ${c.text}`).join(' ')
+  const potatoRule = 'রঙের ভিত্তি হল রাতের তাপমাত্রা ১০°সে‑এর বেশি আর দিনে ৯০% আর্দ্রতা ৬ ঘণ্টা দুই দিন ধারাবাহিক হলে।'
+  assert.equal(answerProblem(potatoRule, paddy), 'unsupported_number')
+  assert.equal(answerProblem('১৮–২৮°সে তাপমাত্রায় ভেজা দিন থাকলে বিপদ।', paddy), null)
+})
+
+test("the forecast's numbers count as sources, and Bengali and ASCII digits are the same number", () => {
+  assert.equal(answerProblem('৫ নভেম্বর ঝুঁকি সতর্ক।', '{"days":["৫ নভেম্বর ২০২৬: সতর্ক"]}'), null)
+  assert.equal(answerProblem('৭ নভেম্বর ঝুঁকি সতর্ক।', '{"days":["৫ নভেম্বর ২০২৬: সতর্ক"]}'), 'unsupported_number')
+  assert.equal(answerProblem('ফলন ৩০% কমে।', 'yield falls 30%'), null)
+})
+
+test('the colour meanings are in the knowledge base, for both crops', () => {
+  for (const id of ['risk.potato', 'risk.paddy']) assert.match(KB.find((c) => c.id === id)!.text, /সবুজ নিরাপদ, হলুদ সতর্ক, লাল বিপদ/)
 })
 
 test('the prompts forbid doses, and their examples follow the rule', () => {

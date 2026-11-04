@@ -6,7 +6,7 @@ import { CROPS, CROP_IDS } from '@/lib/crops'
 import { DAY_STATE } from '@/lib/data'
 import { CLASS_CONTENT, sourceOf } from '@/lib/diagnosis/content'
 import { PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
-import { GUIDE, RISK_MEANING } from '@/lib/guide'
+import { GUIDE, RISK_COLOURS, RISK_MEANING } from '@/lib/guide'
 import { POTATO_GUIDE } from '@/lib/potatoGuide'
 
 export type KbChunk = {
@@ -68,7 +68,7 @@ const risk: KbChunk[] = CROP_IDS.map((crop) => {
     source: APP_SOURCE,
     href: '/',
     context: `হোম পাতায় ${spec.ofBn} ${spec.diseaseBn} রোগের আজকের ঝুঁকির রং কী বোঝায়।`,
-    text: [...levels, ...meaning].join(' '),
+    text: [RISK_COLOURS, ...levels, ...meaning].join(' '),
   }
 })
 

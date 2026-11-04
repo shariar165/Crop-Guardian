@@ -31,6 +31,9 @@ export type GuideSection = {
   link?: { href: string; label: string }
 }
 
+// What the colours mean, as the first-run card says it; the assistant answers from this too.
+export const RISK_COLOURS = 'সবুজ নিরাপদ, হলুদ সতর্ক, লাল বিপদ।'
+
 export const RISK_MEANING = [
   { risk: 'safe', text: 'আবহাওয়া শুকনো। স্প্রে লাগবে না, টাকা বাঁচান।' },
   { risk: 'watch', text: 'আবহাওয়া মাঝে মাঝে ভেজা। রোজ সকালে পাতা দেখুন, দাগ দেখলে ছবি তুলুন।' },
@@ -170,7 +173,7 @@ export const INTRO: { title: string; text: string; icon: GuideIcon }[] = [
   {
     icon: 'risk',
     title: 'রোজ সকালে ঝুঁকির রং দেখুন',
-    text: 'সবুজ নিরাপদ, হলুদ সতর্ক, লাল বিপদ। আবহাওয়া দেখে বলি কবে স্প্রে লাগবে, কবে লাগবে না।',
+    text: `${RISK_COLOURS} আবহাওয়া দেখে বলি কবে স্প্রে লাগবে, কবে লাগবে না।`,
   },
   {
     icon: 'camera',

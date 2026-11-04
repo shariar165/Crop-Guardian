@@ -42,9 +42,11 @@ const GEMMA: ModelRef = { provider: 'openrouter', id: 'google/gemma-4-31b-it:fre
 
 // Chosen by a test of tool use + structured output in Bengali (Qwen on Groq: under a second;
 // Gemini Flash-Lite: correct but ~20 s). The judge tries other families than the answerer first, so
-// it seldom grades its own writing (the eval report says who graded).
+// it seldom grades its own writing (the eval report says who graded). Qwen breaks its JSON on about
+// a third of rewrites and Gemini is often busy, so the rewrite chain needs a third model: without
+// it the two failing together left a farmer's question unanswered.
 const CHAINS = {
-  rewrite: [QWEN, GEMINI_LITE, GEMMA],
+  rewrite: [QWEN, GPT_OSS, GEMINI_LITE, GEMMA],
   answer: [QWEN, GEMINI, GEMMA, GPT_OSS, GEMINI_LITE],
   judge: [GEMINI, GEMINI_LITE, GEMMA, GPT_OSS],
 } as const satisfies Record<string, ModelRef[]>

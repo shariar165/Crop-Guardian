@@ -3,19 +3,25 @@
 //   2. searchKb finds the chunks (hybrid search + rerank).
 //   3. The answer model writes from those chunks. It may search again or ask for today's risk
 //      through tools, and returns a structured answer with the ids of the chunks it used.
-//   4. guard.ts drops doses and invented sources before anything reaches the farmer.
+//   4. guard.ts drops doses and invented sources before anything reaches the farmer. An answer
+//      with no source, another script or a number its sources don't have goes to the next model.
 // No server-only import: scripts/eval-assistant.ts runs the same code with its own database client.
 import { generateText, isStepCount, type ModelMessage, Output, tool } from 'ai'
 import { z } from 'zod'
 import { type CropId } from '@/lib/crops'
+import { bnDate } from '@/lib/bn'
 import { DAY_STATE, type Risk } from '@/lib/data'
-import { EXPERIMENTAL_NOTE, HISTORY_TURNS, looksLikeQuestion, MAX_ANSWER, MAX_QUESTION, NO_SOURCE, OUT_OF_SCOPE, redactPhones, sanitizeAnswer, validSources } from './guard'
+import { aboutMedicine, answerProblem, BRAND_REFERRAL, EXPERIMENTAL_NOTE, HISTORY_TURNS, looksLikeQuestion, MAX_ANSWER, MAX_QUESTION, neverOffTopic, NO_SOURCE, OUT_OF_SCOPE, redactPhones, sanitizeAnswer, validSources } from './guard'
 import type { KbChunk } from './kb'
 import { withFallback } from './models'
 import { ANSWER_INSTRUCTIONS, answerPrompt, PROMPT_VERSION, REWRITE_INSTRUCTIONS } from './prompts'
 import { type Query, searchKb } from './retrieve'
 
 export const GREETING = 'নমস্কার, আসসালামু আলাইকুম! আলুর নাবি ধসা, আলু চাষ, ধানের ব্লাস্ট বা এই অ্যাপ নিয়ে যা জানতে চান, লিখুন।'
+
+// Models tried again after a bad answer. Fewer than the chain, and few, so a question the sources
+// really can't answer doesn't wait on every model before the farmer hears so.
+const MAX_REJECTED = 2
 
 export type Turn = { q: string; a: string }
 
@@ -41,6 +47,8 @@ export type AskResult = {
     redacted: boolean
     // The guard replaced the answer because it named a medicine brand.
     named: boolean
+    // Why answers were refused before this one, or why this one fell back to NO_SOURCE.
+    rejected: string[]
     shown: string[]
     toolCalls: string[]
     // Which model in each fallback chain answered.
@@ -82,7 +90,7 @@ const fixed = (kind: AskResult['kind'], answer: string): AskResult => ({
   escalate: false,
   kind,
   note: null,
-  meta: { promptVersion: PROMPT_VERSION, redacted: false, named: false, shown: [], toolCalls: [], models: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+  meta: { promptVersion: PROMPT_VERSION, redacted: false, named: false, rejected: [], shown: [], toolCalls: [], models: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
 })
 
 export async function ask(
@@ -108,11 +116,15 @@ export async function ask(
     return { ...r, meta: { ...r.meta, models: [readBy] } }
   }
   if (plan.kind === 'greeting' && !looksLikeQuestion(question)) return early('greeting', GREETING)
-  if (plan.kind === 'off_topic') return early('off_topic', OUT_OF_SCOPE)
+  const mustAnswer = neverOffTopic(question)
+  if (plan.kind === 'off_topic' && !mustAnswer) return early('off_topic', OUT_OF_SCOPE)
 
   const chunks = await searchKb(deps.query, question, plan.queries)
   // Every chunk the model is shown, from the first search or its own; it may cite only these.
   const shown = new Map(chunks.map((c) => [c.id, c]))
+  // What the forecast tool returned, which an answer may quote just as it quotes a passage.
+  const forecast: string[] = []
+  const rejected: string[] = []
 
   const tools = {
     searchGuide: tool({
@@ -130,14 +142,32 @@ export async function ask(
       execute: async ({ crop }) => {
         const r = await deps.risk(crop)
         const word = (risk: Risk) => DAY_STATE[risk].word
-        return { place: r.place, today: word(r.today), reason: r.reason, days: r.days.map((d) => `${d.date}: ${word(d.risk)}`) }
+        // Dates in the app's own Bengali form, so the model copies those and not ISO digits.
+        const facts = { place: r.place, today: word(r.today), reason: r.reason, days: r.days.map((d) => `${bnDate(d.date)}: ${word(d.risk)}`) }
+        forecast.push(JSON.stringify(facts))
+        return facts
       },
     }),
   }
 
-  // A failed model isn't retried on itself: the next one in the chain is tried instead.
-  const { result, modelUsed: answeredBy } = await withFallback('answer', (model, abortSignal) =>
-    generateText({
+  const problemWith = (out: z.infer<typeof answerSchema>, usedForecast: boolean) => {
+    if (out.answer.trim() === OUT_OF_SCOPE) return mustAnswer ? 'no_source' : null
+    const cited = validSources(out.sources, [...shown.keys()]).map((id) => shown.get(id)!)
+    if (cited.length === 0 && !usedForecast) return 'no_source'
+    return answerProblem(out.answer, [...cited.map((c) => `${c.title} ${c.text}`), ...forecast].join(' '))
+  }
+  const calledRisk = (r: { steps: { toolCalls: { toolName: string }[] }[] }) => r.steps.some((s) => s.toolCalls.some((c) => c.toolName === 'todayRisk'))
+
+  // No answer passed: the farmer is sent to the officer, never shown what failed, never left with an error.
+  const giveUp = (problems: string[], meta: Partial<AskResult['meta']>): AskResult => {
+    const r = fixed('question', aboutMedicine(question) ? BRAND_REFERRAL : NO_SOURCE)
+    return { ...r, escalate: true, meta: { ...r.meta, ...meta, rejected: problems, shown: [...shown.keys()] } }
+  }
+
+  // A failed model isn't retried on itself: the next one in the chain is tried instead. A bad answer
+  // counts as failing, up to MAX_REJECTED times.
+  const writeAnswer = () => withFallback('answer', async (model, abortSignal) => {
+    const attempt = await generateText({
       model,
       instructions: ANSWER_INSTRUCTIONS,
       messages: [...past, { role: 'user', content: answerPrompt({ question, chunks, place, today }) }],
@@ -148,8 +178,23 @@ export async function ask(
       maxOutputTokens: 800,
       maxRetries: 0,
       abortSignal,
-    }),
-  )
+    })
+    const problem = rejected.length < MAX_REJECTED ? problemWith(attempt.output, calledRisk(attempt)) : null
+    if (problem) {
+      rejected.push(problem)
+      throw new Error(`answer rejected: ${problem}`)
+    }
+    return attempt
+  })
+
+  // When the other models are out of quota the chain can end on a refused answer, which is a known
+  // outcome, not an outage.
+  const written = await writeAnswer().catch((err: unknown) => {
+    if (rejected.length === 0) throw err
+    return null
+  })
+  if (!written) return giveUp(rejected, {})
+  const { result, modelUsed: answeredBy } = written
 
   const toolCalls = result.steps.flatMap((s) => s.toolCalls.map((c) => c.toolName))
   const usage = {
@@ -157,15 +202,16 @@ export async function ask(
     cachedInputTokens: (read.usage.inputTokenDetails?.cacheReadTokens ?? 0) + (result.usage.inputTokenDetails?.cacheReadTokens ?? 0),
     outputTokens: (read.usage.outputTokens ?? 0) + (result.usage.outputTokens ?? 0),
   }
-  const meta = { promptVersion: PROMPT_VERSION, shown: [...shown.keys()], toolCalls, models: [readBy, answeredBy], ...usage }
+  const meta = { promptVersion: PROMPT_VERSION, rejected, shown: [...shown.keys()], toolCalls, models: [readBy, answeredBy], ...usage }
 
   const out = result.output
-  if (out.answer.trim() === OUT_OF_SCOPE) return { ...fixed('off_topic', OUT_OF_SCOPE), meta: { ...meta, redacted: false, named: false } }
+  if (out.answer.trim() === OUT_OF_SCOPE && !mustAnswer) return { ...fixed('off_topic', OUT_OF_SCOPE), meta: { ...meta, redacted: false, named: false } }
+
+  // The last model allowed gets no further chance: what it wrote is checked, never shown unchecked.
+  const problem = problemWith(out, calledRisk(result))
+  if (problem) return giveUp([...rejected, problem], meta)
 
   const sourceIds = validSources(out.sources, [...shown.keys()])
-  // A risk answer is grounded in the forecast tool even when no advice chunk was used.
-  const grounded = sourceIds.length > 0 || toolCalls.includes('todayRisk')
-  if (!grounded) return { ...fixed('question', NO_SOURCE), escalate: true, meta: { ...meta, redacted: false, named: false } }
 
   const { text, redacted, named } = sanitizeAnswer(out.answer)
   return {
