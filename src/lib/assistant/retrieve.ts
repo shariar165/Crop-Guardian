@@ -2,9 +2,10 @@
 // meaning (pgvector cosine distance) and by words (full-text search over stemmed Bengali), the
 // lists are fused by reciprocal rank, and a reranker orders what is left against the question.
 // Every step degrades rather than fails: no embeddings → words only; no reranker (or no Cohere key)
-// → fused order.
+// → fused order. Every search stays inside the question's scope (kb.ts), so a paddy question can't
+// be shown potato's rule for a model to repeat.
 import { embedMany, rerank } from 'ai'
-import type { KbChunk } from './kb'
+import { idsInScope, type KbPassage, type KbScope, NO_SCOPE } from './kb'
 import { embeddingModel, embedOptions, rerankingModel } from './models'
 import { stemmedText } from './tokens'
 
@@ -43,7 +44,7 @@ async function embedPhrases(phrases: string[]): Promise<number[][] | null> {
 
 const ids = (rows: Record<string, unknown>[]) => rows.map((r) => String(r.id))
 
-const toChunk = (r: Record<string, unknown>): KbChunk => ({
+const toChunk = (r: Record<string, unknown>): KbPassage => ({
   id: String(r.id),
   title: String(r.title),
   source: String(r.source),
@@ -52,7 +53,8 @@ const toChunk = (r: Record<string, unknown>): KbChunk => ({
   text: String(r.text),
 })
 
-export async function searchKb(query: Query, question: string, phrases: string[]): Promise<KbChunk[]> {
+export async function searchKb(query: Query, question: string, phrases: string[], scope: KbScope = NO_SCOPE): Promise<KbPassage[]> {
+  const allowed = idsInScope(scope)
   const searches = [...new Set([question, ...phrases])].slice(0, 4)
   const vectors = await embedPhrases(searches)
 
@@ -61,12 +63,12 @@ export async function searchKb(query: Query, question: string, phrases: string[]
       const words = keywordQuery(phrase)
       const byWords = words
         ? query(
-            `SELECT id FROM kb_chunk, websearch_to_tsquery('simple', $1) q WHERE tsv @@ q ORDER BY ts_rank(tsv, q) DESC LIMIT ${PER_SEARCH}`,
-            [words],
+            `SELECT id FROM kb_chunk, websearch_to_tsquery('simple', $1) q WHERE tsv @@ q AND id = ANY($2) ORDER BY ts_rank(tsv, q) DESC LIMIT ${PER_SEARCH}`,
+            [words, allowed],
           ).then((r) => ids(r.rows))
         : Promise.resolve([])
       const byMeaning = vectors
-        ? query(`SELECT id FROM kb_chunk ORDER BY embedding <=> $1::vector LIMIT ${PER_SEARCH}`, [toVector(vectors[i])]).then((r) => ids(r.rows))
+        ? query(`SELECT id FROM kb_chunk WHERE id = ANY($2) ORDER BY embedding <=> $1::vector LIMIT ${PER_SEARCH}`, [toVector(vectors[i]), allowed]).then((r) => ids(r.rows))
         : Promise.resolve([])
       return [byWords, byMeaning]
     }),

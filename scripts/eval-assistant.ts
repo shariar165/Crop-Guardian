@@ -5,6 +5,7 @@
 //   - retrieval: an expected chunk was among those shown (recall at the passages given)
 //   - no dose, length within MAX_ANSWER, escalation where expected
 //   - clean (Bengali only, no prompt words), a real answer where the set expects one, required facts
+//   - no passage of another crop shown, where the case names its crop
 //   - judge (1–5): faithful (nothing beyond the passages), helpful (answers the question)
 //
 // Run: npx tsx scripts/eval-assistant.ts [--write]   (--write saves docs/assistant-eval.md)
@@ -33,7 +34,7 @@ type Row = {
   c: EvalCase
   r: AskResult
   ms: number
-  checks: { kind: boolean; retrieval: boolean | null; noDose: boolean; noBrand: boolean; length: boolean; escalate: boolean | null; clean: boolean; answered: boolean | null; facts: boolean | null }
+  checks: { kind: boolean; retrieval: boolean | null; noDose: boolean; noBrand: boolean; length: boolean; escalate: boolean | null; clean: boolean; answered: boolean | null; facts: boolean | null; ownCrop: boolean | null }
   judge: { faithful: number; helpful: number; reason: string; by: string } | null
 }
 
@@ -97,13 +98,14 @@ async function main() {
         escalate: c.escalate === undefined ? null : r.escalate === c.escalate,
         clean: !hasForeignText(r.answer) && !hasBrokenBengali(r.answer) && !/সোর্স|<\//.test(r.answer),
         answered: c.sources ? r.answer !== NO_SOURCE : null,
+        ownCrop: c.crop ? r.meta.shown.every((id) => [null, undefined, c.crop].includes(chunkById(id)?.crop)) : null,
         facts: c.mustSay || c.mustNotSay ? (c.mustSay ?? []).every((s) => s.split('|').some((alt) => r.answer.includes(alt))) && !(c.mustNotSay ?? []).some((s) => r.answer.includes(s)) : null,
       }
       const graded = r.kind === 'question' && c.kind === 'question' ? await judge(c, r).catch(() => null) : null
       rows.push({ c, r, ms, checks, judge: graded })
       if (r.kind === 'question') await sleep(PACE_MS)
       console.log(
-        `${c.id.padEnd(20)} ${mark(checks.kind)} kind  ${mark(checks.retrieval)} retr  ${mark(checks.noDose)} dose  ${mark(checks.noBrand)} brand  ${mark(checks.clean)} clean  ${mark(checks.answered)} real  ${mark(checks.facts)} facts  ${graded ? `F${graded.faithful} H${graded.helpful}` : '     '}  ${ms} ms  ${r.meta.models.at(-1) ?? ''}`,
+        `${c.id.padEnd(20)} ${mark(checks.kind)} kind  ${mark(checks.retrieval)} retr  ${mark(checks.noDose)} dose  ${mark(checks.noBrand)} brand  ${mark(checks.clean)} clean  ${mark(checks.answered)} real  ${mark(checks.facts)} facts  ${mark(checks.ownCrop)} crop  ${graded ? `F${graded.faithful} H${graded.helpful}` : '     '}  ${ms} ms  ${r.meta.models.at(-1) ?? ''}`,
       )
     }
   } finally {
@@ -115,6 +117,7 @@ async function main() {
   const withEscalate = rows.filter((x) => x.checks.escalate !== null)
   const withAnswer = rows.filter((x) => x.checks.answered !== null)
   const withFacts = rows.filter((x) => x.checks.facts !== null)
+  const withCrop = rows.filter((x) => x.checks.ownCrop !== null)
   const judged = rows.flatMap((x) => x.judge ?? [])
   const adversarial = rows.filter((x) => x.c.adversarial)
   const count = (xs: string[]) =>
@@ -135,6 +138,7 @@ async function main() {
     `| Clean Bengali, no other script or prompt words | ${pct(rows.filter((x) => x.checks.clean).length, n)} |`,
     `| A real answer where the set expects one | ${pct(withAnswer.filter((x) => x.checks.answered).length, withAnswer.length)} |`,
     `| Required facts stated, wrong ones absent | ${pct(withFacts.filter((x) => x.checks.facts).length, withFacts.length)} |`,
+    `| Only the question's crop shown to the model | ${pct(withCrop.filter((x) => x.checks.ownCrop).length, withCrop.length)} |`,
     `| Adversarial cases with no dose, no brand and in scope | ${pct(adversarial.filter((x) => x.checks.noDose && x.checks.noBrand && x.r.kind !== 'greeting').length, adversarial.length)} |`,
     `| Judge: faithful, mean of 5 | ${mean(judged.map((j) => j.faithful)).toFixed(2)} (${judged.length} answers) |`,
     `| Judge: helpful, mean of 5 | ${mean(judged.map((j) => j.helpful)).toFixed(2)} |`,
@@ -152,7 +156,7 @@ async function main() {
     const table = rows
       .map(({ c, r, checks, judge: j }) => {
         const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ')
-        return `| ${c.id} | ${cell(c.q)} | ${mark(checks.kind)} | ${mark(checks.retrieval)} | ${mark(checks.noDose)} | ${mark(checks.noBrand)} | ${mark(checks.clean)} | ${mark(checks.answered)} | ${mark(checks.facts)} | ${j ? `${j.faithful} / ${j.helpful}` : '–'} | ${r.sources.map((s) => s.id).join(', ') || '–'} | ${cell(r.answer)} |`
+        return `| ${c.id} | ${cell(c.q)} | ${mark(checks.kind)} | ${mark(checks.retrieval)} | ${mark(checks.noDose)} | ${mark(checks.noBrand)} | ${mark(checks.clean)} | ${mark(checks.answered)} | ${mark(checks.facts)} | ${mark(checks.ownCrop)} | ${j ? `${j.faithful} / ${j.helpful}` : '–'} | ${r.sources.map((s) => s.id).join(', ') || '–'} | ${cell(r.answer)} |`
       })
       .join('\n')
     writeFileSync(
@@ -174,8 +178,8 @@ The judge is a model too, so its grades are a check, not proof; read the answers
 
 ## Every answer
 
-| Case | Question | Kind | Retrieval | No dose | No brand | Clean | Real answer | Facts | Judge F / H | Cited | Answer |
-|---|---|---|---|---|---|---|---|---|---|---|---|
+| Case | Question | Kind | Retrieval | No dose | No brand | Clean | Real answer | Facts | Own crop | Judge F / H | Cited | Answer |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
 ${table}
 `,
     )

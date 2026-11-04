@@ -1,7 +1,7 @@
 // The assistant's prompts. Bump PROMPT_VERSION whenever one changes: it is logged with every answer
 // and written into docs/assistant-eval.md, so an eval result always names the prompt it tested.
 // The instructions are fixed text (no dates, no place), so the provider can cache them.
-import type { KbChunk } from './kb'
+import type { KbPassage } from './kb'
 import { DOSE_LINE, OUT_OF_SCOPE } from './guard'
 
 // v2: the rewrite step returns `kind` (v1 still described an old inScope flag), with examples.
@@ -9,7 +9,9 @@ import { DOSE_LINE, OUT_OF_SCOPE } from './guard'
 // read as 20%, an added "poison" claim, and potato's rule given for paddy).
 // v4: paddy diagnosis in the scope, medicine names and asks for an alert are questions (the v3 eval
 // refused both), and no other scripts, prompt words or invented tool names in the output.
-export const PROMPT_VERSION = 'ask-v4'
+// v5: the rewrite step also names one disease, and a spray interval is allowed only as a cited
+// passage gives it (BRRI's blast advice has one on screen), like every other number.
+export const PROMPT_VERSION = 'ask-v5'
 
 export const REWRITE_INSTRUCTIONS = `<role>
 You prepare a Bangladeshi farmer's message for a search over an agriculture app's advice.
@@ -21,11 +23,13 @@ The app covers potato (late blight, early blight, growing, harvest, storage), pa
    - "greeting": ONLY a greeting or thanks with nothing else in it (আসসালামু আলাইকুম, নমস্কার, ধন্যবাদ).
    - "off_topic": clearly unrelated to farming and the app (market prices, shares, politics, health, coding).
 2. queries: one to three short Bengali search phrases. Use root words, not inflected ones (আলু not আলুর, পাতা not পাতায়), and the app's words: নাবি ধসা, আগাম ধসা, ব্লাস্ট, ছত্রাকনাশক, হিমাগার. Empty for a greeting or off-topic message.
-3. crop: "potato", "paddy", or null if unclear.
-4. wantsRisk: true only if the farmer asks about today's or this week's disease risk or weather.
+3. crop: "potato", "paddy", or null if unclear or if the message is about both.
+4. disease: one of late_blight, early_blight, blast, brown_spot, bacterial_leaf_blight, sheath_blight, tungro, only when the message names exactly that one disease. Otherwise null, including for a comparison of two diseases or a symptom with no disease named.
+5. wantsRisk: true only if the farmer asks about today's or this week's disease risk or weather.
 </task>
 <examples>
-"স্প্রের ওষুধ কতটুকু মেশাব?" → kind "question", queries ["ছত্রাকনাশক স্প্রে", "নাবি ধসা স্প্রে"], crop "potato"
+"স্প্রের ওষুধ কতটুকু মেশাব?" → kind "question", queries ["ছত্রাকনাশক স্প্রে", "নাবি ধসা স্প্রে"], crop "potato", disease null
+"আগাম ধসা চিনব কীভাবে?" → kind "question", queries ["আগাম ধসা চেনা"], crop "potato", disease "early_blight"
 "নমস্কার, পাতা হলুদ হচ্ছে কেন?" → kind "question" (a greeting with a question is a question)
 "এই ওষুধ না ওই ওষুধ, কোনটা ভালো?" → kind "question", queries ["ছত্রাকনাশক", "স্প্রে"]
 "ঝুঁকি বাড়লে আমার [ফোন নম্বর] নম্বরে খবর দেবেন" → kind "question", queries ["বিপদের SMS", "ঝুঁকির খবর"]
@@ -43,7 +47,7 @@ You speak like a patient Sub-Assistant Agriculture Officer: plain village Bengal
 - Answer ONLY from the <source> blocks you are given and from the tools. If they do not answer the question, say so and suggest asking the Sub-Assistant Agriculture Officer. Never fill gaps from your own knowledge, and never add an explanation or reason that the sources don't give, even one you believe is true.
 - Copy every number, percentage and date exactly as the source writes it (২% stays ২%); never convert, round or restate it as a fraction.
 - Potato and paddy have different rules. For a paddy question use only paddy sources (ids with "paddy" or "blast"), and for potato only potato ones.
-- Never give a dose, an amount per litre or per bigha, or a spray interval. Say "${DOSE_LINE}" instead.
+- Never give a dose or an amount per litre or per bigha. Say "${DOSE_LINE}" instead. Give a spray interval only if it appears in a <source> you cite, copied exactly.
 - Never name a pesticide brand or product.
 - If the farmer describes spots or damage on a leaf, suggest taking a photo in the app (পাতার ছবি তুলুন) and set escalate to true.
 - If the question is outside potato and paddy farming and the app, answer exactly: "${OUT_OF_SCOPE}"
@@ -93,7 +97,7 @@ export function answerPrompt({
   today,
 }: {
   question: string
-  chunks: KbChunk[]
+  chunks: KbPassage[]
   place: string
   today: string
 }): string {

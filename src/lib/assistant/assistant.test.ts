@@ -2,10 +2,12 @@ import assert from 'node:assert/strict'
 import { afterEach, mock, test } from 'node:test'
 import { ask, historyMessages } from './answer'
 import { aboutMedicine, answerProblem, BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasBrokenBengali, hasDose, hasForeignText, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, NO_SOURCE, neverOffTopic, PHONE_MASK, redactPhones, OUT_OF_SCOPE, sanitizeAnswer, validSources } from './guard'
-import { KB, searchText } from './kb'
+import { idsInScope, KB, questionScope, searchText } from './kb'
+import { MODELS } from './models'
 import { ANSWER_INSTRUCTIONS, answerPrompt, REWRITE_INSTRUCTIONS } from './prompts'
-import { keywordQuery, rrf } from './retrieve'
+import { keywordQuery, rrf, searchKb } from './retrieve'
 import { stemBn, stemmedText, wordsOf } from './tokens'
+import { PHOTO_SPECS } from '@/lib/diagnosis/crops'
 
 test('Bengali suffixes are stripped so inflected words find their root', () => {
   assert.equal(stemBn('আলুর'), 'আলু')
@@ -149,7 +151,7 @@ test("the app's own words are never off topic, and everyday questions still can 
 
 // Every model the keys allow refuses or is refused: this is what a day of used-up free tiers looks
 // like, and the farmer must get the officer, not an error.
-function fakeGroq(answer: object, kind = 'question') {
+function fakeGroq(answer: object, kind = 'question', crop: string | null = null) {
   process.env.GROQ_API_KEY = 'test'
   delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
   delete process.env.OPENROUTER_API_KEY
@@ -161,7 +163,7 @@ function fakeGroq(answer: object, kind = 'question') {
     const outputTool = body.tools?.map((t: { function: { name: string } }) => t.function.name).find((n: string) => n !== 'searchGuide' && n !== 'todayRisk')
     const message = outputTool
       ? { role: 'assistant', content: null, tool_calls: [{ id: 't', type: 'function', function: { name: outputTool, arguments: JSON.stringify(answer) } }] }
-      : { role: 'assistant', content: JSON.stringify({ kind, queries: ['ওষুধ'], crop: null, wantsRisk: false }) }
+      : { role: 'assistant', content: JSON.stringify({ kind, queries: ['ওষুধ'], crop, disease: null, wantsRisk: false }) }
     return Response.json({ id: 'x', created: 1, model: 'm', choices: [{ index: 0, finish_reason: outputTool ? 'tool_calls' : 'stop', message }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })
   })
 }
@@ -169,6 +171,80 @@ const askDeps = { query: async () => ({ rows: [] }), risk: async () => { throw n
 const askIt = (question: string) => ask({ question, place: 'p', today: '2026-11-05' }, askDeps as never)
 
 afterEach(() => mock.restoreAll())
+
+// Stands in for Postgres: every query that limits its ids is answered from KB within that limit.
+const fakeDb = async (_sql: string, params: unknown[] = []) => {
+  const ids = params.find(Array.isArray) as string[]
+  return { rows: KB.filter((c) => ids.includes(c.id)) }
+}
+
+test('every chunk knows its crop: the rules and photo steps of one crop are never tagged for both', () => {
+  const tag = (id: string) => KB.find((c) => c.id === id)!
+  for (const id of ['guide.risk', 'risk.potato', 'photo.potato', 'potato.blight', 'disease.late_blight']) assert.equal(tag(id).crop, 'potato', id)
+  for (const id of ['guide.paddy', 'risk.paddy', 'photo.paddy', 'disease.paddy.blast']) assert.equal(tag(id).crop, 'paddy', id)
+  for (const c of KB.filter((k) => k.id.startsWith('potato.') || k.id.startsWith('disease.paddy.'))) assert.notEqual(c.crop, null, c.id)
+})
+
+test('the crop-neutral photo chunk holds neither crop\'s steps, and each crop has its own from PHOTO_SPECS', () => {
+  const text = (id: string) => KB.find((c) => c.id === id)!.text
+  assert.doesNotMatch(text('guide.photo'), /উল্টে|আলুতে:|ধানে:/)
+  for (const crop of ['potato', 'paddy'] as const) {
+    const { top, under } = PHOTO_SPECS[crop].photos
+    for (const s of [top.title, top.sub, under.title, under.sub]) assert.ok(text(`photo.${crop}`).includes(s), s)
+  }
+  assert.doesNotMatch(text('photo.paddy'), /নিচের দিক/)
+})
+
+test("the farmer's own words set the crop, and the model only fills in what they leave open", () => {
+  assert.equal(questionScope('ধানের পাতায় দাগ', { crop: 'potato' }).crop, 'paddy')
+  assert.equal(questionScope('আলুর পাতায় দাগ', { crop: 'paddy' }).crop, 'potato')
+  assert.equal(questionScope('পাতায় দাগ, কী করব?', { crop: 'paddy' }).crop, 'paddy')
+  assert.equal(questionScope('পাতায় দাগ, কী করব?').crop, null)
+  // Both crops named, and words that only contain ধান or আমন.
+  assert.equal(questionScope('আলু আর ধানে কী তফাত?', { crop: 'paddy' }).crop, null)
+  assert.equal(questionScope('এর সমাধান প্রধান সমস্যা, আমন্ত্রণ').crop, null)
+  // A model's disease of the other crop is ignored.
+  assert.deepEqual(questionScope('আলুর পাতায় দাগ', { disease: 'blast' }), { crop: 'potato', disease: null })
+})
+
+test('one named disease narrows the search, and comparing two keeps both', () => {
+  assert.equal(questionScope('নাবি ধসা হলে পাতা কেমন হয়?').disease, 'late_blight')
+  assert.equal(questionScope('আগাম ধসা চিনব কীভাবে?').disease, 'early_blight')
+  assert.equal(questionScope('ধানের খোল পোড়া কেমন?').disease, 'sheath_blight')
+  assert.equal(questionScope('নাবি ধসা আর আগাম ধসার তফাত কী?').disease, null)
+  const late = idsInScope(questionScope('নাবি ধসা হলে পাতা কেমন হয়?'))
+  assert.ok(late.includes('disease.late_blight') && !late.includes('disease.early_blight') && late.includes('potato.soil'))
+})
+
+test('a paddy question is never searched, or shown, a potato chunk', async () => {
+  delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  delete process.env.COHERE_API_KEY
+  mock.method(console, 'error', () => {})
+  const scope = questionScope('ধানের পাতার ছবি কীভাবে তুলব?')
+  const seen: string[][] = []
+  const spy = async (sql: string, params: unknown[] = []) => {
+    seen.push(params.find(Array.isArray) as string[])
+    return fakeDb(sql, params)
+  }
+  const found = await searchKb(spy as never, 'ধানের পাতার ছবি কীভাবে তুলব?', ['পাতা ছবি', 'ফসল'], scope)
+  assert.ok(found.length > 0 && idsInScope(scope).includes('photo.paddy'))
+  const potato = KB.filter((c) => c.crop === 'potato').map((c) => c.id)
+  for (const ids of seen) for (const id of potato) assert.ok(!ids.includes(id), id)
+  for (const c of found) assert.ok(!potato.includes(c.id), c.id)
+})
+
+test('a rewrite model that misreads the crop still cannot show a paddy farmer potato advice', async () => {
+  fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false }, 'question', 'potato')
+  const r = await ask({ question: 'ধানের ব্লাস্ট রোগ কেমন?', place: 'p', today: '2026-11-05' }, { ...askDeps, query: fakeDb } as never)
+  assert.ok(r.meta.shown.length > 0)
+  for (const id of r.meta.shown) assert.notEqual(KB.find((c) => c.id === id)!.crop, 'potato', id)
+})
+
+test('gpt-oss writes the answers first, and an interval must come from a cited passage', () => {
+  assert.equal(MODELS.answer, 'groq/openai/gpt-oss-120b')
+  assert.equal(MODELS.rewrite, 'groq/qwen/qwen3.8-27b')
+  assert.match(ANSWER_INSTRUCTIONS, /spray interval only if it appears in a <source> you cite/)
+})
 
 test('when every model is refused the farmer is sent to the officer, not shown an error', async () => {
   fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false })
@@ -220,6 +296,7 @@ test('the colour meanings are in the knowledge base, for both crops', () => {
 
 test('the prompts forbid doses, and their examples follow the rule', () => {
   assert.ok(ANSWER_INSTRUCTIONS.includes(DOSE_LINE))
+  assert.doesNotMatch(ANSWER_INSTRUCTIONS, /or a spray interval/)
   const examples = [...ANSWER_INSTRUCTIONS.matchAll(/<answer>([^<]+)<\/answer>/g)].map((m) => m[1])
   assert.ok(examples.length >= 3)
   for (const e of examples) assert.ok(!hasDose(e) && !hasBrand(e), e)

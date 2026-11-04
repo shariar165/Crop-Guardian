@@ -12,7 +12,7 @@ import { type CropId } from '@/lib/crops'
 import { bnDate } from '@/lib/bn'
 import { DAY_STATE, type Risk } from '@/lib/data'
 import { aboutMedicine, answerProblem, BRAND_REFERRAL, EXPERIMENTAL_NOTE, HISTORY_TURNS, looksLikeQuestion, MAX_ANSWER, MAX_QUESTION, neverOffTopic, NO_SOURCE, OUT_OF_SCOPE, redactPhones, sanitizeAnswer, validSources } from './guard'
-import type { KbChunk } from './kb'
+import { type KbChunk, type KbPassage, questionScope } from './kb'
 import { withFallback } from './models'
 import { ANSWER_INSTRUCTIONS, answerPrompt, PROMPT_VERSION, REWRITE_INSTRUCTIONS } from './prompts'
 import { type Query, searchKb } from './retrieve'
@@ -63,6 +63,7 @@ const rewriteSchema = z.object({
   kind: z.enum(['greeting', 'off_topic', 'question']),
   queries: z.array(z.string()).max(3).describe('Short Bengali search phrases with root words'),
   crop: z.enum(['potato', 'paddy']).nullable(),
+  disease: z.string().nullable().describe('The one disease named, or null'),
   wantsRisk: z.boolean(),
 })
 
@@ -119,9 +120,10 @@ export async function ask(
   const mustAnswer = neverOffTopic(question)
   if (plan.kind === 'off_topic' && !mustAnswer) return early('off_topic', OUT_OF_SCOPE)
 
-  const chunks = await searchKb(deps.query, question, plan.queries)
+  const scope = questionScope(question, plan)
+  const chunks = await searchKb(deps.query, question, plan.queries, scope)
   // Every chunk the model is shown, from the first search or its own; it may cite only these.
-  const shown = new Map(chunks.map((c) => [c.id, c]))
+  const shown = new Map<string, KbPassage>(chunks.map((c) => [c.id, c]))
   // What the forecast tool returned, which an answer may quote just as it quotes a passage.
   const forecast: string[] = []
   const rejected: string[] = []
@@ -131,7 +133,7 @@ export async function ask(
       description: "Search the app's advice again with a different Bengali phrase.",
       inputSchema: z.object({ phrase: z.string().describe('A short Bengali search phrase with root words') }),
       execute: async ({ phrase }) => {
-        const found = await searchKb(deps.query, phrase, [])
+        const found = await searchKb(deps.query, phrase, [], scope)
         for (const c of found) shown.set(c.id, c)
         return found.map((c) => ({ id: c.id, title: c.title, from: c.source, text: c.text }))
       },

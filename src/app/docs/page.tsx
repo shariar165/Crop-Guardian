@@ -39,7 +39,7 @@ const SAFETY = [
 ]
 
 const LIMITS = [
-  'The diagnosis thresholds were fitted on Indonesian field photos, not Bangladeshi ones; 20–30 officer-labelled local photos are the next step.',
+  'The diagnosis thresholds were fitted on Indonesian field photos, not Bangladeshi ones; held-out public field datasets are the next step, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.',
   'The risk rule is checked against two weather reanalyses, not yet against recorded outbreaks.',
   'The rice-blast rule is a draft, labelled experimental in the app.',
   'The assistant knows only what the app’s advice says; it is a way to find that advice, not an agronomist.',

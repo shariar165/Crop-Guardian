@@ -1,7 +1,7 @@
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { placeOf, unionById } from '@/lib/areas'
-import { KB } from '@/lib/assistant/kb'
+import { KB, questionScope } from '@/lib/assistant/kb'
 import { searchKb } from '@/lib/assistant/retrieve'
 import { CROPS } from '@/lib/crops'
 import { daysBetween, isIsoDate, todayIn } from '@/lib/dates'
@@ -86,7 +86,7 @@ const handler = createMcpHandler(
       async ({ query }) => {
         try {
           const pool = db()
-          const chunks = await searchKb((sql, params) => pool.query(sql, params), query, [])
+          const chunks = await searchKb((sql, params) => pool.query(sql, params), query, [], questionScope(query))
           return json(chunks.map(({ id, title, source, href, text }) => ({ id, title, source, href, text })))
         } catch {
           return fail('The advice search is unavailable right now.')
