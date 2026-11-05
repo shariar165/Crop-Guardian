@@ -5,13 +5,18 @@ import { fromBnDigits } from '@/lib/bn'
 export const MAX_QUESTION = 300
 // Two short paragraphs on a phone; the prompt asks for less.
 export const MAX_ANSWER = 700
-// Turns of earlier chat sent back with a question (a sliding window: older ones are dropped).
-export const HISTORY_TURNS = 3
+// Turns of earlier chat sent back with a question (a sliding window: older ones are dropped), and
+// how much of each answer: enough to tell what "এটা" refers to.
+export const HISTORY_TURNS = 2
+export const MAX_HISTORY_ANSWER = 200
 
 export const EXPERIMENTAL_NOTE = 'পরীক্ষামূলক: অ্যাপের পরামর্শ থেকে লেখা। সন্দেহ হলে উপসহকারী কৃষি কর্মকর্তাকে জিজ্ঞেস করুন।'
 export const DOSE_LINE = 'ওষুধের মাত্রা: বোতলের লেবেল অনুযায়ী।'
 export const OUT_OF_SCOPE = 'আমি শুধু আলু আর ধানের রোগ, চাষ আর এই অ্যাপ নিয়ে বলতে পারি। অন্য বিষয়ে উপজেলা কৃষি অফিসে জিজ্ঞেস করুন।'
 export const NO_SOURCE = 'এ বিষয়ে অ্যাপের পরামর্শে কিছু পাইনি। উপসহকারী কৃষি কর্মকর্তাকে জিজ্ঞেস করুন, বা পাতার ছবি তুলে পাঠান।'
+// Said before a passage shown as it stands: it is the closest advice, not an answer to the question.
+export const PASSAGE_INTRO = 'এখন উত্তর লেখা যাচ্ছে না। অ্যাপের পরামর্শের সবচেয়ে কাছের অংশ:'
+export const ASK_CROP = 'আলু না ধান?'
 export const UNAVAILABLE = 'এখন উত্তর দিতে পারছি না। একটু পরে আবার চেষ্টা করুন, বা «আলু চাষের পরামর্শ» পাতা দেখুন।'
 
 export type QuestionCheck = { ok: true; text: string } | { ok: false; reason: 'empty' | 'long' }

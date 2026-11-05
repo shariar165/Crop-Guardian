@@ -1,6 +1,6 @@
 // The farmer's fields as plain data: parsing and season checks with no device storage, so the
 // server can read the copy a signed-in farmer sends for SMS alerts. The phone's store is fields.ts.
-import { isSeasonId, SEASON_IDS, type SeasonId } from '@/lib/crops'
+import { type CropId, isSeasonId, SEASON_IDS, SEASONS, type SeasonId } from '@/lib/crops'
 import { isIsoDate } from '@/lib/dates'
 import { riskActive, seasonFor } from '@/lib/season'
 
@@ -32,3 +32,13 @@ export function parseFields(raw: string | null, legacyPlanting: string | null): 
 }
 
 export const inSeason = (field: Field, today: string) => riskActive(seasonFor(today, field.planted, field.season))
+
+// The crop a question with no crop in it is about: the field in season, or the one picked on Home
+// when two crops are in season. Null when the fields don't settle it.
+export function fieldCrop(fields: Field[], today: string, chosen: SeasonId | null): CropId | null {
+  const current = fields.filter((f) => inSeason(f, today))
+  const picked = current.find((f) => f.season === chosen)
+  if (picked) return SEASONS[picked.season].crop
+  const crops = new Set(current.map((f) => SEASONS[f.season].crop))
+  return crops.size === 1 ? [...crops][0] : null
+}

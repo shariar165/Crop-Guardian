@@ -6,17 +6,26 @@ import { todayIn } from '@/lib/dates'
 import { db } from '@/lib/db'
 import { getPlace } from '@/lib/place'
 import { riskAt } from '@/lib/riskAt'
+import type { CropId } from '@/lib/crops'
 import { ask, type AskResult } from './answer'
+import type { AnswerCache } from './cache'
 
 // Enough for a farmer's real questions in a day; stops a script from running up the model bill.
 export const DAILY_LIMIT = 30
 
-export async function askOnServer(question: string, history: unknown): Promise<AskResult> {
+const answerCache = (): AnswerCache => ({
+  get: async (key) => (await db().query('SELECT "answer" FROM ask_cache WHERE "key" = $1', [key])).rows[0]?.answer ?? null,
+  set: async (key, value) => {
+    await db().query('INSERT INTO ask_cache ("key", "answer") VALUES ($1, $2) ON CONFLICT ("key") DO NOTHING', [key, JSON.stringify(value)])
+  },
+})
+
+export async function askOnServer(question: string, history: unknown, field: CropId | null): Promise<AskResult> {
   const place = await getPlace()
   const pool = db()
   return ask(
-    { question, history, place: place.name, today: todayIn() },
-    { query: (sql, params) => pool.query(sql, params), risk: (crop) => riskAt(place, crop) },
+    { question, history, today: todayIn(), field },
+    { query: (sql, params) => pool.query(sql, params), risk: (crop) => riskAt(place, crop), cache: answerCache() },
   )
 }
 

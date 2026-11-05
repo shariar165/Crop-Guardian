@@ -1,7 +1,7 @@
 // The farmer's guide (/guide) and the first-run intro on Home, in short, plain Bengali.
 // Every line here describes what the app really does; keep it in step with the screens.
 import { BLAST_WET_HOURS, WET_MAX_C, WET_MIN_C } from '@/lib/blast'
-import { SEASONS } from '@/lib/crops'
+import { type CropId, SEASONS } from '@/lib/crops'
 import { HUMID_RH, HUTTON_HUMID_HOURS, MIN_TEMP_C } from '@/lib/risk'
 import { EMERGENCE_DAYS, HARVEST_DAYS } from '@/lib/season'
 import { toBnDigits } from '@/lib/bn'
@@ -40,6 +40,13 @@ export const RISK_MEANING = [
   { risk: 'danger', text: 'নাবি ধসা ছড়ানোর মতো আবহাওয়া। আজই পাতা দেখুন, দরকার হলে স্প্রে করুন।' },
 ] as const
 
+// Each crop's rule as the guide states it. The assistant quotes these word for word: models asked to
+// write the rule left its numbers out.
+export const RISK_RULE: Record<CropId, string> = {
+  potato: `ঝুঁকি আসে আবহাওয়ার পূর্বাভাস থেকে। রাতে ${toBnDigits(MIN_TEMP_C)}°সে-এর বেশি গরম আর দিনে ${toBnDigits(HUTTON_HUMID_HOURS)} ঘণ্টার বেশি ${toBnDigits(HUMID_RH)}% আর্দ্রতা টানা দুই দিন থাকলে বিপদ।`,
+  paddy: `ধানের জমিতে দেখাই ব্লাস্টের ঝুঁকি। ${toBnDigits(WET_MIN_C)}–${toBnDigits(WET_MAX_C)}°সে তাপমাত্রায় দিনে ${toBnDigits(BLAST_WET_HOURS)} ঘণ্টার বেশি ${toBnDigits(HUMID_RH)}% আর্দ্রতা টানা দুই দিন থাকলে বিপদ।`,
+}
+
 export const GUIDE: GuideSection[] = [
   {
     id: 'start',
@@ -58,7 +65,7 @@ export const GUIDE: GuideSection[] = [
     title: 'হোম: আজকের ঝুঁকির রং',
     icon: 'risk',
     lines: [
-      `ঝুঁকি আসে আবহাওয়ার পূর্বাভাস থেকে। রাতে ${toBnDigits(MIN_TEMP_C)}°সে-এর বেশি গরম আর দিনে ${toBnDigits(HUTTON_HUMID_HOURS)} ঘণ্টার বেশি ${toBnDigits(HUMID_RH)}% আর্দ্রতা টানা দুই দিন থাকলে বিপদ।`,
+      RISK_RULE.potato,
       'নিচে ৫ দিনের পূর্বাভাস থাকে। সামনে বিপদ আসলে আগেই জানিয়ে দিই।',
       'মোবাইল নম্বর দিয়ে ঢুকে «আমার অ্যাকাউন্ট»-এ SMS চালু করলে বিপদের আগের দিন বিকেলে ফোনে SMS পাবেন, অ্যাপ না খুললেও।',
       'মৌসুম না থাকলে (চারা গজানোর আগে বা ফসল তোলার পরে) ঝুঁকি দেখাই না।',
@@ -69,7 +76,7 @@ export const GUIDE: GuideSection[] = [
     title: 'ধান: ব্লাস্ট রোগের ঝুঁকি (পরীক্ষামূলক)',
     icon: 'risk',
     lines: [
-      `ধানের জমিতে দেখাই ব্লাস্টের ঝুঁকি। ${toBnDigits(WET_MIN_C)}–${toBnDigits(WET_MAX_C)}°সে তাপমাত্রায় দিনে ${toBnDigits(BLAST_WET_HOURS)} ঘণ্টার বেশি ${toBnDigits(HUMID_RH)}% আর্দ্রতা টানা দুই দিন থাকলে বিপদ।`,
+      RISK_RULE.paddy,
       `চারা রোয়ার ${toBnDigits(SEASONS.boro.startDays)} দিন পর থেকে ${toBnDigits(SEASONS.boro.endDays)} দিন পর্যন্ত খবর দিই, বোরো আর আমন দুই মৌসুমেই।`,
       'বিপদের দিনে পাতায় চোখের মতো দাগ আর শীষের গোড়া দেখুন। এই হিসাব এখনো মাঠে যাচাই হয়নি, সন্দেহ হলে কৃষি কর্মকর্তাকে জিজ্ঞেস করুন।',
     ],

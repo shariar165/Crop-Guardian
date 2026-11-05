@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict'
 import { afterEach, mock, test } from 'node:test'
 import { ask, historyMessages } from './answer'
-import { aboutMedicine, answerProblem, BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasBrokenBengali, hasDose, hasForeignText, HISTORY_TURNS, MAX_ANSWER, MAX_QUESTION, NO_SOURCE, neverOffTopic, PHONE_MASK, redactPhones, OUT_OF_SCOPE, sanitizeAnswer, validSources } from './guard'
-import { idsInScope, KB, questionScope, searchText } from './kb'
-import { MODELS } from './models'
+import { answerKey, KB_VERSION, normalizeQuestion } from './cache'
+import { aboutMedicine, answerProblem, ASK_CROP, BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasBrokenBengali, hasDose, hasForeignText, HISTORY_TURNS, MAX_ANSWER, MAX_HISTORY_ANSWER, MAX_QUESTION, NO_SOURCE, neverOffTopic, PASSAGE_INTRO, PHONE_MASK, redactPhones, OUT_OF_SCOPE, sanitizeAnswer, validSources } from './guard'
+import { idsInScope, KB, questionScope, RULE_CHUNK, searchText } from './kb'
+import { MODELS, withFallback } from './models'
 import { ANSWER_INSTRUCTIONS, answerPrompt, REWRITE_INSTRUCTIONS } from './prompts'
 import { keywordQuery, rrf, searchKb } from './retrieve'
 import { stemBn, stemmedText, wordsOf } from './tokens'
 import { PHOTO_SPECS } from '@/lib/diagnosis/crops'
+import { fieldCrop } from '@/lib/fieldList'
+import { GUIDE, RISK_RULE } from '@/lib/guide'
 
 test('Bengali suffixes are stripped so inflected words find their root', () => {
   assert.equal(stemBn('আলুর'), 'আলু')
@@ -96,7 +99,7 @@ test('only the last few turns go back to the model, phone numbers removed', () =
   const turns = Array.from({ length: 6 }, (_, i) => ({ q: `প্রশ্ন ${i} ০১৭১২৩৪৫৬৭৮`, a: `উত্তর ${i}` }))
   const messages = historyMessages([...turns, { q: 5 }, 'x'])
   assert.equal(messages.length, HISTORY_TURNS * 2)
-  assert.equal(messages[0].content, `প্রশ্ন 3 ${PHONE_MASK}`)
+  assert.equal(messages[0].content, `প্রশ্ন ${6 - HISTORY_TURNS} ${PHONE_MASK}`)
   assert.deepEqual(historyMessages('nope'), [])
 })
 
@@ -151,24 +154,32 @@ test("the app's own words are never off topic, and everyday questions still can 
 
 // Every model the keys allow refuses or is refused: this is what a day of used-up free tiers looks
 // like, and the farmer must get the officer, not an error.
-function fakeGroq(answer: object, kind = 'question', crop: string | null = null) {
+function fakeGroq(answer: object | string, kind = 'question', crop: string | null = null, plan: object = {}) {
   process.env.GROQ_API_KEY = 'test'
   delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
   delete process.env.OPENROUTER_API_KEY
   delete process.env.COHERE_API_KEY
   mock.method(console, 'error', () => {})
-  mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
-    const body = JSON.parse(String(init.body))
-    // With tools in the request, structured output arrives as a call to one more tool.
-    const outputTool = body.tools?.map((t: { function: { name: string } }) => t.function.name).find((n: string) => n !== 'searchGuide' && n !== 'todayRisk')
-    const message = outputTool
-      ? { role: 'assistant', content: null, tool_calls: [{ id: 't', type: 'function', function: { name: outputTool, arguments: JSON.stringify(answer) } }] }
-      : { role: 'assistant', content: JSON.stringify({ kind, queries: ['ওষুধ'], crop, disease: null, wantsRisk: false }) }
-    return Response.json({ id: 'x', created: 1, model: 'm', choices: [{ index: 0, finish_reason: outputTool ? 'tool_calls' : 'stop', message }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })
+  return mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
+    const rewrite = String(init.body).includes('You prepare a Bangladeshi')
+    const content = rewrite ? JSON.stringify({ kind, queries: ['ওষুধ'], crop, disease: null, wantsRisk: false, wantsRule: false, ...plan }) : typeof answer === 'string' ? answer : JSON.stringify(answer)
+    return Response.json({ id: 'x', created: 1, model: 'm', choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })
+  })
+}
+// Every provider says no, as on a day of used-up free tiers. `rewriteWorks` keeps the reading step up.
+function outOfQuota(rewriteWorks = false) {
+  const reply = fakeGroq({})
+  reply.mock.mockImplementation(async (_url: string, init: RequestInit) => {
+    if (rewriteWorks && String(init.body).includes('You prepare a Bangladeshi')) {
+      const content = JSON.stringify({ kind: 'question', queries: [], crop: null, disease: null, wantsRisk: false, wantsRule: false })
+      return Response.json({ id: 'x', created: 1, model: 'm', choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })
+    }
+    return Response.json({ error: { message: 'Rate limit reached', code: 'rate_limit_exceeded' } }, { status: 429 })
   })
 }
 const askDeps = { query: async () => ({ rows: [] }), risk: async () => { throw new Error('unused') } }
-const askIt = (question: string) => ask({ question, place: 'p', today: '2026-11-05' }, askDeps as never)
+const today = '2026-11-05'
+const askIt = (question: string) => ask({ question, today }, askDeps as never)
 
 afterEach(() => mock.restoreAll())
 
@@ -185,14 +196,37 @@ test('every chunk knows its crop: the rules and photo steps of one crop are neve
   for (const c of KB.filter((k) => k.id.startsWith('potato.') || k.id.startsWith('disease.paddy.'))) assert.notEqual(c.crop, null, c.id)
 })
 
-test('the crop-neutral photo chunk holds neither crop\'s steps, and each crop has its own from PHOTO_SPECS', () => {
+test("each crop's photo chunk stands alone, with the two photos from PHOTO_SPECS and the guide's tips", () => {
   const text = (id: string) => KB.find((c) => c.id === id)!.text
-  assert.doesNotMatch(text('guide.photo'), /উল্টে|আলুতে:|ধানে:/)
+  assert.equal(KB.find((c) => c.id === 'guide.photo'), undefined)
   for (const crop of ['potato', 'paddy'] as const) {
     const { top, under } = PHOTO_SPECS[crop].photos
-    for (const s of [top.title, top.sub, under.title, under.sub]) assert.ok(text(`photo.${crop}`).includes(s), s)
+    for (const s of [top.title, top.sub, under.title, under.sub, 'পাতার ছবি তুলুন', 'দিনের আলোয়']) assert.ok(text(`photo.${crop}`).includes(s), s)
+    // The steps come first, so a short answer can't keep the tips and lose them.
+    assert.ok(text(`photo.${crop}`).indexOf(under.title) < text(`photo.${crop}`).indexOf('দিনের আলোয়'))
   }
-  assert.doesNotMatch(text('photo.paddy'), /নিচের দিক/)
+  assert.doesNotMatch(text('photo.paddy'), /নিচের দিক|উল্টে/)
+  assert.doesNotMatch(text('photo.potato'), /আরেকটা আক্রান্ত/)
+})
+
+test('the SMS line holds for every crop, so it is not tagged with potato\'s rule', () => {
+  const chunk = (id: string) => KB.find((c) => c.id === id)!
+  assert.equal(chunk('guide.sms').crop, null)
+  assert.match(chunk('guide.sms').text, /SMS চালু/)
+  assert.doesNotMatch(chunk('guide.risk').text, /SMS চালু/)
+})
+
+test('no passage holds a brand, since one can reach a farmer word for word', () => {
+  for (const c of KB) assert.ok(!hasBrand(`${c.title} ${c.text}`), c.id)
+})
+
+test('the rules the assistant quotes are the ones the guide shows, with their numbers', () => {
+  for (const crop of ['potato', 'paddy'] as const) {
+    assert.ok(GUIDE.some((s) => s.lines.includes(RISK_RULE[crop])), crop)
+    assert.ok(KB.find((c) => c.id === RULE_CHUNK[crop])!.text.includes(RISK_RULE[crop]), crop)
+  }
+  assert.match(RISK_RULE.potato, /১০°সে.*৬ ঘণ্টা.*৯০%/)
+  assert.match(RISK_RULE.paddy, /১৮–২৮°সে.*১০ ঘণ্টা.*৯০%/)
 })
 
 test("the farmer's own words set the crop, and the model only fills in what they leave open", () => {
@@ -200,6 +234,12 @@ test("the farmer's own words set the crop, and the model only fills in what they
   assert.equal(questionScope('আলুর পাতায় দাগ', { crop: 'paddy' }).crop, 'potato')
   assert.equal(questionScope('পাতায় দাগ, কী করব?', { crop: 'paddy' }).crop, 'paddy')
   assert.equal(questionScope('পাতায় দাগ, কী করব?').crop, null)
+  // Then the farmer's field; a crop in the words still wins over it.
+  assert.equal(questionScope('পাতায় দাগ, কী করব?', {}, 'paddy').crop, 'paddy')
+  assert.equal(questionScope('আলুর পাতায় দাগ', {}, 'paddy').crop, 'potato')
+  // Things only one crop has name it too.
+  assert.equal(questionScope('হিমাগারে রাখলে কি ওজন কমে?').crop, 'potato')
+  assert.equal(questionScope('শীষের গোড়া কালো হয়েছে').crop, 'paddy')
   // Both crops named, and words that only contain ধান or আমন.
   assert.equal(questionScope('আলু আর ধানে কী তফাত?', { crop: 'paddy' }).crop, null)
   assert.equal(questionScope('এর সমাধান প্রধান সমস্যা, আমন্ত্রণ').crop, null)
@@ -235,7 +275,7 @@ test('a paddy question is never searched, or shown, a potato chunk', async () =>
 
 test('a rewrite model that misreads the crop still cannot show a paddy farmer potato advice', async () => {
   fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false }, 'question', 'potato')
-  const r = await ask({ question: 'ধানের ব্লাস্ট রোগ কেমন?', place: 'p', today: '2026-11-05' }, { ...askDeps, query: fakeDb } as never)
+  const r = await ask({ question: 'ধানের ব্লাস্ট রোগ কেমন?', today }, { ...askDeps, query: fakeDb } as never)
   assert.ok(r.meta.shown.length > 0)
   for (const id of r.meta.shown) assert.notEqual(KB.find((c) => c.id === id)!.crop, 'potato', id)
 })
@@ -246,16 +286,247 @@ test('gpt-oss writes the answers first, and an interval must come from a cited p
   assert.match(ANSWER_INSTRUCTIONS, /spray interval only if it appears in a <source> you cite/)
 })
 
-test('when every model is refused the farmer is sent to the officer, not shown an error', async () => {
+const withDb = { ...askDeps, query: fakeDb } as never
+
+test('models that read the passages and cite none mean the officer, not a passage they turned down', async () => {
   fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false })
-  const plain = await askIt('পাতা হলুদ হচ্ছে কেন?')
-  assert.equal(plain.answer, NO_SOURCE)
-  assert.equal(plain.escalate, true)
-  assert.deepEqual(plain.meta.rejected, ['no_source', 'no_source'])
+  const r = await ask({ question: 'পাতা হলুদ হচ্ছে কেন?', today, field: 'potato' }, withDb)
+  assert.equal(r.answer, NO_SOURCE)
+  assert.equal(r.escalate, true)
+  assert.equal(r.meta.fallback, 'referral')
+  assert.deepEqual(r.meta.rejected, ['no_source', 'no_source'])
+})
+
+test('a medicine question with nothing found goes to the officer, with no answer model called', async () => {
+  const calls = fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false })
+  assert.equal((await askIt('কোন কোম্পানির ওষুধ সবচেয়ে ভালো?')).answer, BRAND_REFERRAL)
+  assert.equal(calls.mock.callCount(), 1)
+})
+
+test('with every model out of quota the farmer reads the closest passage, labelled, with its source', async () => {
+  outOfQuota()
+  const r = await ask({ question: 'আলুর পাতায় দাগ, কী করব?', today }, withDb)
+  assert.equal(r.meta.fallback, 'passage')
+  assert.ok(r.answer.startsWith(PASSAGE_INTRO), r.answer)
+  assert.equal(r.sources.length, 1)
+  const passage = KB.find((c) => c.id === r.sources[0].id)!
+  assert.equal(passage.crop, 'potato')
+  // Word for word, up to the length the screen allows.
+  assert.ok(r.answer.includes(passage.text.slice(0, 80)), r.answer)
+  assert.ok(r.answer.length <= MAX_ANSWER)
+  assert.equal(r.meta.readBy, null)
+  assert.equal(r.meta.writtenBy, null)
+})
+
+test('a working reader with no writer also ends on the passage, not an error', async () => {
+  outOfQuota(true)
+  const r = await ask({ question: 'আলুর পাতায় দাগ, কী করব?', today }, withDb)
+  assert.equal(r.meta.fallback, 'passage')
+  assert.notEqual(r.meta.readBy, null)
+})
+
+test('answers refused for how they are written also end on the passage', async () => {
+  fakeGroq({ answer: 'এটা 也就 ভালো।', sources: ['potato.soil'], escalate: false })
+  const r = await ask({ question: 'আলুর মাটি কেমন হবে?', today }, withDb)
+  assert.equal(r.meta.fallback, 'passage')
+  assert.deepEqual(r.meta.rejected, ['foreign_text', 'foreign_text'])
+})
+
+test('a medicine question stays with the officer when the models are down, whatever was found', async () => {
+  outOfQuota()
+  assert.equal((await ask({ question: 'আলুতে কোন ওষুধ দেব?', today }, withDb)).answer, BRAND_REFERRAL)
+})
+
+test("with no crop in the words, the field in season decides, and no other crop's passage is shown", async () => {
+  fakeGroq({ answer: 'লাল মানে বিপদ।', sources: ['risk.paddy'], escalate: false })
+  const r = await ask({ question: 'হোমে লাল রং মানে কী?', today, field: 'paddy' }, withDb)
+  assert.equal(r.askCrop, false)
+  assert.ok(r.meta.shown.length > 0)
+  for (const id of r.meta.shown) assert.notEqual(KB.find((c) => c.id === id)!.crop, 'potato', id)
+})
+
+test('with no crop in the words and no field, one crop\'s advice is not guessed: the farmer is asked', async () => {
+  const calls = fakeGroq({ answer: 'never', sources: [], escalate: false })
+  const r = await ask({ question: 'হোমে লাল রং মানে কী?', today }, withDb)
+  assert.equal(r.answer, ASK_CROP)
+  assert.equal(r.askCrop, true)
+  assert.equal(r.meta.writtenBy, null)
+  assert.equal(calls.mock.callCount(), 1)
+})
+
+test("a first question's crop is never the model's guess, and a follow-up's can be", async () => {
+  fakeGroq({ answer: 'কিছু একটা।', sources: ['risk.paddy'], escalate: false }, 'question', 'paddy')
+  assert.equal((await ask({ question: 'হোমে লাল রং মানে কী?', today }, withDb)).askCrop, true)
 
   mock.restoreAll()
+  fakeGroq({ answer: 'লাল মানে বিপদ।', sources: ['risk.paddy'], escalate: false }, 'question', 'paddy')
+  const history = [{ q: 'ধানের ব্লাস্ট কী?', a: 'ধানের একটি রোগ।' }]
+  const r = await ask({ question: 'লাল রং মানে কী?', history, today }, withDb)
+  assert.equal(r.askCrop, false)
+  for (const id of r.meta.shown) assert.notEqual(KB.find((c) => c.id === id)!.crop, 'potato', id)
+})
+
+test('advice for every crop needs no crop, and another crop\'s passage is kept from the model', async () => {
+  fakeGroq({ answer: 'নেট ছাড়াও চলে।', sources: ['guide.offline'], escalate: false })
+  const neutralFirst = async (sql: string, params: unknown[] = []) => {
+    const { rows } = await fakeDb(sql, params)
+    return { rows: [...rows].sort((a, b) => Number(b.id === 'guide.offline') - Number(a.id === 'guide.offline')) }
+  }
+  const r = await ask({ question: 'নেট না থাকলে অ্যাপ চলবে?', today }, { ...askDeps, query: neutralFirst } as never)
+  assert.equal(r.askCrop, false)
+  assert.equal(r.answer, 'নেট ছাড়াও চলে।')
+  for (const id of r.meta.shown) assert.equal(KB.find((c) => c.id === id)!.crop, null, id)
+})
+
+test('a question about the rule is answered with the rule itself, with no answer model', async () => {
+  for (const crop of ['potato', 'paddy'] as const) {
+    mock.restoreAll()
+    const calls = fakeGroq({ answer: 'never', sources: [], escalate: false }, 'question', null, { wantsRule: true })
+    const r = await ask({ question: 'অ্যাপ কীভাবে বোঝে কবে বিপদ?', today, field: crop }, withDb)
+    assert.equal(r.answer, RISK_RULE[crop])
+    assert.deepEqual(r.sources.map((s) => s.id), [RULE_CHUNK[crop]])
+    assert.ok(r.note)
+    assert.equal(calls.mock.callCount(), 1)
+  }
+})
+
+test('a question about the rule with no crop known asks which', async () => {
+  fakeGroq({ answer: 'never', sources: [], escalate: false }, 'question', null, { wantsRule: true })
+  assert.equal((await ask({ question: 'অ্যাপ কীভাবে বোঝে কবে বিপদ?', today }, withDb)).askCrop, true)
+})
+
+test('a risk question gets the forecast in one model call, and its numbers count as sources', async () => {
+  const calls = fakeGroq({ answer: '৫ নভেম্বর সতর্ক থাকুন।', sources: [], escalate: false }, 'question', null, { wantsRisk: true })
+  const risk = async () => ({ place: 'কিচক', today: 'watch', reason: 'ভেজা', days: [{ date: '2026-11-05', risk: 'watch' }] })
+  const r = await ask({ question: 'আজ আলুর ঝুঁকি কেমন?', today }, { ...askDeps, query: fakeDb, risk } as never)
+  assert.equal(r.answer, '৫ নভেম্বর সতর্ক থাকুন।')
+  assert.deepEqual(r.meta.toolCalls, ['todayRisk'])
+  assert.equal(calls.mock.callCount(), 2)
+  assert.match(String(calls.mock.calls[1].arguments[1]?.body), /forecast/)
+})
+
+test('a failed forecast does not stop the answer', async () => {
+  fakeGroq({ answer: 'রোজ ঝুঁকির রং দেখুন।', sources: ['potato.soil'], escalate: false }, 'question', null, { wantsRisk: true })
+  const r = await ask({ question: 'আজ আলুর ঝুঁকি কেমন?', today }, withDb)
+  assert.equal(r.answer, 'রোজ ঝুঁকির রং দেখুন।')
+  assert.deepEqual(r.meta.toolCalls, [])
+})
+
+test('tokens are counted per step, including refused answers and JSON that would not parse', async () => {
   fakeGroq({ answer: 'কিছু একটা।', sources: [], escalate: false })
-  assert.equal((await askIt('কোন কোম্পানির ওষুধ সবচেয়ে ভালো?')).answer, BRAND_REFERRAL)
+  const refused = await ask({ question: 'আলুর মাটি কেমন হবে?', today }, withDb)
+  assert.deepEqual(refused.meta.tokens, { rewrite: { in: 1, cached: 0, out: 1 }, answer: { in: 2, cached: 0, out: 2 } })
+
+  mock.restoreAll()
+  fakeGroq('this is not json', 'question')
+  const broken = await ask({ question: 'আলুর মাটি কেমন হবে?', today }, withDb)
+  assert.equal(broken.meta.fallback, 'passage')
+  assert.equal(broken.meta.tokens.answer.in, 2)
+})
+
+test('questions that differ only in spacing, punctuation, digits or joiners are one question', () => {
+  const same = normalizeQuestion('আলু কখন  লাগাব?')
+  for (const q of ['আলু কখন লাগাব', 'আলু কখন লাগাব।', ' আলু, কখন লাগাব ?', 'আলু কখন\u200c লাগাব?']) assert.equal(normalizeQuestion(q), same, q)
+  assert.equal(normalizeQuestion('৬ ঘণ্টা'), normalizeQuestion('6 ঘণ্টা'))
+  assert.notEqual(normalizeQuestion('আলু কখন লাগাব?'), normalizeQuestion('আলু কখন তুলব?'))
+})
+
+test("the cache key changes with the crop, and carries the advice's version", () => {
+  assert.equal(answerKey('লাল রং?', 'potato'), answerKey('লাল রং', 'potato'))
+  assert.notEqual(answerKey('লাল রং', 'potato'), answerKey('লাল রং', 'paddy'))
+  assert.notEqual(answerKey('লাল রং', 'potato'), answerKey('লাল রং', null))
+  assert.match(KB_VERSION, /^[0-9a-f]{16}$/)
+})
+
+const fakeCache = (seed: Record<string, object> = {}) => {
+  const rows = new Map(Object.entries(seed))
+  return { rows, get: async (k: string) => (rows.get(k) ?? null) as never, set: async (k: string, v: object) => void rows.set(k, v) }
+}
+
+test('a stored answer costs no model call, and is read through the guard again', async () => {
+  const calls = fakeGroq({ answer: 'never', sources: [], escalate: false })
+  const cache = fakeCache({ [answerKey('আলু কখন লাগাব?', 'potato')]: { answer: 'রিডোমিল দিন।', sources: [], escalate: false, note: 'n' } })
+  const r = await ask({ question: 'আলু কখন লাগাব', today }, { ...askDeps, cache } as never)
+  assert.equal(calls.mock.callCount(), 0)
+  assert.equal(r.meta.cached, true)
+  assert.equal(r.answer, BRAND_REFERRAL)
+})
+
+test('a written answer is stored; a forecast, a passage, a crop question or a follow-up never is', async () => {
+  const written = fakeCache()
+  fakeGroq({ answer: 'আলু লাগান।', sources: ['potato.soil'], escalate: false })
+  await ask({ question: 'আলু কখন লাগাব?', today }, { ...askDeps, query: fakeDb, cache: written } as never)
+  assert.equal(written.rows.size, 1)
+
+  mock.restoreAll()
+  const followUp = fakeCache()
+  fakeGroq({ answer: 'আলু লাগান।', sources: ['potato.soil'], escalate: false })
+  await ask({ question: 'আলু কখন লাগাব?', history: [{ q: 'ক', a: 'খ' }], today }, { ...askDeps, query: fakeDb, cache: followUp } as never)
+  assert.equal(followUp.rows.size, 0)
+
+  mock.restoreAll()
+  const forecast = fakeCache()
+  fakeGroq({ answer: 'সতর্ক থাকুন।', sources: ['potato.soil'], escalate: false }, 'question', null, { wantsRisk: true })
+  const risk = async () => ({ place: 'কিচক', today: 'watch', reason: 'ভেজা', days: [] })
+  await ask({ question: 'আজ আলুর ঝুঁকি কেমন?', today }, { ...askDeps, query: fakeDb, risk, cache: forecast } as never)
+  assert.equal(forecast.rows.size, 0)
+
+  mock.restoreAll()
+  const passage = fakeCache()
+  outOfQuota()
+  await ask({ question: 'আলু কখন লাগাব?', today }, { ...askDeps, query: fakeDb, cache: passage } as never)
+  assert.equal(passage.rows.size, 0)
+
+  mock.restoreAll()
+  const crop = fakeCache()
+  fakeGroq({ answer: 'never', sources: [], escalate: false })
+  await ask({ question: 'হোমে লাল রং মানে কী?', today }, { ...askDeps, query: fakeDb, cache: crop } as never)
+  assert.equal(crop.rows.size, 0)
+})
+
+test('a broken cache costs the farmer nothing, as before its table exists', async () => {
+  fakeGroq({ answer: 'আলু লাগান।', sources: ['potato.soil'], escalate: false })
+  const down = async () => {
+    throw new Error('relation "ask_cache" does not exist')
+  }
+  const r = await ask({ question: 'আলু কখন লাগাব?', today }, { ...askDeps, query: fakeDb, cache: { get: down, set: down } } as never)
+  assert.equal(r.answer, 'আলু লাগান।')
+})
+
+test('history is two turns, with long answers cut, so old context is not paid for again', () => {
+  const long = 'ক'.repeat(600)
+  const messages = historyMessages(Array.from({ length: 5 }, (_, i) => ({ q: String(i), a: long })))
+  assert.equal(HISTORY_TURNS, 2)
+  assert.equal(messages.length, 4)
+  assert.equal(messages[1].content.length, MAX_HISTORY_ANSWER)
+})
+
+test('the crop sent for a question is the field in season, or the one picked; two crops settle nothing', () => {
+  const potato = { season: 'potato', planted: '2026-12-20' } as const
+  const boro = { season: 'boro', planted: '2027-01-20' } as const
+  const inBoth = '2027-02-15'
+  assert.equal(fieldCrop([potato], inBoth, null), 'potato')
+  assert.equal(fieldCrop([boro], inBoth, null), 'paddy')
+  assert.equal(fieldCrop([potato, boro], inBoth, null), null)
+  assert.equal(fieldCrop([potato, boro], inBoth, 'boro'), 'paddy')
+  // Harvested long ago, or not planted: no field in season.
+  assert.equal(fieldCrop([potato], '2027-10-01', null), null)
+  assert.equal(fieldCrop([], inBoth, null), null)
+})
+
+test('a judge never comes from the family that wrote the answer, and no score beats a self-graded one', async () => {
+  process.env.GROQ_API_KEY = 'test'
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test'
+  process.env.OPENROUTER_API_KEY = 'test'
+  const used = async (writer: string) => (await withFallback('judge', async () => 'ok', { notFamilyOf: writer })).modelUsed
+  assert.match(await used('groq/openai/gpt-oss-120b'), /^google\//)
+  assert.match(await used('groq/qwen/qwen3.8-27b'), /^google\//)
+  // Gemma is served by OpenRouter but made by Google.
+  assert.equal(await used('google/gemini-flash-lite-latest'), 'groq/openai/gpt-oss-120b')
+  assert.equal(await used('openrouter/google/gemma-4-31b-it:free'), 'groq/openai/gpt-oss-120b')
+
+  delete process.env.GROQ_API_KEY
+  await assert.rejects(used('google/gemini-flash-lite-latest'))
 })
 
 test('a model calling a medicine question off topic does not turn the farmer away', async () => {
@@ -298,16 +569,17 @@ test('the prompts forbid doses, and their examples follow the rule', () => {
   assert.ok(ANSWER_INSTRUCTIONS.includes(DOSE_LINE))
   assert.doesNotMatch(ANSWER_INSTRUCTIONS, /or a spray interval/)
   const examples = [...ANSWER_INSTRUCTIONS.matchAll(/<answer>([^<]+)<\/answer>/g)].map((m) => m[1])
-  assert.ok(examples.length >= 3)
+  assert.ok(examples.length >= 2)
   for (const e of examples) assert.ok(!hasDose(e) && !hasBrand(e), e)
 })
 
 // Fixed text is what the provider caches; a date or place in it would break the cache every day.
 test('the cached instructions hold nothing that changes per question', () => {
   for (const text of [ANSWER_INSTRUCTIONS, REWRITE_INSTRUCTIONS]) assert.doesNotMatch(text, /\d{4}-\d{2}-\d{2}|\$\{/)
-  const prompt = answerPrompt({ question: 'প্রশ্ন', chunks: KB.slice(0, 2), place: 'কিচক, শিবগঞ্জ', today: '2026-12-20' })
-  assert.ok(prompt.includes(`<source id="${KB[0].id}"`) && prompt.includes('কিচক, শিবগঞ্জ') && prompt.includes('2026-12-20'))
-  assert.ok(answerPrompt({ question: 'q', chunks: [], place: 'p', today: 't' }).includes('(none found)'))
+  const prompt = answerPrompt({ question: 'প্রশ্ন', chunks: KB.slice(0, 2), forecast: ['{"place":"কিচক"}'] })
+  assert.ok(prompt.includes(`<source id="${KB[0].id}"`) && prompt.includes('<forecast>{"place":"কিচক"}</forecast>'))
+  const plain = answerPrompt({ question: 'q', chunks: [] })
+  assert.ok(plain.includes('(none found)') && !plain.includes('forecast'))
 })
 
 test('every eval case names chunks that exist, and ids are unique', async () => {

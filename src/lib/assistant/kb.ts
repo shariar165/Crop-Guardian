@@ -6,7 +6,7 @@ import { CROPS, CROP_IDS, type CropId } from '@/lib/crops'
 import { DAY_STATE } from '@/lib/data'
 import { CLASS_CONTENT, sourceOf } from '@/lib/diagnosis/content'
 import { PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
-import { GUIDE, RISK_COLOURS, RISK_MEANING } from '@/lib/guide'
+import { GUIDE, type GuideSection, RISK_COLOURS, RISK_MEANING } from '@/lib/guide'
 import { POTATO_GUIDE } from '@/lib/potatoGuide'
 import { wordsOf } from './tokens'
 
@@ -47,21 +47,36 @@ const GUIDE_SCOPE: Record<string, Pick<KbChunk, 'crop' | 'disease'>> = {
   potato: { crop: 'potato', disease: null },
 }
 
-// A crop's own photo steps are in photoSteps below; left here they reach the other crop's farmers.
-const ONE_CROP_LINE = /^(আলুতে|ধানে):/
+// The SMS line sits in the risk section but holds for every crop, and an SMS question must not have
+// to say which.
+const SMS_LINE = /SMS চালু/
 
-const guide: KbChunk[] = GUIDE.map((s) => ({
+const guideChunk = (s: GuideSection, lines = s.lines): KbChunk => ({
   id: `guide.${s.id}`,
   title: s.title,
   source: APP_SOURCE,
   href: `/guide#${s.id}`,
   context: `ক্রপ গার্ডিয়ান অ্যাপ কীভাবে ব্যবহার করবেন, নির্দেশিকার «${s.title}» অংশ।`,
-  text: s.lines.filter((l) => !ONE_CROP_LINE.test(l)).join(' '),
+  text: lines.join(' '),
   ...(GUIDE_SCOPE[s.id] ?? { crop: null, disease: null }),
-}))
+})
 
-// The same instructions the camera shows, per crop: paddy's second photo is another leaf, not the
-// underside.
+const riskSection = GUIDE.find((s) => s.id === 'risk')!
+const guide: KbChunk[] = [
+  ...GUIDE.filter((s) => s.id !== 'photo').map((s) => (s === riskSection ? guideChunk(s, s.lines.filter((l) => !SMS_LINE.test(l))) : guideChunk(s))),
+  guideChunk({ ...riskSection, id: 'sms', title: 'বিপদের SMS' }, riskSection.lines.filter((l) => SMS_LINE.test(l))),
+]
+
+// Where the guide's own words for each crop's rule live, for quoting them with their source.
+export const RULE_CHUNK: Record<CropId, string> = { potato: 'guide.risk', paddy: 'guide.paddy' }
+
+// The guide's photo section, minus the line each crop has for itself below.
+const ONE_CROP_LINE = /^(আলুতে|ধানে):/
+const [pressButton, ...afterPhotos] = GUIDE.find((s) => s.id === 'photo')!.lines.filter((l) => !ONE_CROP_LINE.test(l))
+
+// One whole set of instructions per crop, with the two photos first and the camera's own words:
+// paddy's second photo is another leaf, not the underside. Split across two chunks, models gave the
+// general tips and left out the steps.
 const photoSteps: KbChunk[] = PHOTO_CROPS.map((crop) => {
   const { top, under } = PHOTO_SPECS[crop].photos
   return {
@@ -70,7 +85,7 @@ const photoSteps: KbChunk[] = PHOTO_CROPS.map((crop) => {
     source: APP_SOURCE,
     href: '/camera',
     context: `ক্যামেরায় ${CROPS[crop].ofBn} পাতার যে দুটো ছবি তুলতে হয়।`,
-    text: `প্রথম ছবি: ${top.title}। ${top.sub}। দ্বিতীয় ছবি: ${under.title}। ${under.sub}।`,
+    text: `${pressButton} প্রথম ছবি: ${top.title}। ${top.sub}। দ্বিতীয় ছবি: ${under.title}। ${under.sub}। ${afterPhotos.join(' ')}`,
     crop,
     disease: null,
   }
@@ -123,18 +138,23 @@ export const inScope = (c: KbChunk, s: KbScope): boolean =>
 
 export const idsInScope = (s: KbScope): string[] => KB.filter((c) => inScope(c, s)).map((c) => c.id)
 
-// Whole words, so প্রধান, সমাধান and আমন্ত্রণ don't read as paddy.
+// Whole words, so প্রধান, সমাধান and আমন্ত্রণ don't read as paddy. Things only one crop has count too.
 const CROP_WORD: Record<CropId, RegExp> = {
-  potato: /^(আলু|ধসা|potato)/,
-  paddy: /^(ধান|বোরো|আমন$|আমনে|ব্লাস্ট|টুংরো|paddy|rice)/,
+  potato: /^(আলু|ধসা|হিমাগার|potato)/,
+  paddy: /^(ধান|বোরো|আমন$|আমনে|ব্লাস্ট|টুংরো|শীষ|paddy|rice)/,
 }
 
-// The farmer's own words beat the model's reading: naming a crop is not a judgement call, and a wrong
-// guess here is how one crop's advice reaches the other. The model decides only what the words don't.
-export function questionScope(question: string, model: { crop?: string | null; disease?: string | null } = {}): KbScope {
-  const words = wordsOf(question)
-  const named = CROP_IDS.filter((c) => words.some((w) => CROP_WORD[c].test(w)))
-  const crop = named.length === 2 ? null : (named[0] ?? CROP_IDS.find((c) => c === model.crop) ?? null)
+export const namedCrops = (text: string): CropId[] => {
+  const words = wordsOf(text)
+  return CROP_IDS.filter((c) => words.some((w) => CROP_WORD[c].test(w)))
+}
+
+// The farmer's own words beat everything: naming a crop is not a judgement call, and a wrong guess
+// here is how one crop's advice reaches the other. Then the model's reading (given only for a
+// follow-up, see ask()), then the field in season on the farmer's phone.
+export function questionScope(question: string, model: { crop?: string | null; disease?: string | null } = {}, field: CropId | null = null): KbScope {
+  const named = namedCrops(question)
+  const crop = named.length === 2 ? null : (named[0] ?? CROP_IDS.find((c) => c === model.crop) ?? field)
   if (!crop) return NO_SCOPE
   const labels = Object.entries(PHOTO_SPECS[crop].labelsBn).filter(([id]) => id !== 'healthy')
   const diseases = labels.filter(([, bn]) => question.includes(bn)).map(([id]) => id)

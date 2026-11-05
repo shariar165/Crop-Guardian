@@ -13,7 +13,9 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import type { LanguageModel } from 'ai'
 
 type Provider = 'groq' | 'google' | 'openrouter'
-type ModelRef = { provider: Provider; id: string }
+type ModelOptions = Record<string, Record<string, string>>
+// family: who made the weights or runs them, for keeping a judge away from its own side's writing.
+type ModelRef = { provider: Provider; id: string; family: 'groq' | 'google'; options?: ModelOptions }
 
 const KEY: Record<Provider, string> = {
   groq: 'GROQ_API_KEY',
@@ -33,19 +35,21 @@ const openrouter = (id: string) =>
 
 const build = ({ provider, id }: ModelRef): LanguageModel => (provider === 'groq' ? groq(id) : provider === 'google' ? google(id) : openrouter(id))
 
-const QWEN: ModelRef = { provider: 'groq', id: 'qwen/qwen3.8-27b' }
-const GPT_OSS: ModelRef = { provider: 'groq', id: 'openai/gpt-oss-120b' }
+const QWEN: ModelRef = { provider: 'groq', id: 'qwen/qwen3.8-27b', family: 'groq' }
+// A reasoning model bills its thinking as output; these answers copy from passages and need little.
+const GPT_OSS: ModelRef = { provider: 'groq', id: 'openai/gpt-oss-120b', family: 'groq', options: { groq: { reasoningEffort: 'low' } } }
 // The "-latest" aliases follow Google's current free-tier models, so a retired id never breaks this.
-const GEMINI: ModelRef = { provider: 'google', id: 'gemini-flash-latest' }
-const GEMINI_LITE: ModelRef = { provider: 'google', id: 'gemini-flash-lite-latest' }
-const GEMMA: ModelRef = { provider: 'openrouter', id: 'google/gemma-4-31b-it:free' }
+const GEMINI: ModelRef = { provider: 'google', id: 'gemini-flash-latest', family: 'google' }
+const GEMINI_LITE: ModelRef = { provider: 'google', id: 'gemini-flash-lite-latest', family: 'google' }
+// Served by OpenRouter but made by Google, so it is no independent judge of Gemini.
+const GEMMA: ModelRef = { provider: 'openrouter', id: 'google/gemma-4-31b-it:free', family: 'google' }
 
 // gpt-oss leads the answers and Qwen comes last: across the eval runs all the garbled Bengali and
 // the Chinese came from Qwen, and gpt-oss wrote almost all of the last run cleanly. Qwen still
 // reads the question, where it is fast, but it breaks its JSON on about a third of rewrites and
 // Gemini is often busy, so that chain needs a third model: without it the two failing together left
-// a farmer's question unanswered. The judge tries other families than the answerer first, so it
-// seldom grades its own writing (the eval report says who graded).
+// a farmer's question unanswered. The judge never comes from the family that wrote the answer: its
+// chain is cut to the others, and with none left there is no score (see withFallback).
 const CHAINS = {
   rewrite: [QWEN, GPT_OSS, GEMINI_LITE, GEMMA],
   answer: [GPT_OSS, GEMINI, GEMMA, GEMINI_LITE, QWEN],
@@ -70,14 +74,23 @@ export const MODELS = {
 // A model that hangs is worse than one that fails: give up and try the next.
 const ATTEMPT_TIMEOUT_MS = 30_000
 
+const ALL_MODELS: ModelRef[] = [QWEN, GPT_OSS, GEMINI, GEMINI_LITE, GEMMA]
+const familyOf = (modelName: string) => ALL_MODELS.find((m) => name(m) === modelName)?.family
+
 // Runs `call` with each of the role's models in turn until one answers, and says which one did.
-export async function withFallback<T>(role: Role, call: (model: LanguageModel, signal: AbortSignal) => Promise<T>): Promise<{ result: T; modelUsed: string }> {
-  const chain = CHAINS[role].filter(keyed)
+// `notFamilyOf` leaves out every model from that one's family, even if nothing else is left.
+export async function withFallback<T>(
+  role: Role,
+  call: (model: LanguageModel, signal: AbortSignal, options: ModelOptions | undefined) => Promise<T>,
+  { notFamilyOf }: { notFamilyOf?: string } = {},
+): Promise<{ result: T; modelUsed: string }> {
+  const barred = notFamilyOf ? familyOf(notFamilyOf) : undefined
+  const chain = (CHAINS[role] as readonly ModelRef[]).filter((m) => keyed(m) && m.family !== barred)
   if (chain.length === 0) throw new Error(`No API key for any ${role} model (see src/lib/assistant/models.ts)`)
   let last: unknown
   for (const m of chain) {
     try {
-      return { result: await call(build(m), AbortSignal.timeout(ATTEMPT_TIMEOUT_MS)), modelUsed: name(m) }
+      return { result: await call(build(m), AbortSignal.timeout(ATTEMPT_TIMEOUT_MS), m.options), modelUsed: name(m) }
     } catch (err) {
       last = err
       console.error(`Assistant ${role}: ${name(m)} failed, trying the next model:`, err instanceof Error ? err.message : err)

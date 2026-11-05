@@ -15,7 +15,8 @@ export type Query = (sql: string, params?: unknown[]) => Promise<{ rows: Record<
 // Results kept from each search; fused candidates sent to the reranker; chunks given to the model.
 const PER_SEARCH = 8
 const RERANK_POOL = 12
-export const TOP_K = 5
+// Three find the expected passage as often as five did on the eval set, for about half the tokens.
+export const TOP_K = 3
 // Cohere's relevance below which a chunk is about something else. Tuned on the eval set.
 export const MIN_RELEVANCE = 0.05
 
