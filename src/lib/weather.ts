@@ -22,10 +22,12 @@ export type HourlyForecast = {
   time: string[] // local time in FORECAST_TZ, e.g. "2026-10-18T05:00"
   temperature: (number | null)[]
   humidity: (number | null)[]
+  // mm in the hour. Only the past-weather fetches ask for it (the backtests' JHULSACAST rule).
+  precipitation?: (number | null)[]
 }
 
 type OpenMeteoResponse = {
-  hourly?: { time?: unknown; temperature_2m?: unknown; relative_humidity_2m?: unknown }
+  hourly?: { time?: unknown; temperature_2m?: unknown; relative_humidity_2m?: unknown; precipitation?: unknown }
 }
 
 // ~1 km precision is plenty for weather and lets nearby requests share a cache entry.
@@ -52,16 +54,18 @@ export function parseHourly(body: unknown): HourlyForecast {
   const time = hourly?.time
   const temperature = hourly?.temperature_2m
   const humidity = hourly?.relative_humidity_2m
+  const precipitation = hourly?.precipitation
   if (
     !Array.isArray(time) ||
     !Array.isArray(temperature) ||
     !Array.isArray(humidity) ||
     temperature.length !== time.length ||
-    humidity.length !== time.length
+    humidity.length !== time.length ||
+    (precipitation !== undefined && (!Array.isArray(precipitation) || precipitation.length !== time.length))
   ) {
     throw new Error('Open-Meteo returned malformed hourly data')
   }
-  return { time, temperature, humidity }
+  return precipitation === undefined ? { time, temperature, humidity } : { time, temperature, humidity, precipitation }
 }
 
 async function fetchHourly(url: string, revalidate: number, timeoutMs: number): Promise<HourlyForecast> {
@@ -99,7 +103,7 @@ export function fetchHourlyPast(lat: number, lon: number, pastDays: number): Pro
   return fetchHourly(`${FORECAST_URL}?${params}`, REVALIDATE_S, FETCH_TIMEOUT_MS)
 }
 
-// Observed weather for start..end inclusive, as YYYY-MM-DD local dates.
+// Observed weather for start..end inclusive, as YYYY-MM-DD local dates, with hourly rain.
 // Days not yet in the archive come back as nulls.
 export function fetchHourlyArchive(
   lat: number,
@@ -109,6 +113,7 @@ export function fetchHourlyArchive(
   timeoutMs = FETCH_TIMEOUT_MS,
 ): Promise<HourlyForecast> {
   const params = hourlyParams(lat, lon)
+  params.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation')
   params.set('start_date', start)
   params.set('end_date', end)
   return fetchHourly(`${ARCHIVE_URL}?${params}`, ARCHIVE_REVALIDATE_S, timeoutMs)
@@ -120,7 +125,7 @@ export function fetchHourlyArchive(
 const NASA_POWER_URL = 'https://power.larc.nasa.gov/api/temporal/hourly/point'
 const NASA_FILL = -999
 
-type NasaPowerResponse = { properties?: { parameter?: { T2M?: unknown; RH2M?: unknown } } }
+type NasaPowerResponse = { properties?: { parameter?: { T2M?: unknown; RH2M?: unknown; PRECTOTCORR?: unknown } } }
 
 const isSeries = (v: unknown): v is Record<string, number> => typeof v === 'object' && v !== null && !Array.isArray(v)
 
@@ -129,17 +134,21 @@ export function parseNasaPower(body: unknown): HourlyForecast {
   const parameter = (body as NasaPowerResponse)?.properties?.parameter
   const t2m = parameter?.T2M
   const rh = parameter?.RH2M
-  if (!isSeries(t2m) || !isSeries(rh)) throw new Error('NASA POWER returned malformed hourly data')
+  // Rain (mm/hour, bias-corrected) is optional: older calls didn't ask for it.
+  const rain = parameter?.PRECTOTCORR
+  if (!isSeries(t2m) || !isSeries(rh) || (rain !== undefined && !isSeries(rain))) throw new Error('NASA POWER returned malformed hourly data')
   const reading = (v: unknown) => (typeof v === 'number' && v !== NASA_FILL ? v : null)
   const keys = Object.keys(t2m).sort()
-  return {
+  const hourly: HourlyForecast = {
     time: keys.map((k) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}T${k.slice(8, 10)}:00`),
     temperature: keys.map((k) => reading(t2m[k])),
     humidity: keys.map((k) => reading(rh[k])),
   }
+  if (isSeries(rain)) hourly.precipitation = keys.map((k) => reading(rain[k]))
+  return hourly
 }
 
-// Reanalysis weather for start..end inclusive (YYYY-MM-DD local dates). Slow: allow ~30 s a winter.
+// Reanalysis weather for start..end inclusive (YYYY-MM-DD local dates), with hourly rain. Slow: allow ~30 s a winter.
 export async function fetchHourlyNasaPower(
   lat: number,
   lon: number,
@@ -148,7 +157,7 @@ export async function fetchHourlyNasaPower(
   timeoutMs = FETCH_TIMEOUT_MS,
 ): Promise<HourlyForecast> {
   const params = new URLSearchParams({
-    parameters: 'T2M,RH2M',
+    parameters: 'T2M,RH2M,PRECTOTCORR',
     community: 'AG',
     latitude: coord(lat),
     longitude: coord(lon),

@@ -78,6 +78,12 @@ npx tsx scripts/find-hutton-periods.ts            # add --write to update docs/r
 
 [docs/risk-backtest.md](docs/risk-backtest.md) compares how often the app's rule and a stricter one (≥ 10 humid hours) would have alerted in those winters, using two independent sources of past weather: the Open-Meteo archive and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2, `fetchHourlyNasaPower` in `src/lib/weather.ts`). The two sources agree on only a third to a half of the danger days. NASA POWER is coarser (about 50 km) and its humidity rarely stays at 90% for long, so it finds fewer danger days, and almost none under the stricter rule. That spread is a finding in itself: the rule depends on the humidity of whichever weather model feeds it. It needs checking against a field station and real outbreak dates (see [Limitations](#limitations-and-next-steps)).
 
+```bash
+npx tsx scripts/compare-blight-rules.ts           # add --write to update docs/rule-comparison.md
+```
+
+[docs/rule-comparison.md](docs/rule-comparison.md) puts three rules side by side at Shibganj for 2019–20 and the last three winters, on both sources: the app's, the stricter one, and JHULSACAST (`src/lib/jhulsacast.ts`, CPRI's forecast for the West Bengal plains: 7-day and 5-day moving sums of humid and mild hours, the 5-day one with rain, which is why `fetchHourlyArchive` and `fetchHourlyNasaPower` also fetch hourly precipitation). For each it gives danger days, danger weeks out of the 12 full weeks from 1 Dec, the first day it fires, and the calendar sprays the ledger would count as saved. It also checks one dated outbreak report (Lalmonirhat, Feb 2020); that is one event, not a validation. The app's rule is unchanged; the comparison is there to choose it.
+
 ## Rice-blast risk (paddy, experimental)
 
 Paddy fields get rice-blast risk from the same forecast (`src/lib/blast.ts`), with no ML and no extra request. It is a draft BLASTAM-style rule, to be confirmed with BRRI before farmers rely on it, so Home labels it "পরীক্ষামূলক". Open-Meteo has no leaf wetness, so an hour at RH ≥ 90% stands in for a wet leaf:
