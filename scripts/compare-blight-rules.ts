@@ -348,7 +348,18 @@ function eventTable(rows: Row[], w: Winter): string[] {
   ]
 }
 
-function markdown(main: Row[], event: Row[], sws: StationWinter[], outbreak: string[], place: { name: string; lat: number; lon: number }, today: string): string {
+// Written by hand from the tables this script generates (data collection stopped on 2026-11-15, and
+// every download is cached), so rewrite it if a rerun ever changes the tables.
+const WHAT_THIS_SHOWS = [
+  '## What this shows',
+  '',
+  '- **On station humidity, the ≥ 6 h and ≥ 10 h rules call danger in most weeks of every winter with station data.** In the 6 station-winters with enough readings (Bogura, Rangpur and Dinajpur; 2019–20, 2023–24 and 2024–25), the ≥ 6 h rule gave 11 or 12 danger weeks of 12, and the ≥ 10 h rule gave 7 to 12. The models are drier than the stations, and on the Open-Meteo archive at Shibganj the ≥ 6 h rule still gave 9 to 12.',
+  '- **The 7-day humid-hour sum reaches its lower levels weeks before the reports, in winters with reports and winters without them, so it doesn\'t mark when an outbreak starts.** There are 9 report–station pairs that can be checked. In all 9, the sum at the nearest station had reached 60 and 75 hours at least two weeks before the report. It had reached 90 before 8 of them and 105 before 6, and one of those 6 is a report of little disease. In 2020–21, a winter with no report found, it reached 105 at 8 of 11 stations (median 10 Dec). The timing also runs backwards at the extremes. The winter with the latest report (4 Feb 2025) reached 105 early (median 13 Dec), and the winter with the earliest report (1 Jan 2018) reached it late (median 17 Jan).',
+  '- **JHULSACAST fired anywhere from seven weeks before a report to after it, and sometimes not at all.** At Rajarhat it fired on 17 Dec 2024, seven weeks before the 4 Feb 2025 reports. In 2019–20 it fired on 26–27 Dec at four stations, about four weeks before the first report (21 Jan). In 2023–24 it fired between 17 and 24 Jan at six stations, from the day before the first report (18 Jan) to six days after it. It never fired in 2024–25 at Rangpur or Dinajpur, the stations nearest the 4 Feb 2025 reports, and it never fired at any station in 2017–18. It also fired in both winters that had station data but no report: 2020–21 (5 stations, 14–22 Dec) and 2022–23 (3 stations, 3–8 Jan).',
+  '- **Only 6 of the 12 reports could be checked, and reports lag the disease by a time they mostly don\'t state.** One of the 6 reports little disease, and 4 of the 6 are from Jan–Feb 2024. Only 2 of the 12 reports give a date before their own, about 10 and 15 days before publication. We found no dated field record of when late blight first appeared in these districts. DAE or BARI may keep such records unpublished. Without them, no threshold can be validated with the data available today.',
+]
+
+function markdown(main: Row[],event: Row[], sws: StationWinter[], outbreak: string[], place: { name: string; lat: number; lon: number }, today: string): string {
   const { lat, lon } = DEFAULT_LOCATION
   const ew = winterOf(EVENT.winter)
   const fit = thresholdTable(sws)
@@ -359,6 +370,8 @@ function markdown(main: Row[], event: Row[], sws: StationWinter[], outbreak: str
   const eventStationText = [covered.length ? `Station records covering that winter: ${covered.join(', ')}; see the station tables above and the outbreak section below.` : '', missing.length ? `${missing.join('; ')}.` : ''].filter(Boolean).join(' ')
   return [
     '# Late-blight rules compared',
+    '',
+    ...WHAT_THIS_SHOWS,
     '',
     `Three weather rules for late blight replayed at Shibganj, Bogura (${lat}, ${lon}) over the winters ${WINTERS.map((y) => winterOf(y).label).join(', ')} (1 Dec to the end of February), ` +
       'from two past-weather sources: the [Open-Meteo archive](https://open-meteo.com/en/docs/historical-weather-api) (its default model here is ECMWF IFS at 9 km, the model the live app\'s forecast uses) and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2 reanalysis, about 50 km, hourly in local solar time). ' +
