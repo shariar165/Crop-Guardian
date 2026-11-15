@@ -1,6 +1,6 @@
 # Late-blight rules compared
 
-Three weather rules for late blight replayed at Shibganj, Bogura (25.02, 89.32) over the winters 2019–20, 2023–24, 2024–25, 2025–26 (1 Dec to the end of February), from two past-weather sources: the [Open-Meteo archive](https://open-meteo.com/en/docs/historical-weather-api) (reanalysis) and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2 reanalysis, about 50 km, hourly in local solar time). The app uses the first rule; the other two are only compared here.
+Three weather rules for late blight replayed at Shibganj, Bogura (25.02, 89.32) over the winters 2019–20, 2023–24, 2024–25, 2025–26 (1 Dec to the end of February), from two past-weather sources: the [Open-Meteo archive](https://open-meteo.com/en/docs/historical-weather-api) (its default model here is ECMWF IFS at 9 km, the model the live app's forecast uses) and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2 reanalysis, about 50 km, hourly in local solar time). The app uses the first rule; the other two are only compared here.
 
 > Weather-only counts. None of these rules has been validated against late-blight records in Bangladesh, and the one outbreak report below is a single event, not a validation.
 
@@ -58,18 +58,128 @@ Its 7-day condition needs 105 hours at RH ≥ 90% in a week, about 15 hours a da
 | Lalmonirhat Sadar | 2019–20 | Open-Meteo archive | 6.0 | 72 | 55 | 5 |
 | Lalmonirhat Sadar | 2019–20 | NASA POWER | 4.2 | 67 | 48 | 5 |
 
-JHULSACAST was tuned on station humidity in the field at Kalyani; both sources here are reanalysis, which smooths the foggy nights when a field sits near saturation. So "never fires" may say as much about reanalysis humidity as about the rule. The same bias runs the other way for the app's rule: if the field is more humid than the reanalysis, the 6 h rule would call danger on even more days than the table above shows. A season of Bangladesh Meteorological Department station data from a potato district would settle both.
+JHULSACAST was tuned on station humidity at Kalyani; both sources here are models. The next section measures how far their humidity is from three stations.
+
+## Stations: the humidity gap
+
+Observed weather from three Bangladesh Meteorological Department synoptic stations, from NOAA's [Integrated Surface Database](https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database) (ISD, FM-12 SYNOP reports, on the [NOAA open-data bucket](https://noaa-global-hourly-pds.s3.amazonaws.com/index.html)), against three models read at each station's coordinates: the Open-Meteo archive, the [Open-Meteo Historical Forecast API](https://open-meteo.com/en/docs/historical-forecast-api) (the model the live app's forecast comes from, replayed; from 2022 only) and NASA POWER.
+
+- The stations report every 3 hours (00, 03, … 21 UTC). **Each reading stands for the 3 hours from its time**, so a reading at RH ≥ 90% counts as 3 humid hours; when one reading is missing, the one before stands for 6. A day counts only when all its 24 hours are covered.
+- RH is computed from temperature and dew point (Magnus form). The rules' rain is the 24-hour total reported at 09:00 local, put on the day before.
+- Every source is compared on the station's days only, so a gap in the station record is a gap for all four.
+- The Open-Meteo archive and Historical Forecast columns agree to the hour: at these places both APIs' default is ECMWF IFS at 9 km, which is also what the live forecast's default returns (checked on the raw responses against `models=ecmwf_ifs`). So the archive used throughout this report already is the live app's model; ERA5 (`models=era5`) is a different series and is not used here.
+- Meteostat's bulk data was checked and not used: for these stations it is model output, not observations (at the SYNOP hours of Jan–Feb 2024, 8 of 478 temperatures matched ISD; Dinajpur is not in it).
+
+### Coverage
+
+| Station | Winter | Days with full readings | Days missing |
+|---|---|--:|---|
+| Bogura (41883) | 2019–20 | 47 of 91 | 7 Jan – 19 Feb |
+| Bogura (41883) | 2023–24 | 89 of 91 | 9 Dec – 10 Dec |
+| Bogura (41883) | 2024–25 | 0 of 90 | all (no ISD file yet) |
+| Bogura (41883) | 2025–26 | 0 of 90 | all (no ISD file yet) |
+| Rangpur (41859) | 2019–20 | 47 of 91 | 7 Jan – 19 Feb |
+| Rangpur (41859) | 2023–24 | 90 of 91 | 10 Dec |
+| Rangpur (41859) | 2024–25 | 85 of 90 | 1 Dec – 2 Dec, 4 Dec, 18 Dec, 28 Feb |
+| Rangpur (41859) | 2025–26 | 0 of 90 | all (no ISD file yet) |
+| Dinajpur (41863) | 2019–20 | 47 of 91 | 7 Jan – 19 Feb |
+| Dinajpur (41863) | 2023–24 | 83 of 91 | 9 Dec – 10 Dec, 12 Dec – 13 Dec, 25 Jan – 26 Jan, 10 Feb, 19 Feb |
+| Dinajpur (41863) | 2024–25 | 84 of 90 | 1 Dec – 2 Dec, 4 Dec, 18 Dec, 14 Feb, 28 Feb |
+| Dinajpur (41863) | 2025–26 | 0 of 90 | all (no ISD file yet) |
+
+### Hours a day at RH ≥ 90%, by month
+
+| Station | Month | Days | Station (ISD) | Open-Meteo archive | Historical forecast | NASA POWER |
+|---|---|--:|--:|--:|--:|--:|
+| Bogura | Dec 2019 | 31 | 11.4 | 9.1 | — | 8.2 |
+| Bogura | Jan 2020 | 6 | 11.5 | 10.3 | — | 9.0 |
+| Bogura | Feb 2020 | 10 | 6.6 | 7.1 | — | 1.3 |
+| Bogura | Dec 2023 | 29 | 6.2 | 6.4 | 6.4 | 7.0 |
+| Bogura | Jan 2024 | 31 | 11.6 | 11.8 | 11.8 | 3.9 |
+| Bogura | Feb 2024 | 29 | 4.4 | 4.5 | 4.5 | 1.4 |
+| Rangpur | Dec 2019 | 31 | 12.1 | 7.2 | — | 8.7 |
+| Rangpur | Jan 2020 | 6 | 8.5 | 7.3 | — | 9.2 |
+| Rangpur | Feb 2020 | 10 | 8.7 | 7.8 | — | 1.2 |
+| Rangpur | Dec 2023 | 30 | 11.4 | 7.1 | 7.1 | 6.5 |
+| Rangpur | Jan 2024 | 31 | 15.5 | 11.5 | 11.5 | 3.5 |
+| Rangpur | Feb 2024 | 29 | 7.8 | 4.5 | 4.5 | 1.1 |
+| Rangpur | Dec 2024 | 27 | 10.9 | 7.0 | 7.0 | 8.4 |
+| Rangpur | Jan 2025 | 31 | 11.3 | 9.8 | 9.8 | 4.7 |
+| Rangpur | Feb 2025 | 27 | 7.1 | 5.1 | 5.1 | 0.7 |
+| Dinajpur | Dec 2019 | 31 | 13.4 | 6.0 | — | 8.4 |
+| Dinajpur | Jan 2020 | 6 | 11.5 | 8.2 | — | 8.8 |
+| Dinajpur | Feb 2020 | 10 | 11.4 | 5.8 | — | 0.9 |
+| Dinajpur | Dec 2023 | 27 | 10.8 | 6.3 | 6.3 | 7.1 |
+| Dinajpur | Jan 2024 | 29 | 14.9 | 11.1 | 11.1 | 3.2 |
+| Dinajpur | Feb 2024 | 27 | 6.2 | 4.2 | 4.2 | 1.1 |
+| Dinajpur | Dec 2024 | 27 | 10.6 | 5.9 | 5.9 | 8.3 |
+| Dinajpur | Jan 2025 | 31 | 12.3 | 9.2 | 9.2 | 4.1 |
+| Dinajpur | Feb 2025 | 26 | 8.1 | 4.6 | 4.6 | 0.8 |
+
+### The most humid week
+
+The 7 consecutive station days with the most hours at RH ≥ 90% (JHULSACAST's 7-day condition needs 105).
+
+| Station | Winter | Station (ISD) | Open-Meteo archive | Historical forecast | NASA POWER |
+|---|---|---|---|---|---|
+| Bogura | 2019–20 | 120 h (from 21 Dec) | 77 h (from 22 Dec) | — | 75 h (from 13 Dec) |
+| Bogura | 2023–24 | 105 h (from 9 Jan) | 98 h (from 14 Jan) | 98 h (from 14 Jan) | 69 h (from 2 Dec) |
+| Rangpur | 2019–20 | 126 h (from 18 Dec) | 76 h (from 23 Dec) | — | 74 h (from 13 Dec) |
+| Rangpur | 2023–24 | 141 h (from 10 Jan) | 102 h (from 12 Jan) | 102 h (from 12 Jan) | 63 h (from 3 Dec) |
+| Rangpur | 2024–25 | 105 h (from 7 Dec) | 85 h (from 19 Jan) | 85 h (from 19 Jan) | 68 h (from 22 Dec) |
+| Dinajpur | 2019–20 | 111 h (from 20 Dec) | 67 h (from 22 Dec) | — | 84 h (from 13 Dec) |
+| Dinajpur | 2023–24 | 138 h (from 11 Jan) | 96 h (from 12 Jan) | 96 h (from 12 Jan) | 66 h (from 2 Dec) |
+| Dinajpur | 2024–25 | 114 h (from 20 Jan) | 78 h (from 17 Jan) | 78 h (from 17 Jan) | 65 h (from 19 Dec) |
+
+### The rules on station data
+
+Danger weeks out of the 12 full weeks from 1 Dec (first day the rule fires), for station-winters with at least 80 days of full readings, with the models at the same place and on the same days. A quiet week with a day missing is not counted as quiet.
+
+| Station | Winter | Source | Hutton, ≥ 6 h (app) | Stricter, ≥ 10 h | JHULSACAST |
+|---|---|---|---|---|---|
+| Bogura | 2023–24 | Station (ISD) | 12 of 12 (7 Dec) | 7 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Bogura | 2023–24 | Open-Meteo archive | 12 of 12 (7 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Bogura | 2023–24 | Historical forecast | 12 of 12 (7 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Bogura | 2023–24 | NASA POWER | 8 of 12 (1 Dec, already on 30 Nov) | 2 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Rangpur | 2023–24 | Station (ISD) | 12 of 12 (2 Dec) | 9 of 12 (3 Dec) | 2 of 12 (17 Jan), 1 quiet without full data |
+| Rangpur | 2023–24 | Open-Meteo archive | 12 of 12 (6 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Rangpur | 2023–24 | Historical forecast | 12 of 12 (6 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Rangpur | 2023–24 | NASA POWER | 7 of 12 (1 Dec, already on 30 Nov) | 2 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Rangpur | 2024–25 | Station (ISD) | 12 of 12 (5 Dec) | 8 of 12 (5 Dec), 1 quiet without full data | 0 of 12 (never), 2 quiet without full data |
+| Rangpur | 2024–25 | Open-Meteo archive | 10 of 12 (9 Dec), 1 quiet without full data | 6 of 12 (9 Dec), 2 quiet without full data | 0 of 12 (never), 2 quiet without full data |
+| Rangpur | 2024–25 | Historical forecast | 10 of 12 (9 Dec), 1 quiet without full data | 6 of 12 (9 Dec), 2 quiet without full data | 0 of 12 (never), 2 quiet without full data |
+| Rangpur | 2024–25 | NASA POWER | 6 of 12 (8 Dec), 1 quiet without full data | 2 of 12 (12 Dec), 1 quiet without full data | 0 of 12 (never), 2 quiet without full data |
+| Dinajpur | 2023–24 | Station (ISD) | 11 of 12 (1 Dec, already on 30 Nov), 1 quiet without full data | 10 of 12 (7 Dec), 1 quiet without full data | 2 of 12 (18 Jan), 4 quiet without full data |
+| Dinajpur | 2023–24 | Open-Meteo archive | 12 of 12 (7 Dec) | 7 of 12 (7 Dec), 2 quiet without full data | 0 of 12 (never), 5 quiet without full data |
+| Dinajpur | 2023–24 | Historical forecast | 12 of 12 (7 Dec) | 7 of 12 (7 Dec), 2 quiet without full data | 0 of 12 (never), 5 quiet without full data |
+| Dinajpur | 2023–24 | NASA POWER | 6 of 12 (1 Dec, already on 30 Nov), 4 quiet without full data | 3 of 12 (7 Dec), 4 quiet without full data | 0 of 12 (never), 5 quiet without full data |
+| Dinajpur | 2024–25 | Station (ISD) | 12 of 12 (7 Dec) | 10 of 12 (7 Dec), 1 quiet without full data | 0 of 12 (never), 3 quiet without full data |
+| Dinajpur | 2024–25 | Open-Meteo archive | 11 of 12 (5 Dec) | 5 of 12 (31 Dec), 3 quiet without full data | 0 of 12 (never), 3 quiet without full data |
+| Dinajpur | 2024–25 | Historical forecast | 11 of 12 (5 Dec) | 5 of 12 (31 Dec), 3 quiet without full data | 0 of 12 (never), 3 quiet without full data |
+| Dinajpur | 2024–25 | NASA POWER | 7 of 12 (5 Dec), 1 quiet without full data | 1 of 12 (22 Dec), 3 quiet without full data | 0 of 12 (never), 3 quiet without full data |
+
+### Which model threshold matches the station's 90%
+
+For each model, the RH threshold (in 0.5% steps) at which its mean humid hours a day, Dec–Feb, equal the stations' hours at RH ≥ 90%, pooled over every station-day above. Reported, not applied: the app still counts hours at 90% on its forecast.
+
+| Source | Station-days | Station, h/day at RH ≥ 90% | Model, h/day at ≥ 90% | Model threshold that matches | Model, h/day there | Daily error at 90% → there | Threshold, by station-winter |
+|---|--:|--:|--:|--:|--:|---|---|
+| Open-Meteo archive | 572 | 10.4 | 7.4 | **84%** | 10.5 | 4.2 → 3.4 h | 78–90% |
+| Historical forecast | 431 | 10.0 | 7.4 | **85%** | 10.0 | 4.0 → 3.3 h | 82–90% |
+| NASA POWER | 572 | 10.4 | 4.8 | **78%** | 10.3 | 6.6 → 5.1 h | 71–84.5% |
+
+Counting a model only at the station's 8 reading times, as the station is counted, changes its mean by Open-Meteo archive -0.31 h/day, Historical forecast -0.31 h/day, NASA POWER 0.07 h/day: the 3-hour sampling alone does not explain the gap.
 
 ## One dated report: Lalmonirhat, 2019–20
 
-New Age reported on 4 Feb 2020 a late-blight outbreak in northern districts, including Lalmonirhat, Thakurgaon and Panchagarh (the date is from our note; we didn't find the article online). The Daily Star had already reported late blight in Thakurgaon Sadar and Panchagarh's Boda upazila on 21 Jan 2020 ([Late blight attack worries potato growers](https://www.thedailystar.net/country/news/late-blight-attack-worries-potato-growers-1857268)), so the outbreak began some time before the report. Weather at Lalmonirhat Sadar (25.8787, 89.4534), with the 28 days before the report:
+New Age, 2 Feb 2020, from Lalmonirhat: [Late blight attack worries potato farmers in northern districts](https://www.newagebd.net/article/98379/late-blight-attack-worries-potato-farmers-in-northern-districts) (Rezaul Karim Manik), naming Rangpur, Kurigram, Lalmonirhat, Gaibandha, Dinajpur, Nilphamari, Thakurgaon and Panchagarh, after prolonged cold and dense fog; it gives no date for when the disease appeared. The Daily Star had already reported late blight in Thakurgaon Sadar and Panchagarh's Boda upazila on 21 Jan 2020 ([Late blight attack worries potato growers](https://www.thedailystar.net/country/news/late-blight-attack-worries-potato-growers-1857268)), so the outbreak began some time before the report. The Rangpur and Dinajpur stations can't speak to it: their records for that winter miss Rangpur 7 Jan – 19 Feb; Dinajpur 7 Jan – 19 Feb. Weather at Lalmonirhat Sadar (25.8787, 89.4534), with the 28 days before the report:
 
-| Source | Rule | Danger days, 7 Jan – 3 Feb | Danger days in December | Danger weeks | Weeks, 1 Dec → 22 Feb | First fires |
+| Source | Rule | Danger days, 5 Jan – 1 Feb | Danger days in December | Danger weeks | Weeks, 1 Dec → 22 Feb | First fires |
 |---|---|--:|--:|--:|---|---|
-| Open-Meteo archive | Hutton, ≥ 6 h (app) | 18 of 28 | 9 of 31 | 9 of 12 | `●·●●●●●●●··●` | 1 Dec (already on 30 Nov) |
-| Open-Meteo archive | Stricter, ≥ 10 h | 3 of 28 | 5 of 31 | 4 of 12 | `··●●·●●·····` | 20 Dec |
+| Open-Meteo archive | Hutton, ≥ 6 h (app) | 20 of 28 | 9 of 31 | 9 of 12 | `●·●●●●●●●··●` | 1 Dec (already on 30 Nov) |
+| Open-Meteo archive | Stricter, ≥ 10 h | 5 of 28 | 5 of 31 | 4 of 12 | `··●●·●●·····` | 20 Dec |
 | Open-Meteo archive | JHULSACAST | 0 of 28 | 0 of 31 | 0 of 12 | `············` | never |
-| NASA POWER | Hutton, ≥ 6 h (app) | 6 of 28 | 12 of 31 | 7 of 12 | `●●●·●●●·●···` | 1 Dec (already on 30 Nov) |
+| NASA POWER | Hutton, ≥ 6 h (app) | 7 of 28 | 12 of 31 | 7 of 12 | `●●●·●●●·●···` | 1 Dec (already on 30 Nov) |
 | NASA POWER | Stricter, ≥ 10 h | 0 of 28 | 0 of 31 | 0 of 12 | `············` | never |
 | NASA POWER | JHULSACAST | 0 of 28 | 0 of 31 | 0 of 12 | `············` | never |
 

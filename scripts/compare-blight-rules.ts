@@ -1,17 +1,28 @@
 // Three late-blight rules side by side over past winters: the app's (Hutton, ≥ 6 h), a stricter one
 // (≥ 10 h) and JHULSACAST (src/lib/jhulsacast.ts), from two past-weather sources. For each: danger
 // days, danger weeks, the first day it fires, and the calendar sprays the season ledger would count
-// as saved. Then one dated outbreak report, in Lalmonirhat, as a weak check.
+// as saved. Then the same against three Bangladesh Meteorological Department stations' observed
+// humidity (NOAA ISD), with the live app's model replayed (Open-Meteo Historical Forecast), and
+// one dated outbreak report, in Lalmonirhat, as a weak check.
 // Run: npx tsx scripts/compare-blight-rules.ts [--write]   (--write updates docs/rule-comparison.md)
 import { writeFileSync } from 'node:fs'
 import { upazilaById } from '@/lib/areas'
 import { SEASONS } from '@/lib/crops'
 import { SPRAY_COST } from '@/lib/data'
 import { addDays, todayIn } from '@/lib/dates'
+import { fitThreshold, humidHoursByDay, monthlyMeans, sampledEvery3h, worstWeek } from '@/lib/humidityGap'
+import { fetchStationHourly } from '@/lib/isd'
 import { classifyJhulsaDays, FIVE_DAY, LEAD_DAYS, MILD_MAX_C, MILD_MIN_C, SEVEN_DAY, summarizeJhulsaDays } from '@/lib/jhulsacast'
 import { buildLedger, WEEK_DAYS } from '@/lib/ledger'
 import { classifyDays, HUMID_RH, HUTTON_HUMID_HOURS, MIN_TEMP_C, STRICT_HUMID_HOURS, type StripDay, summarizeDays } from '@/lib/risk'
-import { DEFAULT_LOCATION, fetchHourlyArchive, fetchHourlyNasaPower, type HourlyForecast } from '@/lib/weather'
+import {
+  DEFAULT_LOCATION,
+  fetchHourlyArchive,
+  fetchHourlyHistoricalForecast,
+  fetchHourlyNasaPower,
+  HISTORICAL_FORECAST_FROM,
+  type HourlyForecast,
+} from '@/lib/weather'
 
 // December of each year to February of the next: the last three, and 2019–20 for the outbreak check.
 const WINTERS = [2019, 2023, 2024, 2025]
@@ -22,9 +33,10 @@ const LEAD_IN_FROM = '11-01'
 const TIMEOUT_MS = 60_000
 const DOC = 'docs/rule-comparison.md'
 
-// One dated report (the user's note: New Age, 4 Feb 2020, late blight in northern districts
-// including Lalmonirhat, Thakurgaon and Panchagarh), checked at Lalmonirhat Sadar.
-const EVENT = { winter: 2019, date: '2020-02-04', upazila: 'lalmonirhat-sadar' }
+// One dated report (New Age, 2 Feb 2020, from Lalmonirhat: late blight in the northern districts),
+// checked at Lalmonirhat Sadar.
+const EVENT = { winter: 2019, date: '2020-02-02', upazila: 'lalmonirhat-sadar' }
+const NEW_AGE = 'https://www.newagebd.net/article/98379/late-blight-attack-worries-potato-farmers-in-northern-districts'
 const BEFORE_DAYS = 28
 
 type Rule = { name: string; classify: (hourly: HourlyForecast) => StripDay[] }
@@ -157,6 +169,167 @@ function nearTable(): string[] {
   ]
 }
 
+// ---- Stations ----
+
+// BMD synoptic stations near the potato districts, at the coordinates their ISD records give.
+type Station = { wmo: string; name: string; lat: number; lon: number }
+const STATIONS: Station[] = [
+  { wmo: '41883', name: 'Bogura', lat: 24.85, lon: 89.37 },
+  { wmo: '41859', name: 'Rangpur', lat: 25.73, lon: 89.23 },
+  { wmo: '41863', name: 'Dinajpur', lat: 25.65, lon: 88.68 },
+]
+// The rules are run on a station's winter only when nearly every day of it has readings.
+const MIN_RULE_DAYS = 80
+
+type GapSource = { name: string; from?: string; fetch: (s: Station, w: Winter) => Promise<HourlyForecast> }
+const STATION_SOURCE = 'Station (ISD)'
+const GAP_SOURCES: GapSource[] = [
+  { name: STATION_SOURCE, fetch: (s, w) => fetchStationHourly(s.wmo, w.fetchFrom, w.to, TIMEOUT_MS) },
+  { name: 'Open-Meteo archive', fetch: (s, w) => fetchHourlyArchive(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
+  { name: 'Historical forecast', from: HISTORICAL_FORECAST_FROM, fetch: (s, w) => fetchHourlyHistoricalForecast(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
+  { name: 'NASA POWER', fetch: (s, w) => fetchHourlyNasaPower(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
+]
+const MODELS = GAP_SOURCES.filter((g) => g.name !== STATION_SOURCE)
+
+type StationWinter = {
+  station: Station
+  w: Winter
+  // Winter days with a full day of station readings; every source is compared on these only.
+  days: string[]
+  allDays: string[]
+  // Each source's series, cut to the station's complete days (lead-in included).
+  series: Map<string, HourlyForecast>
+  stationHumid: Map<string, number>
+}
+
+const datesFrom = (from: string, to: string) => {
+  const out: string[] = []
+  for (let d = from; d <= to; d = addDays(d, 1)) out.push(d)
+  return out
+}
+
+function onlyDays(hourly: HourlyForecast, keep: Set<string>): HourlyForecast {
+  const pick = hourly.time.map((t) => keep.has(t.slice(0, 10)))
+  const cut = <T>(xs: T[]) => xs.filter((_, i) => pick[i])
+  return { time: cut(hourly.time), temperature: cut(hourly.temperature), humidity: cut(hourly.humidity), ...(hourly.precipitation ? { precipitation: cut(hourly.precipitation) } : {}) }
+}
+
+async function stationWinter(station: Station, w: Winter): Promise<StationWinter> {
+  const observed = await GAP_SOURCES[0].fetch(station, w)
+  const complete = new Set(observed.time.map((t) => t.slice(0, 10)))
+  const allDays = datesFrom(w.from, w.to)
+  const days = allDays.filter((d) => complete.has(d))
+  const series = new Map<string, HourlyForecast>([[STATION_SOURCE, observed]])
+  if (days.length > 0) {
+    for (const source of MODELS) {
+      if (source.from && w.from < source.from) continue
+      series.set(source.name, onlyDays(await source.fetch(station, w), complete))
+    }
+  }
+  console.log(`${station.name} ${w.label}: ${days.length} of ${allDays.length} winter days with full readings; ${[...series.keys()].join(', ')}`)
+  return { station, w, days, allDays, series, stationHumid: humidHoursByDay(observed, HUMID_RH) }
+}
+
+// "8 Jan – 18 Feb, 25 Feb" for the winter days without full readings.
+function gaps(sw: StationWinter): string {
+  const have = new Set(sw.days)
+  const runs: string[][] = []
+  for (const d of sw.allDays.filter((x) => !have.has(x))) {
+    const run = runs.at(-1)
+    if (run && addDays(run.at(-1)!, 1) === d) run.push(d)
+    else runs.push([d])
+  }
+  if (runs.length === 0) return 'none'
+  const text = runs.map((r) => (r.length === 1 ? shortDate(r[0]) : `${shortDate(r[0])} – ${shortDate(r.at(-1)!)}`))
+  return text.length > 6 ? `${text.slice(0, 6).join(', ')} and ${text.length - 6} more` : text.join(', ')
+}
+
+function coverageTable(sws: StationWinter[]): string[] {
+  return [
+    '| Station | Winter | Days with full readings | Days missing |',
+    '|---|---|--:|---|',
+    ...sws.map((sw) => `| ${sw.station.name} (${sw.station.wmo}) | ${sw.w.label} | ${sw.days.length} of ${sw.allDays.length} | ${sw.days.length === 0 ? 'all (no ISD file yet)' : gaps(sw)} |`),
+  ]
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`
+
+function monthTable(sws: StationWinter[]): string[] {
+  const rows: string[] = []
+  for (const sw of sws.filter((x) => x.days.length > 0)) {
+    const bySource = GAP_SOURCES.map((g) => {
+      const s = sw.series.get(g.name)
+      return s ? monthlyMeans(humidHoursByDay(s, HUMID_RH), sw.days) : null
+    })
+    for (const [i, m] of bySource[0]!.entries()) {
+      const cells = bySource.map((b) => (b ? b[i]?.mean.toFixed(1) ?? '—' : '—'))
+      rows.push(`| ${sw.station.name} | ${monthLabel(m.month)} | ${m.days} | ${cells.join(' | ')} |`)
+    }
+  }
+  return [`| Station | Month | Days | ${GAP_SOURCES.map((g) => g.name).join(' | ')} |`, `|---|---|--:|${GAP_SOURCES.map(() => '--:').join('|')}|`, ...rows]
+}
+
+function worstWeekTable(sws: StationWinter[]): string[] {
+  const rows = sws
+    .filter((x) => x.days.length > 0)
+    .map((sw) => {
+      const cells = GAP_SOURCES.map((g) => {
+        const s = sw.series.get(g.name)
+        const week = s && worstWeek(humidHoursByDay(s, HUMID_RH), sw.days)
+        return week ? `${week.hours} h (from ${shortDate(week.start)})` : '—'
+      })
+      return `| ${sw.station.name} | ${sw.w.label} | ${cells.join(' | ')} |`
+    })
+  return [`| Station | Winter | ${GAP_SOURCES.map((g) => g.name).join(' | ')} |`, `|---|---|${GAP_SOURCES.map(() => '---').join('|')}|`, ...rows]
+}
+
+function ruleCell(r: Result): string {
+  const first = r.first ? (r.carriedIn ? `${shortDate(r.first)}, already on 30 Nov` : shortDate(r.first)) : 'never'
+  return `${r.dangerWeeks} of ${WEEKS} (${first})${r.noData ? `, ${r.noData} quiet without full data` : ''}`
+}
+
+function stationRulesTable(sws: StationWinter[]): string[] {
+  const rows: string[] = []
+  for (const sw of sws.filter((x) => x.days.length >= MIN_RULE_DAYS)) {
+    for (const g of GAP_SOURCES) {
+      const s = sw.series.get(g.name)
+      if (!s) continue
+      rows.push(`| ${sw.station.name} | ${sw.w.label} | ${g.name} | ${RULES.map((rule) => ruleCell(assess(rule.classify(s), sw.w))).join(' | ')} |`)
+    }
+  }
+  return [`| Station | Winter | Source | ${RULES.map((r) => r.name).join(' | ')} |`, `|---|---|---|${RULES.map(() => '---').join('|')}|`, ...rows]
+}
+
+function thresholdTable(sws: StationWinter[]): { table: string[]; sampling: string[] } {
+  const usable = sws.filter((x) => x.days.length > 0)
+  const table = [
+    `| Source | Station-days | Station, h/day at RH ≥ ${HUMID_RH}% | Model, h/day at ≥ ${HUMID_RH}% | Model threshold that matches | Model, h/day there | Daily error at ${HUMID_RH}% → there | Threshold, by station-winter |`,
+    '|---|--:|--:|--:|--:|--:|---|---|',
+  ]
+  const sampling: string[] = []
+  for (const g of MODELS) {
+    const pairs = usable.flatMap((sw) => {
+      const model = sw.series.get(g.name)
+      return model ? [{ model, station: sw.stationHumid, dates: sw.days, label: `${sw.station.name} ${sw.w.label}` }] : []
+    })
+    if (pairs.length === 0) continue
+    const fit = fitThreshold(pairs)
+    const each = pairs.map((p) => fitThreshold([p]).threshold)
+    table.push(
+      `| ${g.name} | ${fit.days} | ${fit.stationMean.toFixed(1)} | ${fit.modelMeanAt90.toFixed(1)} | **${fit.threshold}%** | ${fit.modelMean.toFixed(1)} | ${fit.maeAt90.toFixed(1)} → ${fit.mae.toFixed(1)} h | ${Math.min(...each)}–${Math.max(...each)}% |`,
+    )
+    // What reading the model only at the station's 8 times would do to its count.
+    const every = pairs.flatMap((p) => {
+      const full = humidHoursByDay(p.model, HUMID_RH)
+      const sampled = humidHoursByDay(sampledEvery3h(p.model), HUMID_RH)
+      return p.dates.filter((d) => full.has(d)).map((d) => sampled.get(d)! - full.get(d)!)
+    })
+    sampling.push(`${g.name} ${(every.reduce((a, b) => a + b, 0) / every.length).toFixed(2)} h/day`)
+  }
+  return { table, sampling }
+}
+
 function countIn(r: Result, from: string, to: string): number {
   return [...r.dangerDates].filter((d) => d >= from && d <= to).length
 }
@@ -175,14 +348,16 @@ function eventTable(rows: Row[], w: Winter): string[] {
   ]
 }
 
-function markdown(main: Row[], event: Row[], place: { name: string; lat: number; lon: number }, today: string): string {
+function markdown(main: Row[], event: Row[], sws: StationWinter[], place: { name: string; lat: number; lon: number }, today: string): string {
   const { lat, lon } = DEFAULT_LOCATION
   const ew = winterOf(EVENT.winter)
+  const fit = thresholdTable(sws)
+  const eventGaps = sws.filter((sw) => sw.w.label === ew.label && ['Rangpur', 'Dinajpur'].includes(sw.station.name)).map((sw) => `${sw.station.name} ${gaps(sw)}`)
   return [
     '# Late-blight rules compared',
     '',
     `Three weather rules for late blight replayed at Shibganj, Bogura (${lat}, ${lon}) over the winters ${WINTERS.map((y) => winterOf(y).label).join(', ')} (1 Dec to the end of February), ` +
-      'from two past-weather sources: the [Open-Meteo archive](https://open-meteo.com/en/docs/historical-weather-api) (reanalysis) and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2 reanalysis, about 50 km, hourly in local solar time). ' +
+      'from two past-weather sources: the [Open-Meteo archive](https://open-meteo.com/en/docs/historical-weather-api) (its default model here is ECMWF IFS at 9 km, the model the live app\'s forecast uses) and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2 reanalysis, about 50 km, hourly in local solar time). ' +
       'The app uses the first rule; the other two are only compared here.',
     '',
     '> Weather-only counts. None of these rules has been validated against late-blight records in Bangladesh, and the one outbreak report below is a single event, not a validation.',
@@ -213,15 +388,53 @@ function markdown(main: Row[], event: Row[], place: { name: string; lat: number;
     '',
     ...nearTable(),
     '',
-    'JHULSACAST was tuned on station humidity in the field at Kalyani; both sources here are reanalysis, which smooths the foggy nights when a field sits near saturation. ' +
-      'So "never fires" may say as much about reanalysis humidity as about the rule. ' +
-      "The same bias runs the other way for the app's rule: if the field is more humid than the reanalysis, the 6 h rule would call danger on even more days than the table above shows. " +
-      'A season of Bangladesh Meteorological Department station data from a potato district would settle both.',
+    'JHULSACAST was tuned on station humidity at Kalyani; both sources here are models. The next section measures how far their humidity is from three stations.',
+    '',
+    '## Stations: the humidity gap',
+    '',
+    'Observed weather from three Bangladesh Meteorological Department synoptic stations, from NOAA\'s [Integrated Surface Database](https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database) (ISD, FM-12 SYNOP reports, on the [NOAA open-data bucket](https://noaa-global-hourly-pds.s3.amazonaws.com/index.html)), ' +
+      'against three models read at each station\'s coordinates: the Open-Meteo archive, the [Open-Meteo Historical Forecast API](https://open-meteo.com/en/docs/historical-forecast-api) (the model the live app\'s forecast comes from, replayed; from 2022 only) and NASA POWER.',
+    '',
+    '- The stations report every 3 hours (00, 03, … 21 UTC). **Each reading stands for the 3 hours from its time**, so a reading at RH ≥ 90% counts as 3 humid hours; when one reading is missing, the one before stands for 6. A day counts only when all its 24 hours are covered.',
+    '- RH is computed from temperature and dew point (Magnus form). The rules\' rain is the 24-hour total reported at 09:00 local, put on the day before.',
+    '- Every source is compared on the station\'s days only, so a gap in the station record is a gap for all four.',
+    "- The Open-Meteo archive and Historical Forecast columns agree to the hour: at these places both APIs' default is ECMWF IFS at 9 km, which is also what the live forecast's default returns (checked on the raw responses against `models=ecmwf_ifs`). So the archive used throughout this report already is the live app's model; ERA5 (`models=era5`) is a different series and is not used here.",
+    '- Meteostat\'s bulk data was checked and not used: for these stations it is model output, not observations (at the SYNOP hours of Jan–Feb 2024, 8 of 478 temperatures matched ISD; Dinajpur is not in it).',
+    '',
+    '### Coverage',
+    '',
+    ...coverageTable(sws),
+    '',
+    `### Hours a day at RH ≥ ${HUMID_RH}%, by month`,
+    '',
+    ...monthTable(sws),
+    '',
+    '### The most humid week',
+    '',
+    `The 7 consecutive station days with the most hours at RH ≥ ${HUMID_RH}% (JHULSACAST's 7-day condition needs ${SEVEN_DAY.humidHours}).`,
+    '',
+    ...worstWeekTable(sws),
+    '',
+    '### The rules on station data',
+    '',
+    `Danger weeks out of the ${WEEKS} full weeks from 1 Dec (first day the rule fires), for station-winters with at least ${MIN_RULE_DAYS} days of full readings, with the models at the same place and on the same days. ` +
+      'A quiet week with a day missing is not counted as quiet.',
+    '',
+    ...stationRulesTable(sws),
+    '',
+    `### Which model threshold matches the station's ${HUMID_RH}%`,
+    '',
+    `For each model, the RH threshold (in 0.5% steps) at which its mean humid hours a day, Dec–Feb, equal the stations' hours at RH ≥ ${HUMID_RH}%, pooled over every station-day above. Reported, not applied: the app still counts hours at ${HUMID_RH}% on its forecast.`,
+    '',
+    ...fit.table,
+    '',
+    `Counting a model only at the station's 8 reading times, as the station is counted, changes its mean by ${fit.sampling.join(', ')}: the 3-hour sampling alone does not explain the gap.`,
     '',
     `## One dated report: Lalmonirhat, ${EVENT.winter}–${String(EVENT.winter + 1).slice(2)}`,
     '',
-    `New Age reported on ${shortDate(EVENT.date)} 2020 a late-blight outbreak in northern districts, including Lalmonirhat, Thakurgaon and Panchagarh (the date is from our note; we didn't find the article online). ` +
+    `New Age, ${shortDate(EVENT.date)} 2020, from Lalmonirhat: [Late blight attack worries potato farmers in northern districts](${NEW_AGE}) (Rezaul Karim Manik), naming Rangpur, Kurigram, Lalmonirhat, Gaibandha, Dinajpur, Nilphamari, Thakurgaon and Panchagarh, after prolonged cold and dense fog; it gives no date for when the disease appeared. ` +
       'The Daily Star had already reported late blight in Thakurgaon Sadar and Panchagarh\'s Boda upazila on 21 Jan 2020 ([Late blight attack worries potato growers](https://www.thedailystar.net/country/news/late-blight-attack-worries-potato-growers-1857268)), so the outbreak began some time before the report. ' +
+      `The Rangpur and Dinajpur stations can't speak to it: their records for that winter miss ${eventGaps.join('; ')}. ` +
       `Weather at Lalmonirhat Sadar (${place.lat}, ${place.lon}), with the ${BEFORE_DAYS} days before the report:`,
     '',
     ...eventTable(event, ew),
@@ -244,13 +457,17 @@ async function main() {
   const place = { name: upazila.nameEn, lat: upazila.lat, lon: upazila.lon }
   const event = await rowsAt(place.lat, place.lon, winterOf(EVENT.winter), place.name)
 
+  const sws: StationWinter[] = []
+  for (const station of STATIONS) for (const year of WINTERS) sws.push(await stationWinter(station, winterOf(year)))
+
   console.log()
   console.log(mainTable(main).join('\n'))
   console.log()
   console.log(eventTable(event, winterOf(EVENT.winter)).join('\n'))
+  for (const table of [coverageTable(sws), monthTable(sws), worstWeekTable(sws), stationRulesTable(sws), thresholdTable(sws).table]) console.log('\n' + table.join('\n'))
 
   if (process.argv.includes('--write')) {
-    writeFileSync(DOC, markdown(main, event, place, today))
+    writeFileSync(DOC, markdown(main, event, sws, place, today))
     console.log(`\nWrote ${DOC}`)
   }
 }

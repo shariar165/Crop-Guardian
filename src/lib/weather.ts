@@ -2,6 +2,9 @@ import { LOCAL_TZ } from '@/lib/dates'
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
 const ARCHIVE_URL = 'https://archive-api.open-meteo.com/v1/archive'
+// The live forecast's own model, as it forecast each day at the time (from 2022), for the backtest.
+const HISTORICAL_FORECAST_URL = 'https://historical-forecast-api.open-meteo.com/v1/forecast'
+export const HISTORICAL_FORECAST_FROM = '2022-01-01'
 
 export const FORECAST_TZ = LOCAL_TZ
 export const FORECAST_DAYS = 5
@@ -117,6 +120,22 @@ export function fetchHourlyArchive(
   params.set('start_date', start)
   params.set('end_date', end)
   return fetchHourly(`${ARCHIVE_URL}?${params}`, ARCHIVE_REVALIDATE_S, timeoutMs)
+}
+
+// What the live app's forecast model gave for start..end (YYYY-MM-DD local dates), with hourly rain:
+// the same source as Home's risk, replayed. Only from HISTORICAL_FORECAST_FROM.
+export function fetchHourlyHistoricalForecast(
+  lat: number,
+  lon: number,
+  start: string,
+  end: string,
+  timeoutMs = FETCH_TIMEOUT_MS,
+): Promise<HourlyForecast> {
+  const params = hourlyParams(lat, lon)
+  params.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation')
+  params.set('start_date', start)
+  params.set('end_date', end)
+  return fetchHourly(`${HISTORICAL_FORECAST_URL}?${params}`, ARCHIVE_REVALIDATE_S, timeoutMs)
 }
 
 // NASA POWER (MERRA-2 reanalysis, ~50 km), a second source of past weather for the backtest, to
