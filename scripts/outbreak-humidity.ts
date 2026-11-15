@@ -4,10 +4,11 @@
 // threshold; it shows what level the sum had reached before each report.
 import { districtById, upazilaById } from '@/lib/areas'
 import { addDays } from '@/lib/dates'
-import { fetchStationHourly, ISD_STATIONS, type IsdStation } from '@/lib/isd'
+import { ISD_STATIONS, type IsdStation } from '@/lib/isd'
 import { classifyJhulsaDays, MILD_MAX_C, MILD_MIN_C, movingSums, type MovingSum, SEVEN_DAY, summarizeJhulsaDays } from '@/lib/jhulsacast'
 import { BLIGHT_REPORTS, type BlightReport, winterOf } from '@/lib/outbreaks'
 import { HUMID_RH } from '@/lib/risk'
+import { checkFills, stationSeries } from './stationData'
 
 const WINTERS = Array.from({ length: 9 }, (_, i) => 2016 + i)
 const LEVELS = [60, 75, 90, SEVEN_DAY.humidHours]
@@ -39,7 +40,7 @@ const winterDays = (w: number) => {
 async function load(station: IsdStation, winter: number): Promise<StationWinter> {
   const allDays = winterDays(winter)
   // From 1 Nov, so a window ending in early December, and JHULSACAST's run, have their days.
-  const hourly = await fetchStationHourly(station.id, `${winter}-11-01`, allDays.at(-1)!, TIMEOUT_MS)
+  const hourly = await stationSeries(station, `${winter}-11-01`, allDays.at(-1)!, TIMEOUT_MS)
   const days = summarizeJhulsaDays(hourly)
   const sums = movingSums(days, SEVEN_DAY.days)
   const inWinter = new Set(allDays)
@@ -312,6 +313,7 @@ export async function outbreakSection(): Promise<string[]> {
   for (const station of ISD_STATIONS) for (const w of WINTERS) all.push(await load(station, w))
   console.log(`Outbreak section: ${all.length} station-winters, ${all.filter((x) => x.windows.length > 0).length} with 7-day windows`)
   const usable = usableTable(all)
+  const fills = await checkFills(TIMEOUT_MS)
 
   return [
     '## Outbreak reports and the 7-day humid sum',
@@ -341,7 +343,7 @@ export async function outbreakSection(): Promise<string[]> {
     '',
     ...coverageTable(all),
     '',
-    'The 7 Jan – 19 Feb 2020 gap is in NOAA\'s copy, not at the stations: it falls on the same days at every station, and [OGIMET](https://www.ogimet.com/)\'s SYNOP archive has Rangpur (41859) for those days, 334 reports over all 44 days (30 days with all 8, 11 with 7; 303 reports with both temperature and dew point; checked on 15 Nov 2026 for that one station-period only). It is not used here.',
+    `The 7 Jan – 19 Feb 2020 gap is in NOAA's copy, not at the stations: it falls on the same days at every station. For Rangpur (41859) it is filled from [OGIMET](https://www.ogimet.com/)'s SYNOP archive (\`src/lib/ogimet.ts\`; ISD's readings win where both exist). ${fills.map((f) => `On the ${f.shared} readings both have in ${f.from.slice(0, 7)} – ${f.to.slice(0, 7)}, the decoded temperature equals ISD's in ${f.sameTemp} and the dew point in ${f.sameDew}, and the 24-hour rain in ${f.sameRain} of ${f.sharedRain}; OGIMET adds ${f.added} readings ISD lacks.`).join(' ')} The other stations' 2020 gap is not filled.`,
     '',
     '### The 7-day sum each winter',
     '',

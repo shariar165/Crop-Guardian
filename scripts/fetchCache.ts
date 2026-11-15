@@ -9,6 +9,10 @@ import { dirname, join } from 'node:path'
 
 const ROOT = '.cache'
 const ISD = /noaa-global-hourly-pds\.s3\.amazonaws\.com\/(\d{4})\/(\d+)\.csv$/
+// OGIMET answers a refusal (rate limit, bad request) with 200 and a line of text: only a body with
+// report lines is worth keeping.
+const OGIMET = /ogimet\.com\//
+const keep = (url: string, body: Uint8Array) => !OGIMET.test(url) || /^\d{5},/m.test(new TextDecoder().decode(body))
 
 export function cachePath(url: string): string {
   const isd = url.match(ISD)
@@ -34,6 +38,7 @@ export function cacheFetches(): void {
     }
     if (!res.ok) return res
     const body = new Uint8Array(await res.arrayBuffer())
+    if (!keep(urlOf(input), body)) return new Response(body)
     writeFileSync(`${file}.part`, body)
     renameSync(`${file}.part`, file)
     return new Response(body)

@@ -158,8 +158,9 @@ export async function fetchIsdYear(id: string, year: number, timeoutMs: number):
 }
 
 // A station's observed weather for start..end (local dates), by ISD id ("41883099999"). The years
-// are read one at a time, and only the readings inside the span are kept.
-export async function fetchStationHourly(id: string, start: string, end: string, timeoutMs: number): Promise<HourlyForecast> {
+// are read one at a time, and only the readings inside the span are kept. `extra` readings (from
+// another copy of the same reports) fill only the times ISD lacks.
+export async function fetchStationHourly(id: string, start: string, end: string, timeoutMs: number, extra: IsdReading[] = []): Promise<HourlyForecast> {
   const span = [...new Set([Number(addDays(start, -1).slice(0, 4)), Number(end.slice(0, 4))])]
   const from = `${addDays(start, -1)}T00:00`
   const to = `${end}T23:59`
@@ -167,5 +168,7 @@ export async function fetchStationHourly(id: string, start: string, end: string,
   for (const year of span) {
     for (const r of parseIsd(await fetchIsdYear(id, year, timeoutMs))) if (r.time >= from && r.time <= to) readings.push(r)
   }
-  return stationHourly(readings, start, end)
+  const have = new Set(readings.map((r) => r.time))
+  for (const r of extra) if (r.time >= from && r.time <= to && !have.has(r.time)) readings.push(r)
+  return stationHourly(readings.sort((a, b) => a.time.localeCompare(b.time)), start, end)
 }

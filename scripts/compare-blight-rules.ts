@@ -12,11 +12,12 @@ import { SEASONS } from '@/lib/crops'
 import { SPRAY_COST } from '@/lib/data'
 import { addDays, todayIn } from '@/lib/dates'
 import { fitThreshold, humidHoursByDay, monthlyMeans, sampledEvery3h, worstWeek } from '@/lib/humidityGap'
-import { fetchStationHourly, isdStation, type IsdStation } from '@/lib/isd'
+import { isdStation, type IsdStation } from '@/lib/isd'
 import { classifyJhulsaDays, FIVE_DAY, LEAD_DAYS, MILD_MAX_C, MILD_MIN_C, SEVEN_DAY, summarizeJhulsaDays } from '@/lib/jhulsacast'
 import { buildLedger, WEEK_DAYS } from '@/lib/ledger'
 import { cacheFetches } from './fetchCache'
 import { outbreakSection } from './outbreak-humidity'
+import { stationSeries } from './stationData'
 import { classifyDays, HUMID_RH, HUTTON_HUMID_HOURS, MIN_TEMP_C, STRICT_HUMID_HOURS, type StripDay, summarizeDays } from '@/lib/risk'
 import {
   DEFAULT_LOCATION,
@@ -183,7 +184,7 @@ const MIN_RULE_DAYS = 80
 type GapSource = { name: string; from?: string; fetch: (s: Station, w: Winter) => Promise<HourlyForecast> }
 const STATION_SOURCE = 'Station (ISD)'
 const GAP_SOURCES: GapSource[] = [
-  { name: STATION_SOURCE, fetch: (s, w) => fetchStationHourly(s.id, w.fetchFrom, w.to, TIMEOUT_MS) },
+  { name: STATION_SOURCE, fetch: (s, w) => stationSeries(s, w.fetchFrom, w.to, TIMEOUT_MS) },
   { name: 'Open-Meteo archive', fetch: (s, w) => fetchHourlyArchive(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
   { name: 'Historical forecast', from: HISTORICAL_FORECAST_FROM, fetch: (s, w) => fetchHourlyHistoricalForecast(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
   { name: 'NASA POWER', fetch: (s, w) => fetchHourlyNasaPower(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
@@ -351,7 +352,11 @@ function markdown(main: Row[], event: Row[], sws: StationWinter[], outbreak: str
   const { lat, lon } = DEFAULT_LOCATION
   const ew = winterOf(EVENT.winter)
   const fit = thresholdTable(sws)
-  const eventGaps = sws.filter((sw) => sw.w.label === ew.label && ['Rangpur', 'Dinajpur'].includes(sw.station.name)).map((sw) => `${sw.station.name} ${gaps(sw)}`)
+  // Rangpur and Dinajpur are the stations in districts the report names.
+  const eventStations = sws.filter((sw) => sw.w.label === ew.label && ['Rangpur', 'Dinajpur'].includes(sw.station.name))
+  const covered = eventStations.filter((sw) => sw.days.length >= MIN_RULE_DAYS).map((sw) => `${sw.station.name} (${sw.days.length} of ${sw.allDays.length} days${sw.station.name === 'Rangpur' ? ", with OGIMET filling NOAA's gap" : ''})`)
+  const missing = eventStations.filter((sw) => sw.days.length < MIN_RULE_DAYS).map((sw) => `${sw.station.name}'s record misses ${gaps(sw)}`)
+  const eventStationText = [covered.length ? `Station records covering that winter: ${covered.join(', ')}; see the station tables above and the outbreak section below.` : '', missing.length ? `${missing.join('; ')}.` : ''].filter(Boolean).join(' ')
   return [
     '# Late-blight rules compared',
     '',
@@ -433,7 +438,7 @@ function markdown(main: Row[], event: Row[], sws: StationWinter[], outbreak: str
     '',
     `New Age, ${shortDate(EVENT.date)} 2020, from Lalmonirhat: [Late blight attack worries potato farmers in northern districts](${NEW_AGE}) (Rezaul Karim Manik), naming Rangpur, Kurigram, Lalmonirhat, Gaibandha, Dinajpur, Nilphamari, Thakurgaon and Panchagarh, after prolonged cold and dense fog; it gives no date for when the disease appeared. ` +
       'The Daily Star had already reported late blight in Thakurgaon Sadar and Panchagarh\'s Boda upazila on 21 Jan 2020 ([Late blight attack worries potato growers](https://www.thedailystar.net/country/news/late-blight-attack-worries-potato-growers-1857268)), so the outbreak began some time before the report. ' +
-      `The Rangpur and Dinajpur stations can't speak to it: their records for that winter miss ${eventGaps.join('; ')}. ` +
+      `${eventStationText} ` +
       `Weather at Lalmonirhat Sadar (${place.lat}, ${place.lon}), with the ${BEFORE_DAYS} days before the report:`,
     '',
     ...eventTable(event, ew),

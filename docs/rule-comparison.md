@@ -78,7 +78,7 @@ Observed weather from three Bangladesh Meteorological Department synoptic statio
 | Bogura (41883) | 2023–24 | 89 of 91 | 9 Dec – 10 Dec |
 | Bogura (41883) | 2024–25 | 0 of 90 | all (no ISD file yet) |
 | Bogura (41883) | 2025–26 | 0 of 90 | all (no ISD file yet) |
-| Rangpur (41859) | 2019–20 | 47 of 91 | 7 Jan – 19 Feb |
+| Rangpur (41859) | 2019–20 | 85 of 91 | 7 Jan – 8 Jan, 21 Jan, 26 Jan, 4 Feb, 19 Feb |
 | Rangpur (41859) | 2023–24 | 90 of 91 | 10 Dec |
 | Rangpur (41859) | 2024–25 | 85 of 90 | 1 Dec – 2 Dec, 4 Dec, 18 Dec, 28 Feb |
 | Rangpur (41859) | 2025–26 | 0 of 90 | all (no ISD file yet) |
@@ -98,8 +98,8 @@ Observed weather from three Bangladesh Meteorological Department synoptic statio
 | Bogura | Jan 2024 | 31 | 11.6 | 11.8 | 11.8 | 3.9 |
 | Bogura | Feb 2024 | 29 | 4.4 | 4.5 | 4.5 | 1.4 |
 | Rangpur | Dec 2019 | 31 | 12.1 | 7.2 | — | 8.7 |
-| Rangpur | Jan 2020 | 6 | 8.5 | 7.3 | — | 9.2 |
-| Rangpur | Feb 2020 | 10 | 8.7 | 7.8 | — | 1.2 |
+| Rangpur | Jan 2020 | 27 | 12.3 | 9.2 | — | 5.7 |
+| Rangpur | Feb 2020 | 27 | 9.8 | 4.9 | — | 0.5 |
 | Rangpur | Dec 2023 | 30 | 11.4 | 7.1 | 7.1 | 6.5 |
 | Rangpur | Jan 2024 | 31 | 15.5 | 11.5 | 11.5 | 3.5 |
 | Rangpur | Feb 2024 | 29 | 7.8 | 4.5 | 4.5 | 1.1 |
@@ -124,7 +124,7 @@ The 7 consecutive station days with the most hours at RH ≥ 90% (JHULSACAST's 7
 |---|---|---|---|---|---|
 | Bogura | 2019–20 | 120 h (from 21 Dec) | 77 h (from 22 Dec) | — | 75 h (from 13 Dec) |
 | Bogura | 2023–24 | 105 h (from 9 Jan) | 98 h (from 14 Jan) | 98 h (from 14 Jan) | 69 h (from 2 Dec) |
-| Rangpur | 2019–20 | 126 h (from 18 Dec) | 76 h (from 23 Dec) | — | 74 h (from 13 Dec) |
+| Rangpur | 2019–20 | 126 h (from 18 Dec) | 79 h (from 11 Jan) | — | 74 h (from 13 Dec) |
 | Rangpur | 2023–24 | 141 h (from 10 Jan) | 102 h (from 12 Jan) | 102 h (from 12 Jan) | 63 h (from 3 Dec) |
 | Rangpur | 2024–25 | 105 h (from 7 Dec) | 85 h (from 19 Jan) | 85 h (from 19 Jan) | 68 h (from 22 Dec) |
 | Dinajpur | 2019–20 | 111 h (from 20 Dec) | 67 h (from 22 Dec) | — | 84 h (from 13 Dec) |
@@ -141,6 +141,9 @@ Danger weeks out of the 12 full weeks from 1 Dec (first day the rule fires), for
 | Bogura | 2023–24 | Open-Meteo archive | 12 of 12 (7 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
 | Bogura | 2023–24 | Historical forecast | 12 of 12 (7 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
 | Bogura | 2023–24 | NASA POWER | 8 of 12 (1 Dec, already on 30 Nov) | 2 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
+| Rangpur | 2019–20 | Station (ISD) | 12 of 12 (1 Dec, already on 30 Nov) | 12 of 12 (1 Dec, already on 30 Nov) | 1 of 12 (27 Dec), 5 quiet without full data |
+| Rangpur | 2019–20 | Open-Meteo archive | 10 of 12 (3 Dec), 1 quiet without full data | 6 of 12 (19 Dec), 3 quiet without full data | 0 of 12 (never), 5 quiet without full data |
+| Rangpur | 2019–20 | NASA POWER | 7 of 12 (1 Dec, already on 30 Nov), 2 quiet without full data | 3 of 12 (4 Dec), 5 quiet without full data | 0 of 12 (never), 5 quiet without full data |
 | Rangpur | 2023–24 | Station (ISD) | 12 of 12 (2 Dec) | 9 of 12 (3 Dec) | 2 of 12 (17 Jan), 1 quiet without full data |
 | Rangpur | 2023–24 | Open-Meteo archive | 12 of 12 (6 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
 | Rangpur | 2023–24 | Historical forecast | 12 of 12 (6 Dec) | 9 of 12 (7 Dec) | 0 of 12 (never), 1 quiet without full data |
@@ -164,15 +167,15 @@ For each model, the RH threshold (in 0.5% steps) at which its mean humid hours a
 
 | Source | Station-days | Station, h/day at RH ≥ 90% | Model, h/day at ≥ 90% | Model threshold that matches | Model, h/day there | Daily error at 90% → there | Threshold, by station-winter |
 |---|--:|--:|--:|--:|--:|---|---|
-| Open-Meteo archive | 572 | 10.4 | 7.4 | **84%** | 10.5 | 4.2 → 3.4 h | 78–90% |
+| Open-Meteo archive | 610 | 10.5 | 7.4 | **84%** | 10.5 | 4.3 → 3.4 h | 78–90% |
 | Historical forecast | 431 | 10.0 | 7.4 | **85%** | 10.0 | 4.0 → 3.3 h | 82–90% |
-| NASA POWER | 572 | 10.4 | 4.8 | **78%** | 10.3 | 6.6 → 5.1 h | 71–84.5% |
+| NASA POWER | 610 | 10.5 | 4.7 | **77%** | 10.5 | 6.8 → 5.2 h | 71–84.5% |
 
-Counting a model only at the station's 8 reading times, as the station is counted, changes its mean by Open-Meteo archive -0.31 h/day, Historical forecast -0.31 h/day, NASA POWER 0.07 h/day: the 3-hour sampling alone does not explain the gap.
+Counting a model only at the station's 8 reading times, as the station is counted, changes its mean by Open-Meteo archive -0.30 h/day, Historical forecast -0.31 h/day, NASA POWER 0.07 h/day: the 3-hour sampling alone does not explain the gap.
 
 ## One dated report: Lalmonirhat, 2019–20
 
-New Age, 2 Feb 2020, from Lalmonirhat: [Late blight attack worries potato farmers in northern districts](https://www.newagebd.net/article/98379/late-blight-attack-worries-potato-farmers-in-northern-districts) (Rezaul Karim Manik), naming Rangpur, Kurigram, Lalmonirhat, Gaibandha, Dinajpur, Nilphamari, Thakurgaon and Panchagarh, after prolonged cold and dense fog; it gives no date for when the disease appeared. The Daily Star had already reported late blight in Thakurgaon Sadar and Panchagarh's Boda upazila on 21 Jan 2020 ([Late blight attack worries potato growers](https://www.thedailystar.net/country/news/late-blight-attack-worries-potato-growers-1857268)), so the outbreak began some time before the report. The Rangpur and Dinajpur stations can't speak to it: their records for that winter miss Rangpur 7 Jan – 19 Feb; Dinajpur 7 Jan – 19 Feb. Weather at Lalmonirhat Sadar (25.8787, 89.4534), with the 28 days before the report:
+New Age, 2 Feb 2020, from Lalmonirhat: [Late blight attack worries potato farmers in northern districts](https://www.newagebd.net/article/98379/late-blight-attack-worries-potato-farmers-in-northern-districts) (Rezaul Karim Manik), naming Rangpur, Kurigram, Lalmonirhat, Gaibandha, Dinajpur, Nilphamari, Thakurgaon and Panchagarh, after prolonged cold and dense fog; it gives no date for when the disease appeared. The Daily Star had already reported late blight in Thakurgaon Sadar and Panchagarh's Boda upazila on 21 Jan 2020 ([Late blight attack worries potato growers](https://www.thedailystar.net/country/news/late-blight-attack-worries-potato-growers-1857268)), so the outbreak began some time before the report. Station records covering that winter: Rangpur (85 of 91 days, with OGIMET filling NOAA's gap); see the station tables above and the outbreak section below. Dinajpur's record misses 7 Jan – 19 Feb. Weather at Lalmonirhat Sadar (25.8787, 89.4534), with the 28 days before the report:
 
 | Source | Rule | Danger days, 5 Jan – 1 Feb | Danger days in December | Danger weeks | Weeks, 1 Dec → 22 Feb | First fires |
 |---|---|--:|--:|--:|---|---|
@@ -244,7 +247,7 @@ Days with a full day of readings, of the 90–91 days from 1 Dec to the end of F
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | Tetulia (41850) | 75 | 65 | 18 | 43 | 50 | — | 56 | 77 | 61 |
 | Saidpur (41858) | 78 | 67 | 19 | 47 | 51 | — | 58 | 83 | 79 |
-| Rangpur (41859) | 17 | 48 | 8 | 47 | 51 | — | 67 | 90 | 85 |
+| Rangpur (41859) | 17 | 48 | 8 | 85 | 51 | — | 67 | 90 | 85 |
 | Rajarhat (418621) | 79 | 66 | 19 | 46 | 51 | — | 59 | 86 | 83 |
 | Dinajpur (41863) | 78 | 67 | 20 | 47 | 51 | — | 58 | 83 | 84 |
 | Bogura (41883) | 17 | 47 | 9 | 47 | 51 | — | 64 | 89 | — |
@@ -266,7 +269,7 @@ Days missing at three quarters of the stations or more, by winter:
 - 2023–24: 9 Dec – 10 Dec
 - 2024–25: 1 Dec – 2 Dec, 4 Dec, 18 Dec, 28 Feb
 
-The 7 Jan – 19 Feb 2020 gap is in NOAA's copy, not at the stations: it falls on the same days at every station, and [OGIMET](https://www.ogimet.com/)'s SYNOP archive has Rangpur (41859) for those days, 334 reports over all 44 days (30 days with all 8, 11 with 7; 303 reports with both temperature and dew point; checked on 15 Nov 2026 for that one station-period only). It is not used here.
+The 7 Jan – 19 Feb 2020 gap is in NOAA's copy, not at the stations: it falls on the same days at every station. For Rangpur (41859) it is filled from [OGIMET](https://www.ogimet.com/)'s SYNOP archive (`src/lib/ogimet.ts`; ISD's readings win where both exist). On the 137 readings both have in 2020-01 – 2020-02, the decoded temperature equals ISD's in 137 and the dew point in 137, and the 24-hour rain in 17 of 17; OGIMET adds 294 readings ISD lacks. The other stations' 2020 gap is not filled.
 
 ### The 7-day sum each winter
 
@@ -292,7 +295,7 @@ The moving sum of hours at RH ≥ 90% over the 7 days ending each day, for windo
 | 2024–25 | Saidpur | 79 | 44 | 90 (12 Dec) | 168 | never |
 | 2017–18 | Rangpur | 48 | 9 | 117 (17 Jan) | 168 | never |
 | 2018–19 | Rangpur | 8 | 1 | 63 (1 Dec) | 141 | never |
-| 2019–20 | Rangpur | 47 | 41 | 126 (24 Dec) | 168 | 27 Dec |
+| 2019–20 | Rangpur | 85 | 57 | 126 (24 Dec) | 168 | 27 Dec |
 | 2020–21 | Rangpur | 51 | 42 | 120 (16 Dec) | 168 | 16 Dec |
 | 2022–23 | Rangpur | 67 | 36 | 111 (3 Jan) | 168 | never |
 | 2023–24 | Rangpur | 90 | 84 | 141 (16 Jan) | 168 | 17 Jan |
@@ -425,7 +428,7 @@ Per station-winter. † marks a date with a missing 7-day window before it (the 
 | 2024–25 | Saidpur | 44 | 11 Dec† | 11 Dec† | 12 Dec† | never† | 4 Feb |
 | 2017–18 | Rangpur | 9 | 17 Jan† | 17 Jan† | 17 Jan† | 17 Jan† | 1 Jan |
 | 2018–19 | Rangpur | 1 | 1 Dec | never† | never† | never† | — |
-| 2019–20 | Rangpur | 41 | 1 Dec | 1 Dec | 20 Dec | 21 Dec | 21 Jan |
+| 2019–20 | Rangpur | 57 | 1 Dec | 1 Dec | 20 Dec | 21 Dec | 21 Jan |
 | 2020–21 | Rangpur | 42 | 8 Dec† | 8 Dec† | 8 Dec† | 10 Dec† | — |
 | 2022–23 | Rangpur | 36 | 4 Dec† | 6 Dec† | 26 Dec† | 2 Jan† | — |
 | 2023–24 | Rangpur | 84 | 6 Dec | 8 Dec | 9 Dec | 5 Jan† | 18 Jan |
