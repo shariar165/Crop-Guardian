@@ -3,7 +3,8 @@
 // days, danger weeks, the first day it fires, and the calendar sprays the season ledger would count
 // as saved. Then the same against three Bangladesh Meteorological Department stations' observed
 // humidity (NOAA ISD), with the live app's model replayed (Open-Meteo Historical Forecast), and
-// one dated outbreak report, in Lalmonirhat, as a weak check.
+// one dated outbreak report, in Lalmonirhat, as a weak check. Last, the dated reports of 2016–17 to
+// 2024–25 next to the 7-day humid sum at the stations around the app's districts (outbreak-humidity.ts).
 // Run: npx tsx scripts/compare-blight-rules.ts [--write]   (--write updates docs/rule-comparison.md)
 import { writeFileSync } from 'node:fs'
 import { upazilaById } from '@/lib/areas'
@@ -11,9 +12,11 @@ import { SEASONS } from '@/lib/crops'
 import { SPRAY_COST } from '@/lib/data'
 import { addDays, todayIn } from '@/lib/dates'
 import { fitThreshold, humidHoursByDay, monthlyMeans, sampledEvery3h, worstWeek } from '@/lib/humidityGap'
-import { fetchStationHourly } from '@/lib/isd'
+import { fetchStationHourly, isdStation, type IsdStation } from '@/lib/isd'
 import { classifyJhulsaDays, FIVE_DAY, LEAD_DAYS, MILD_MAX_C, MILD_MIN_C, SEVEN_DAY, summarizeJhulsaDays } from '@/lib/jhulsacast'
 import { buildLedger, WEEK_DAYS } from '@/lib/ledger'
+import { cacheFetches } from './fetchCache'
+import { outbreakSection } from './outbreak-humidity'
 import { classifyDays, HUMID_RH, HUTTON_HUMID_HOURS, MIN_TEMP_C, STRICT_HUMID_HOURS, type StripDay, summarizeDays } from '@/lib/risk'
 import {
   DEFAULT_LOCATION,
@@ -171,20 +174,16 @@ function nearTable(): string[] {
 
 // ---- Stations ----
 
-// BMD synoptic stations near the potato districts, at the coordinates their ISD records give.
-type Station = { wmo: string; name: string; lat: number; lon: number }
-const STATIONS: Station[] = [
-  { wmo: '41883', name: 'Bogura', lat: 24.85, lon: 89.37 },
-  { wmo: '41859', name: 'Rangpur', lat: 25.73, lon: 89.23 },
-  { wmo: '41863', name: 'Dinajpur', lat: 25.65, lon: 88.68 },
-]
+// Three BMD synoptic stations near the potato districts, at the coordinates their ISD records give.
+type Station = IsdStation
+const STATIONS: Station[] = ['Bogura', 'Rangpur', 'Dinajpur'].map(isdStation)
 // The rules are run on a station's winter only when nearly every day of it has readings.
 const MIN_RULE_DAYS = 80
 
 type GapSource = { name: string; from?: string; fetch: (s: Station, w: Winter) => Promise<HourlyForecast> }
 const STATION_SOURCE = 'Station (ISD)'
 const GAP_SOURCES: GapSource[] = [
-  { name: STATION_SOURCE, fetch: (s, w) => fetchStationHourly(s.wmo, w.fetchFrom, w.to, TIMEOUT_MS) },
+  { name: STATION_SOURCE, fetch: (s, w) => fetchStationHourly(s.id, w.fetchFrom, w.to, TIMEOUT_MS) },
   { name: 'Open-Meteo archive', fetch: (s, w) => fetchHourlyArchive(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
   { name: 'Historical forecast', from: HISTORICAL_FORECAST_FROM, fetch: (s, w) => fetchHourlyHistoricalForecast(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
   { name: 'NASA POWER', fetch: (s, w) => fetchHourlyNasaPower(s.lat, s.lon, w.fetchFrom, w.to, TIMEOUT_MS) },
@@ -348,7 +347,7 @@ function eventTable(rows: Row[], w: Winter): string[] {
   ]
 }
 
-function markdown(main: Row[], event: Row[], sws: StationWinter[], place: { name: string; lat: number; lon: number }, today: string): string {
+function markdown(main: Row[], event: Row[], sws: StationWinter[], outbreak: string[], place: { name: string; lat: number; lon: number }, today: string): string {
   const { lat, lon } = DEFAULT_LOCATION
   const ew = winterOf(EVENT.winter)
   const fit = thresholdTable(sws)
@@ -360,7 +359,7 @@ function markdown(main: Row[], event: Row[], sws: StationWinter[], place: { name
       'from two past-weather sources: the [Open-Meteo archive](https://open-meteo.com/en/docs/historical-weather-api) (its default model here is ECMWF IFS at 9 km, the model the live app\'s forecast uses) and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2 reanalysis, about 50 km, hourly in local solar time). ' +
       'The app uses the first rule; the other two are only compared here.',
     '',
-    '> Weather-only counts. None of these rules has been validated against late-blight records in Bangladesh, and the one outbreak report below is a single event, not a validation.',
+    '> Weather-only counts. None of these rules has been validated against late-blight records in Bangladesh. The outbreak reports below are dated news reports and bulletins, not a validation.',
     '',
     '## The rules',
     '',
@@ -442,12 +441,15 @@ function markdown(main: Row[], event: Row[], sws: StationWinter[], place: { name
     'A rule that fired in the weeks before the report agrees with it; a rule that was also firing all December and January would have agreed with any date. ' +
       'One report gives neither the date the disease first appeared nor the days without it, so it cannot show which rule is right.',
     '',
+    ...outbreak,
+    '',
     `Generated on ${today} by \`npx tsx scripts/compare-blight-rules.ts --write\`.`,
     '',
   ].join('\n')
 }
 
 async function main() {
+  cacheFetches()
   const today = todayIn()
   const main: Row[] = []
   for (const year of WINTERS) main.push(...(await rowsAt(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon, winterOf(year), 'Shibganj')))
@@ -459,6 +461,7 @@ async function main() {
 
   const sws: StationWinter[] = []
   for (const station of STATIONS) for (const year of WINTERS) sws.push(await stationWinter(station, winterOf(year)))
+  const outbreak = await outbreakSection()
 
   console.log()
   console.log(mainTable(main).join('\n'))
@@ -467,7 +470,7 @@ async function main() {
   for (const table of [coverageTable(sws), monthTable(sws), worstWeekTable(sws), stationRulesTable(sws), thresholdTable(sws).table]) console.log('\n' + table.join('\n'))
 
   if (process.argv.includes('--write')) {
-    writeFileSync(DOC, markdown(main, event, sws, place, today))
+    writeFileSync(DOC, markdown(main, event, sws, outbreak, place, today))
     console.log(`\nWrote ${DOC}`)
   }
 }

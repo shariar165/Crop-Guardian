@@ -53,15 +53,28 @@ function window(byDate: Map<string, JhulsaDay>, date: string, n: number): Jhulsa
   return days.every((d) => d !== undefined) ? (days as JhulsaDay[]) : null
 }
 
-const sum = (days: JhulsaDay[], key: 'humidHours' | 'mildHours') => days.reduce((s, d) => s + d[key], 0)
+export type MovingSum = { humidHours: number; mildHours: number }
+
+// Each day's hours at RH ≥ 90% and at 7.2–26.6°C over the `n` days ending on it. Days whose
+// window has a gap have no sum.
+export function movingSums(days: JhulsaDay[], n: number): Map<string, MovingSum> {
+  const byDate = new Map(days.map((d) => [d.date, d]))
+  const sums = new Map<string, MovingSum>()
+  for (const day of days) {
+    const w = window(byDate, day.date, n)
+    if (w) sums.set(day.date, { humidHours: w.reduce((s, d) => s + d.humidHours, 0), mildHours: w.reduce((s, d) => s + d.mildHours, 0) })
+  }
+  return sums
+}
 
 // A danger day is a day either condition is met on: its moving sums have held for the run of days
 // ending that day. Days before enough data (13 days for the 7-day condition) can't fire.
 export function classifyJhulsaDays(days: JhulsaDay[]): JhulsaRisk[] {
   const byDate = new Map(days.map((d) => [d.date, d]))
+  const sums = { [SEVEN_DAY.days]: movingSums(days, SEVEN_DAY.days), [FIVE_DAY.days]: movingSums(days, FIVE_DAY.days) }
   const holds = (date: string, rule: { days: number; humidHours: number; mildHours: number }) => {
-    const w = window(byDate, date, rule.days)
-    return w !== null && sum(w, 'humidHours') >= rule.humidHours && sum(w, 'mildHours') >= rule.mildHours
+    const s = sums[rule.days].get(date)
+    return s !== undefined && s.humidHours >= rule.humidHours && s.mildHours >= rule.mildHours
   }
   const prevails = (date: string, rule: { days: number; humidHours: number; mildHours: number }) =>
     Array.from({ length: rule.days }, (_, i) => addDays(date, -i)).every((d) => holds(d, rule))

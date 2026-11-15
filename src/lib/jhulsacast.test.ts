@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { addDays } from '@/lib/dates'
-import { classifyJhulsaDays, type JhulsaDay, summarizeJhulsaDays } from '@/lib/jhulsacast'
+import { classifyJhulsaDays, type JhulsaDay, movingSums, summarizeJhulsaDays } from '@/lib/jhulsacast'
 
 const START = '2025-12-01'
 // `n` days from START, each with the same hours, and rain from `rain` (0 when not given).
@@ -72,5 +72,14 @@ describe('classifyJhulsaDays', () => {
   it('calls a day danger when either condition fires, and safe otherwise', () => {
     const risks = classifyJhulsaDays(days(14, 15, 22)).map((d) => d.risk)
     assert.deepEqual(risks, [...Array(12).fill('safe'), 'danger', 'danger'])
+  })
+})
+
+describe('movingSums', () => {
+  it('sums the n days ending on each day, and leaves out windows with a gap', () => {
+    const d = days(9, 10, 20).filter((_, i) => i !== 7)
+    const sums = movingSums(d, 7)
+    assert.deepEqual([...sums.keys()], [addDays(START, 6)])
+    assert.deepEqual(sums.get(addDays(START, 6)), { humidHours: 70, mildHours: 140 })
   })
 })

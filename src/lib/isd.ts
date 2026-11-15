@@ -15,6 +15,30 @@ const STEP_H = 3
 const MAX_COVER_H = 6
 const RAIN_HOUR_LOCAL = 9
 
+// BMD stations within 30 km of a union the app covers, with ISD records in these winters (from
+// NOAA's isd-history.csv). Dhaka's airport (41922) is left out: it files only METAR, whose whole-degree
+// dew point is too coarse for RH ≥ 90%; Tejgaon covers Dhaka. ISD has no Rajshahi city station after
+// 2003; Shah Mokhdum is Rajshahi's airport.
+export type IsdStation = { id: string; wmo: string; name: string; lat: number; lon: number }
+export const ISD_STATIONS: IsdStation[] = [
+  { id: '41850099999', wmo: '41850', name: 'Tetulia', lat: 26.35, lon: 88.6 },
+  { id: '41858099999', wmo: '41858', name: 'Saidpur', lat: 25.75, lon: 88.917 },
+  { id: '41859099999', wmo: '41859', name: 'Rangpur', lat: 25.733, lon: 89.233 },
+  { id: '41862199999', wmo: '418621', name: 'Rajarhat', lat: 25.8, lon: 89.55 },
+  { id: '41863099999', wmo: '41863', name: 'Dinajpur', lat: 25.65, lon: 88.683 },
+  { id: '41883099999', wmo: '41883', name: 'Bogura', lat: 24.85, lon: 89.367 },
+  { id: '41895099999', wmo: '41895', name: 'Rajshahi', lat: 24.437, lon: 88.617 },
+  { id: '41907099999', wmo: '41907', name: 'Ishurdi', lat: 24.153, lon: 89.049 },
+  { id: '41909099999', wmo: '41909', name: 'Tangail', lat: 24.25, lon: 89.933 },
+  { id: '41923099999', wmo: '41923', name: 'Dhaka (Tejgaon)', lat: 23.779, lon: 90.383 },
+  { id: '41941099999', wmo: '41941', name: 'Chandpur', lat: 23.267, lon: 90.7 },
+]
+export const isdStation = (name: string): IsdStation => {
+  const s = ISD_STATIONS.find((x) => x.name === name)
+  if (!s) throw new Error(`No ISD station ${name}`)
+  return s
+}
+
 export type IsdReading = { time: string; temp: number; dew: number; rain24: number | null } // time: local "YYYY-MM-DDTHH:MM"
 
 function csvCells(line: string): string[] {
@@ -116,17 +140,32 @@ export function stationHourly(readings: IsdReading[], start: string, end: string
   return { time: pick(time), temperature: pick(temperature), humidity: pick(humidity), precipitation: pick(precipitation) }
 }
 
-// One station-year of ISD, or '' when NOAA has no file for it (yet).
-export async function fetchIsdYear(usafWban: string, year: number, timeoutMs: number): Promise<string> {
-  const res = await fetch(`${ISD_URL}/${year}/${usafWban}.csv`, { signal: AbortSignal.timeout(timeoutMs) })
-  if (res.status === 404 || res.status === 403) return ''
-  if (!res.ok) throw new Error(`ISD responded ${res.status}`)
-  return res.text()
+// One station-year of ISD, or '' when NOAA has no file for it (yet). The backtest scripts keep each
+// file on disk (scripts/fetchCache.ts), so a year read for two winters is downloaded once.
+// The bucket sometimes drops a connection partway through a file, so a failed download is retried.
+const ISD_ATTEMPTS = 3
+export async function fetchIsdYear(id: string, year: number, timeoutMs: number): Promise<string> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await fetch(`${ISD_URL}/${year}/${id}.csv`, { signal: AbortSignal.timeout(timeoutMs) })
+      if (res.status === 404 || res.status === 403) return ''
+      if (!res.ok) throw new Error(`ISD responded ${res.status}`)
+      return await res.text()
+    } catch (err) {
+      if (attempt >= ISD_ATTEMPTS) throw err
+    }
+  }
 }
 
-// A BMD station's observed weather for start..end (local dates). WMO 41883 is ISD "41883099999".
-export async function fetchStationHourly(wmo: string, start: string, end: string, timeoutMs: number): Promise<HourlyForecast> {
-  const years = [...new Set([Number(addDays(start, -1).slice(0, 4)), Number(end.slice(0, 4))])]
-  const files = await Promise.all(years.map((y) => fetchIsdYear(`${wmo}099999`, y, timeoutMs)))
-  return stationHourly(files.flatMap(parseIsd), start, end)
+// A station's observed weather for start..end (local dates), by ISD id ("41883099999"). The years
+// are read one at a time, and only the readings inside the span are kept.
+export async function fetchStationHourly(id: string, start: string, end: string, timeoutMs: number): Promise<HourlyForecast> {
+  const span = [...new Set([Number(addDays(start, -1).slice(0, 4)), Number(end.slice(0, 4))])]
+  const from = `${addDays(start, -1)}T00:00`
+  const to = `${end}T23:59`
+  const readings: IsdReading[] = []
+  for (const year of span) {
+    for (const r of parseIsd(await fetchIsdYear(id, year, timeoutMs))) if (r.time >= from && r.time <= to) readings.push(r)
+  }
+  return stationHourly(readings, start, end)
 }
