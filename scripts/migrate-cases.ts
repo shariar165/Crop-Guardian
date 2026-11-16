@@ -72,6 +72,12 @@ CREATE TABLE IF NOT EXISTS ask_rate (
   "count" integer NOT NULL,
   PRIMARY KEY ("key", "day")
 );
+-- Answers already written, by a hash of the question, the crop and the advice and prompt versions.
+CREATE TABLE IF NOT EXISTS ask_cache (
+  "key"       text PRIMARY KEY,
+  "answer"    jsonb NOT NULL,
+  "createdAt" timestamptz NOT NULL DEFAULT now()
+);
 `
 
 async function main() {
@@ -79,7 +85,7 @@ async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
   try {
     await pool.query(SQL)
-    console.log('The "case", "alert", "alert_state", "kb_chunk" and "ask_rate" tables are ready.')
+    console.log('The "case", "alert", "alert_state", "kb_chunk", "ask_rate" and "ask_cache" tables are ready.')
   } finally {
     await pool.end()
   }

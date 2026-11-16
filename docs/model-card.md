@@ -57,7 +57,7 @@ These are reproducible from the repo today.
 
 ## Limitations
 
-- **Thresholds fitted on Indonesian field photos, not Bangladeshi ones.** Every result in the app therefore says "পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা". The next step is 20–30 photos from Bangladeshi fields, labelled by an agriculture officer, run through `scripts/eval-field-photos.ts`.
+- **Thresholds fitted on Indonesian field photos, not Bangladeshi ones.** Every result in the app therefore says "পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা". The next step is public field datasets the model never trained on, run through `scripts/eval-field-photos.ts`, then the farmer's 7-day follow-up (not built yet), which gives weaker labels than an expert's.
 - **Only three classes.** Other diseases and pests should come out as unknown and go to an officer, but as the parity images show, some will not.
 - **Potato only.** This model sees potato leaves; paddy leaves go to the paddy model.
 - **One photo is decided at a time**, and two photos are combined by a fixed rule (`combine.ts`), not by a model calibrated on photo pairs.
