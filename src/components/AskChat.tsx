@@ -3,13 +3,17 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { HISTORY_TURNS, MAX_QUESTION } from '@/lib/assistant/guard'
+import { CROPS, CROP_IDS, type CropId } from '@/lib/crops'
+import { todayIn } from '@/lib/dates'
 import { store, useStored } from '@/lib/deviceStore'
+import { fieldCrop } from '@/lib/fieldList'
+import { useChosenSeason, useFields } from '@/lib/fields'
 import { primaryClass } from './Buttons'
 import { SendIcon } from './icons'
 import ListenButton from './ListenButton'
 
 type Source = { id: string; title: string; source: string; href: string }
-type Answer = { answer: string; sources: Source[]; escalate: boolean; note: string | null }
+type Answer = { answer: string; sources: Source[]; escalate: boolean; askCrop?: boolean; note: string | null }
 type Turn = { q: string; a: Answer }
 
 const EXAMPLES = ['কুয়াশা পড়ছে, আলুতে কী করব?', 'আজ আমার এলাকায় ধসার ঝুঁকি কেমন?', 'আলু হিমাগারে কীভাবে রাখব?', 'ঢলে পড়া রোগ কীভাবে চিনব?']
@@ -30,6 +34,9 @@ function parseTurns(raw: string | null): Turn[] {
 export default function AskChat() {
   const raw = useStored(STORE)
   const turns = useMemo(() => parseTurns(raw), [raw])
+  // Only the crop of the field in season leaves the phone, never its dates.
+  const fields = useFields()
+  const chosen = useChosenSeason()
   const [input, setInput] = useState('')
   // The question being answered, shown until the answer arrives.
   const [pending, setPending] = useState<string | null>(null)
@@ -39,24 +46,31 @@ export default function AskChat() {
 
   useEffect(() => box.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), [turns, pending])
 
-  async function send(question: string) {
+  // `crop` is the farmer's answer to «আলু না ধান?»: the question they asked goes again with it, and
+  // that exchange leaves the chat, so it never goes back to a model as history.
+  async function send(question: string, crop?: CropId) {
     const q = question.trim()
     if (!q || busy) return
     setPending(q)
     setInput('')
+    const kept = turns.filter((t) => !t.a.askCrop)
     let a: Answer
     try {
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question: q, history: turns.slice(-HISTORY_TURNS).map((t) => ({ q: t.q, a: t.a.answer })) }),
+        body: JSON.stringify({
+          question: q,
+          crop: crop ?? fieldCrop(fields, todayIn(), chosen),
+          history: kept.slice(-HISTORY_TURNS).map((t) => ({ q: t.q, a: t.a.answer })),
+        }),
       })
       a = await res.json()
       if (typeof a.answer !== 'string') throw new Error('No answer')
     } catch {
       a = { answer: OFFLINE, sources: [], escalate: false, note: null }
     }
-    store(STORE, JSON.stringify([...turns, { q, a }].slice(-KEPT_TURNS)))
+    store(STORE, JSON.stringify([...kept, { q, a }].slice(-KEPT_TURNS)))
     setPending(null)
   }
 
@@ -83,6 +97,15 @@ export default function AskChat() {
             <p className="m-0 max-w-[85%] self-end rounded-[18px] rounded-br-[6px] bg-teal px-3.5 py-2.5 text-[16px] leading-[1.4] text-white">{t.q}</p>
             <div className="stitch-lg flex max-w-[92%] flex-col gap-2 rounded-[18px] rounded-bl-[6px] p-3.5">
               <p className="m-0 text-[16px] leading-[1.5]">{t.a.answer}</p>
+              {t.a.askCrop && i === turns.length - 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {CROP_IDS.map((crop) => (
+                    <button key={crop} type="button" disabled={busy} onClick={() => send(t.q, crop)} className={`${primaryClass} min-h-11 px-5 disabled:opacity-50`}>
+                      {CROPS[crop].nameBn}
+                    </button>
+                  ))}
+                </div>
+              )}
               {t.a.sources.length > 0 && (
                 <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px]">
                   {t.a.sources.map((s) => (

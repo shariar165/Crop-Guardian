@@ -5,13 +5,18 @@ import { fromBnDigits } from '@/lib/bn'
 export const MAX_QUESTION = 300
 // Two short paragraphs on a phone; the prompt asks for less.
 export const MAX_ANSWER = 700
-// Turns of earlier chat sent back with a question (a sliding window: older ones are dropped).
-export const HISTORY_TURNS = 3
+// Turns of earlier chat sent back with a question (a sliding window: older ones are dropped), and
+// how much of each answer: enough to tell what "এটা" refers to.
+export const HISTORY_TURNS = 2
+export const MAX_HISTORY_ANSWER = 200
 
 export const EXPERIMENTAL_NOTE = 'পরীক্ষামূলক: অ্যাপের পরামর্শ থেকে লেখা। সন্দেহ হলে উপসহকারী কৃষি কর্মকর্তাকে জিজ্ঞেস করুন।'
 export const DOSE_LINE = 'ওষুধের মাত্রা: বোতলের লেবেল অনুযায়ী।'
 export const OUT_OF_SCOPE = 'আমি শুধু আলু আর ধানের রোগ, চাষ আর এই অ্যাপ নিয়ে বলতে পারি। অন্য বিষয়ে উপজেলা কৃষি অফিসে জিজ্ঞেস করুন।'
 export const NO_SOURCE = 'এ বিষয়ে অ্যাপের পরামর্শে কিছু পাইনি। উপসহকারী কৃষি কর্মকর্তাকে জিজ্ঞেস করুন, বা পাতার ছবি তুলে পাঠান।'
+// Said before a passage shown as it stands: it is the closest advice, not an answer to the question.
+export const PASSAGE_INTRO = 'এখন উত্তর লেখা যাচ্ছে না। অ্যাপের পরামর্শের সবচেয়ে কাছের অংশ:'
+export const ASK_CROP = 'আলু না ধান?'
 export const UNAVAILABLE = 'এখন উত্তর দিতে পারছি না। একটু পরে আবার চেষ্টা করুন, বা «আলু চাষের পরামর্শ» পাতা দেখুন।'
 
 export type QuestionCheck = { ok: true; text: string } | { ok: false; reason: 'empty' | 'long' }
@@ -27,6 +32,16 @@ export function checkQuestion(raw: unknown): QuestionCheck {
 // welcome text instead of an answer. A greeting is short and asks nothing.
 const QUESTION_WORD = /[?？]|কী|কি\b|কত|কেন|কীভাবে|কিভাবে|কখন|কোন|কোথায়|কে\b|নাকি|দেব|করব|how|what|why|when|which/i
 export const looksLikeQuestion = (text: string): boolean => text.length > 40 || QUESTION_WORD.test(text)
+
+// Models have called "ডাইথেন না সিকিউর, কোনটা ভালো?" off topic, which tells a farmer holding a bottle
+// that the app can't help. A question about medicine is always answered, or sent to the officer.
+const MEDICINE_WORD = /ওষুধ|ছত্রাকনাশক|কীটনাশক|স্প্রে|fungicide|pesticide|spray/i
+export const aboutMedicine = (text: string): boolean => MEDICINE_WORD.test(text) || hasBrand(text)
+
+// The same mistake on the app's own words ("হোমে লাল রং মানে কী?"). A wrong "off topic" turns a farmer
+// away, while a wrong "question" only costs one more model call that can still say out of scope.
+const APP_WORD = /রং|রঙ|ঝুঁকি|অ্যাপ/
+export const neverOffTopic = (text: string): boolean => aboutMedicine(text) || APP_WORD.test(text)
 
 // A farmer may type their number ("আমাকে ০১৭… নম্বরে ফোন দিন"); it never goes to a model provider.
 const PHONE = /(?:\+?88)?01[3-9]\d{8}/g
@@ -101,6 +116,40 @@ export function sanitizeAnswer(answer: string): { text: string; redacted: boolea
     text += (text ? ' ' : '') + s
   }
   return { text, redacted, named: false }
+}
+
+// Models slip other scripts into Bengali ("也就") and echo prompt words ("সOURCES"). Latin is fine
+// only for words the farmer's sources use, or the two every farmer sees on screen.
+const FOREIGN_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}\p{Script=Arabic}\p{Script=Devanagari}]/u
+const ALWAYS_LATIN = ['sms', 'whatsapp']
+
+const numbersIn = (text: string): string[] => fromBnDigits(text).match(/\d+(?:\.\d+)?/g) ?? []
+
+export function hasForeignText(answer: string, grounds = ''): boolean {
+  const known = grounds.toLowerCase()
+  const latin = answer.match(/[A-Za-z]{2,}/g) ?? []
+  return FOREIGN_SCRIPT.test(answer) || latin.some((w) => !ALWAYS_LATIN.includes(w.toLowerCase()) && !known.includes(w.toLowerCase()))
+}
+
+// Two vowel signs in a row never occur in Bengali (ো and ৌ are one sign after NFC), so this finds
+// the garbled words some models write ("তিুলুন") without flagging a word it simply doesn't know.
+export const hasBrokenBengali = (text: string): boolean => /[\u09BE-\u09CC\u09D7]{2}/u.test(text.normalize('NFC'))
+
+// Photos stay on the phone unless the farmer shares them; a model describing the usual app says
+// otherwise, and that is a false promise about privacy.
+const NEVER_UNSOURCED = ['আপলোড', 'upload']
+
+export type AnswerProblem = 'foreign_text' | 'broken_text' | 'unsupported_claim' | 'unsupported_number'
+
+// What's wrong with a model's answer, checked against the text it says it used. A prompt rule isn't
+// enough: the v3 eval still gave potato's 6 hours as paddy's rule. Every number must come from the
+// cited passages or the forecast, so a rule copied from the other crop has nowhere to come from.
+export function answerProblem(answer: string, grounds: string): AnswerProblem | null {
+  if (hasForeignText(answer, grounds)) return 'foreign_text'
+  if (hasBrokenBengali(answer)) return 'broken_text'
+  if (NEVER_UNSOURCED.some((w) => answer.toLowerCase().includes(w) && !grounds.toLowerCase().includes(w))) return 'unsupported_claim'
+  const supported = new Set(numbersIn(grounds))
+  return numbersIn(answer).every((n) => supported.has(n)) ? null : 'unsupported_number'
 }
 
 // The model may only cite chunks it was shown; anything else is dropped as invented.
