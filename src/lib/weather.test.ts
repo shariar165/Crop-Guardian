@@ -23,6 +23,12 @@ describe('Open-Meteo responses', () => {
     assert.throws(() => parseHourly(bad), /malformed/)
   })
 
+  it('reads hourly rain when the archive sends it, and refuses it at the wrong length', () => {
+    const wet = { ...point(91), hourly: { ...point(91).hourly, precipitation: [0, 1.2] } }
+    assert.deepEqual(parseHourly(wet).precipitation, [0, 1.2])
+    assert.throws(() => parseHourly({ ...wet, hourly: { ...wet.hourly, precipitation: [0] } }), /malformed/)
+  })
+
   it('keeps one response per point, in order, for several points', () => {
     const many = parseHourlyMany([point(80), point(95)], 2)
     assert.deepEqual(
@@ -53,6 +59,12 @@ describe('NASA POWER responses', () => {
       temperature: [13.33, 12.94, null],
       humidity: [87.82, 89.84, 92.23],
     })
+  })
+
+  it('reads hourly rain when it is asked for', () => {
+    const rain = { PRECTOTCORR: { '2025010100': 0, '2025010101': 0.4, '2025010102': -999 } }
+    const wet = { properties: { parameter: { ...body.properties.parameter, ...rain } } }
+    assert.deepEqual(parseNasaPower(wet).precipitation, [0, 0.4, null])
   })
 
   it('refuses a response without both series', () => {

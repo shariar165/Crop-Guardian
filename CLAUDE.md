@@ -24,6 +24,7 @@ node --import tsx --test --test-name-pattern="Hutton" "src/**/*.test.ts"
 npm run auth:migrate                              # create/update Better Auth tables (needs .env.local)
 npx tsx scripts/set-role.ts 01712345678 officer   # roles can only be changed here
 npx tsx scripts/find-hutton-periods.ts [--write]  # replay dates; --write updates docs/risk-backtest.md
+npx tsx scripts/compare-blight-rules.ts [--write] # app rule vs ≥ 10 h vs JHULSACAST; --write updates docs/rule-comparison.md
 npx tsx scripts/find-blast-periods.ts [--write]   # paddy blast; --write updates docs/blast-backtest.md
 npx tsx scripts/eval-field-photos.ts <dir> [--write]  # labelled photo folders through the real model; --write updates docs/field-photo-test.md
 npm run db:migrate                                # the app's own tables (cases, SMS alerts, assistant, answer cache)
