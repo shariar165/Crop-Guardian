@@ -14,6 +14,7 @@ import { viewerHasAlerts } from '@/lib/alertDb'
 import { bnWeekday } from '@/lib/bn'
 import { todayIn } from '@/lib/dates'
 import { getPlace } from '@/lib/place'
+import { showcaseActive } from '@/lib/showcase'
 import { buildDecision, type RiskAssessment } from '@/lib/risk'
 import { fetchHourlyForecast, type HourlyForecast } from '@/lib/weather'
 
@@ -129,6 +130,7 @@ export default async function Home() {
   const [place, alerts] = await Promise.all([getPlace(), viewerHasAlerts()])
   const hourly = await loadForecast(place.lat, place.lon)
   const live = hourly && assessAll(hourly)
+  const showcase = showcaseActive()
 
   let gate: React.ReactNode
   if (!live) {
@@ -166,10 +168,16 @@ export default async function Home() {
             প্রশ্ন করুন →
           </Link>
         </div>
+        {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}
+        {showcase && (
+          <Link href="/docs" lang="en" className="self-center text-[15px] font-bold text-teal">
+            For judges (English) →
+          </Link>
+        )}
       </div>
 
       <BottomNav />
-      <FirstRunIntro />
+      <FirstRunIntro showcase={showcase} />
     </div>
   )
 }

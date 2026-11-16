@@ -46,7 +46,7 @@ export default function UncertainView() {
           <p className="m-0 text-[15px] leading-[1.45]">ভুল ওষুধ এড়াতে আমি আন্দাজে একটা নাম বলব না।</p>
         </div>
       </div>
-      <ValidationBadge crop={crop} className="mx-4 mt-2.5" />
+      <ValidationBadge crop={crop} sample={record.sample} className="mx-4 mt-2.5" />
 
       <SectionRule label="সম্ভাব্য তালিকা" className="mx-4 mt-4 mb-2.5" />
 

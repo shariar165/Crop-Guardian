@@ -11,15 +11,21 @@ import type { CropId } from '@/lib/crops'
 import type { DiagnosisConfig } from '@/lib/diagnosis/config'
 import { PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { photoLine, riskLine } from '@/lib/diagnosis/explain'
+import { SAMPLE_NOTE, sampleById } from '@/lib/diagnosis/samples'
 import { useTodayRisk } from '@/lib/diagnosis/useDiagnosis'
 
-/** Honest about where the model was checked. */
-export function ValidationBadge({ crop, className = '' }: { crop: CropId; className?: string }) {
+/** Honest about where the model was checked, and that a showcase sample is not the farmer's photo. */
+export function ValidationBadge({ crop, sample, className = '' }: { crop: CropId; sample?: string; className?: string }) {
   return (
-    <span className={`flex items-center gap-1.5 self-start rounded-lg bg-sand px-2.5 py-1 text-[12px] font-semibold text-muted ${className}`}>
-      <SearchIcon size={14} weight={2.2} />
-      {PHOTO_SPECS[crop].validation}
-    </span>
+    <>
+      <span className={`flex items-center gap-1.5 self-start rounded-lg bg-sand px-2.5 py-1 text-[12px] font-semibold text-muted ${className}`}>
+        <SearchIcon size={14} weight={2.2} />
+        {PHOTO_SPECS[crop].validation}
+      </span>
+      {sampleById(sample) && (
+        <span className={`self-start rounded-lg bg-sun px-2.5 py-1 text-[12px] font-bold text-ink ${className}`}>{SAMPLE_NOTE}</span>
+      )}
+    </>
   )
 }
 

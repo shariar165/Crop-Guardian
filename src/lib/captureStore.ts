@@ -25,6 +25,8 @@ export type DiagnosisRecord = {
   result: CombinedResult
   // The farmer's answers on /questions, in the order asked.
   answers: AnswerRecord[]
+  // Set when the photos were a showcase sample leaf (src/lib/diagnosis/samples.ts), not the farmer's.
+  sample?: string
 }
 
 export type CaseRecord = {

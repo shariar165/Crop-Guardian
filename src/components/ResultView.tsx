@@ -69,7 +69,7 @@ export default function ResultView() {
           {content.banner.tone === 'ok' ? <CheckIcon size={22} weight={2.4} /> : <WarnIcon size={22} weight={2.2} />}
           {content.banner.text}
         </div>
-        <ValidationBadge crop={crop} className="mt-1" />
+        <ValidationBadge crop={crop} sample={record.sample} className="mt-1" />
       </div>
 
       <WhyCard

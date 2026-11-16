@@ -322,6 +322,14 @@ npx tsx scripts/mcp-client.ts http://localhost:3000/api/mcp --ask "কিচক 
 
 The camera and the service worker need HTTPS. To try a local build on a real phone, run it behind a tunnel: `npm run build && npm start`, then `cloudflared tunnel --url http://localhost:3000` (Cloudflare's quick tunnel, no account) or `ngrok http 3000`, and open the `https://` URL it prints. Set `BETTER_AUTH_URL` to that URL to sign in through it. The tunnel is public while it runs, so stop it after the demo.
 
+## Showcase mode
+
+For a demo day, set `SHOWCASE_UNTIL=YYYY-MM-DD` (Production in Vercel, then redeploy). Through that date in Bangladesh time (`src/lib/showcase.ts`), and never after:
+
+- `/account` and `/officer` work without signing in, as a showcase officer, and cases upload without an account.
+- Home and the first-run intro show a "For judges (English)" link to `/docs`.
+- The camera shows «নমুনা ছবি দিয়ে দেখুন / Try a sample leaf» for potato. It offers three images from the notebook's parity set, served from `public/samples/` and listed in `src/lib/diagnosis/samples.ts`: a healthy leaf, late blight, and a virus that was held out of training. A sample goes through the same steps as a gallery photo, used as both photos, so the real model decides it and the normal result screen shows it, never the `?mock` path. The result carries «নমুনা ছবি, পরীক্ষার সেট থেকে · sample image from the test set». `/camera` stays static, so it can work offline; it asks `GET /api/showcase` (never cached) whether the mode is on. `samples.test.ts` checks that each sample is its parity image byte for byte and that the notebook decided it as its label says.
+
 ## Limitations and next steps
 
 We say what isn't proven yet, in the app as well as here.
