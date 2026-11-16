@@ -201,7 +201,9 @@ export default function MapView({
       </div>
 
       <div className="mx-[18px] mt-2.5 flex shrink-0 flex-wrap gap-3 text-[13px] font-semibold">
-        <span className="text-muted">আজকের {CROPS[crop].diseaseBn} ঝুঁকি:</span>
+        <span className="text-muted">
+          আজকের {CROPS[crop].diseaseBn} ঝুঁকি{CROPS[crop].experimental ? ' (পরীক্ষামূলক)' : ''}:
+        </span>
         {ORDER.map((r) => (
           <span key={r} className="flex items-center gap-[5px]">
             <LegendSwatch risk={r} />

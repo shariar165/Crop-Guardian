@@ -4,8 +4,8 @@ import { Bar, BarChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContaine
 
 export type BacktestPoint = { season: string; openMeteo: number; nasa: number }
 
-// Alerts the app would have sent each winter (its rule, both weather sources) against the weekly
-// calendar spraying many farmers follow.
+// Alerts the app would have sent each winter (its rule, both weather sources), with the weekly
+// calendar spraying many farmers follow drawn for scale. Not a saving: the rule is unvalidated.
 export default function BacktestChart({ data, calendarSprays }: { data: BacktestPoint[]; calendarSprays: number }) {
   return (
     <figure className="m-0 flex flex-col gap-1.5">
@@ -24,7 +24,7 @@ export default function BacktestChart({ data, calendarSprays }: { data: Backtest
         </ResponsiveContainer>
       </div>
       <figcaption className="text-[12px] leading-[1.4] text-muted">
-        Shibganj, Bogura, Dec–Feb. Weather-only counts from docs/risk-backtest.md; not yet checked against real outbreak records.
+        Shibganj, Bogura, Dec–Feb, from docs/risk-backtest.md. Weather-only alert counts, not sprays avoided: the rule is not validated against outbreaks, so fewer alerts than weekly sprays is no evidence of a saving.
       </figcaption>
     </figure>
   )

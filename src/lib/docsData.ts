@@ -35,3 +35,23 @@ export function parseEvalSummary(md: string): { check: string; result: string }[
   const summary = md.split('## Summary')[1]?.split('## ')[0] ?? ''
   return tableRows(summary).map(([check, result]) => ({ check, result }))
 }
+
+// docs/rule-comparison.md's "## What this shows": the bold lead sentence of each bullet.
+export function parseFindings(md: string): string[] {
+  const section = md.split('## What this shows')[1]?.split('\n## ')[0] ?? ''
+  return section.split('\n').flatMap((line) => {
+    const m = line.trim().match(/^- \*\*(.+?)\*\*/)
+    return m ? [m[1]] : []
+  })
+}
+
+export type HeldOutRow = { dataset: string; photos: string; accuracy: string; misleading: string; unknown: string }
+
+// docs/model-card-paddy.md's "### Leave one dataset out":
+// | Held-out dataset | Photos | Classes | Accuracy | Macro-F1 | Misleading | "Unknown" |
+export function parseLeaveOneOut(md: string): HeldOutRow[] {
+  const section = md.split('### Leave one dataset out')[1]?.split('\n#')[0] ?? ''
+  return tableRows(section).flatMap(([dataset, photos, , accuracy, , misleading, unknown]) =>
+    unknown === undefined ? [] : [{ dataset, photos, accuracy, misleading, unknown }],
+  )
+}

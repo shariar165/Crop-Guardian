@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, mock, test } from 'node:test'
 import { ask, historyMessages } from './answer'
 import { answerKey, KB_VERSION, normalizeQuestion } from './cache'
-import { aboutMedicine, answerProblem, ASK_CROP, BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasBrokenBengali, hasDose, hasForeignText, HISTORY_TURNS, MAX_ANSWER, MAX_HISTORY_ANSWER, MAX_QUESTION, NO_SOURCE, neverOffTopic, PASSAGE_INTRO, PHONE_MASK, redactPhones, OUT_OF_SCOPE, sanitizeAnswer, validSources } from './guard'
+import { aboutMedicine, answerProblem, ASK_CROP, BRAND_REFERRAL, checkQuestion, DOSE_LINE, hasBrand, hasBrokenBengali, hasDose, hasForeignText, HISTORY_TURNS, KEEP_CHECKING_LINE, MAX_ANSWER, MAX_HISTORY_ANSWER, MAX_QUESTION, NO_SOURCE, neverOffTopic, PASSAGE_INTRO, PHONE_MASK, redactPhones, OUT_OF_SCOPE, sanitizeAnswer, saysNoNeed, validSources } from './guard'
 import { idsInScope, KB, questionScope, RULE_CHUNK, searchText } from './kb'
 import { MODELS, withFallback } from './models'
 import { ANSWER_INSTRUCTIONS, answerPrompt, REWRITE_INSTRUCTIONS } from './prompts'
@@ -10,7 +10,12 @@ import { keywordQuery, rrf, searchKb } from './retrieve'
 import { stemBn, stemmedText, wordsOf } from './tokens'
 import { PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { fieldCrop } from '@/lib/fieldList'
-import { GUIDE, RISK_RULE } from '@/lib/guide'
+import { alertMessage } from '@/lib/alerts'
+import { CROP_IDS, CROPS } from '@/lib/crops'
+import { RISK_VIEW } from '@/lib/data'
+import { CLASS_CONTENT } from '@/lib/diagnosis/content'
+import { GUIDE, INTRO, RISK_MEANING, RISK_RULE } from '@/lib/guide'
+import { POTATO_GUIDE } from '@/lib/potatoGuide'
 
 test('Bengali suffixes are stripped so inflected words find their root', () => {
   assert.equal(stemBn('আলুর'), 'আলু')
@@ -65,6 +70,62 @@ test('a sentence with a dose is dropped and the label line added', () => {
   assert.ok(!hasDose(text), text)
   assert.ok(text.includes('আক্রান্ত গাছ তুলে ফেলুন।') && text.includes('আবার দেখুন।') && text.includes(DOSE_LINE))
   assert.deepEqual(sanitizeAnswer('ঠিক আছে।'), { text: 'ঠিক আছে।', redacted: false, named: false })
+})
+
+test('telling a farmer spraying is not needed, or that money is saved, is recognised', () => {
+  for (const t of [
+    'আজ স্প্রে লাগবে না',
+    'স্প্রে লাগেনি',
+    'এখন ওষুধ লাগবে না',
+    'স্প্রের দরকার নেই',
+    'স্প্রে করার দরকার নেই',
+    'এখন ছত্রাকনাশক দেবেন না',
+    'এখন কোনো বালাইনাশক দেবেন না',
+    'শুধু শুধু ওষুধ দিয়ে টাকা নষ্ট করবেন না',
+    'স্প্রে লাগবে না, টাকা বাঁচান',
+    'একটা স্প্রের খরচ বাঁচানো ধরা হয়',
+    'এই মৌসুমে ৩টা স্প্রে বাঁচিয়েছেন',
+    'কত অপ্রয়োজনীয় স্প্রে এড়ালেন',
+    'No need to spray today',
+    'you save money',
+  ])
+    assert.ok(saysNoNeed(t), t)
+  assert.ok(saysNoNeed('স্প্রে লা\u200cগবে না'), 'a zero-width non-joiner inside the phrase')
+  for (const t of [
+    'দুই দিনের মধ্যে স্প্রে করুন',
+    'আবহাওয়া তুলনায় শুকনো। তবু নিয়মিত পাতা দেখতে থাকুন।',
+    'বিপদের সপ্তাহে স্প্রে লেখা না থাকলে সেটাও দেখাই।',
+    'ওষুধ সবসময় বোতলের লেবেল অনুযায়ী মেপে দিন।',
+    'গাছ বাঁচাতে আক্রান্ত পাতা তুলে ফেলুন',
+    KEEP_CHECKING_LINE,
+  ])
+    assert.ok(!saysNoNeed(t), t)
+})
+
+test('a sentence saying spraying is not needed is dropped and the keep-checking line added', () => {
+  const { text, redacted } = sanitizeAnswer('সবুজ মানে আবহাওয়া শুকনো। আজ স্প্রে লাগবে না, টাকা বাঁচান। কাল আবার দেখুন।')
+  assert.ok(redacted)
+  assert.ok(!saysNoNeed(text), text)
+  assert.ok(text.includes('সবুজ মানে আবহাওয়া শুকনো।') && text.includes('কাল আবার দেখুন।') && text.includes(KEEP_CHECKING_LINE), text)
+  assert.ok(!text.includes(DOSE_LINE), 'no dose was dropped, so no label line')
+})
+
+// The rule isn't validated, so no screen, card, result or SMS may say spraying isn't needed.
+test('no text the app shows says spraying is not needed or that money is saved', () => {
+  const texts: [string, string][] = [
+    ...RISK_MEANING.map((m): [string, string] => [`RISK_MEANING.${m.risk}`, m.text]),
+    ...Object.entries(RISK_VIEW).map(([r, v]): [string, string] => [`RISK_VIEW.${r}`, v.title]),
+    ...GUIDE.flatMap((g) => [g.title, ...g.lines].map((t): [string, string] => [`GUIDE.${g.id}`, t])),
+    ...POTATO_GUIDE.flatMap((g) => [g.title, ...g.lines].map((t): [string, string] => [`POTATO_GUIDE.${g.id}`, t])),
+    ...INTRO.flatMap((c) => [c.title, c.text].map((t): [string, string] => [`INTRO.${c.icon}`, t])),
+    ...CROP_IDS.flatMap((crop) => [
+      ...Object.entries(CROPS[crop].decision).map(([r, t]): [string, string] => [`${crop}.decision.${r}`, t]),
+      [`${crop}.sms`, alertMessage(crop, [{ date: '2026-12-01', risk: 'danger' }], 0)] as [string, string],
+      ...Object.entries(CLASS_CONTENT[crop]).flatMap(([id, c]) => [c.banner.text, ...c.steps].map((t): [string, string] => [`${crop}.${id}`, t])),
+    ]),
+    ...KB.map((c): [string, string] => [c.id, `${c.title} ${c.text}`]),
+  ]
+  for (const [where, t] of texts) assert.ok(!saysNoNeed(t), `${where}: ${t}`)
 })
 
 test('a brand is recognised in English, Bengali and their variants, but a chemical group is not', () => {

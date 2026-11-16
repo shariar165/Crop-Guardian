@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { alertMessage, cropsToAlert, nextAlert, SMS_MAX_CHARS } from '@/lib/alerts'
-import { CROP_IDS } from '@/lib/crops'
+import { CROP_IDS, CROPS } from '@/lib/crops'
 import type { Risk } from '@/lib/data'
 import { addDays } from '@/lib/dates'
 import type { StripDay } from '@/lib/risk'
@@ -75,8 +75,10 @@ describe('alertMessage', () => {
     }
   })
 
-  it('marks the paddy warning as experimental', () => {
-    assert.match(alertMessage('paddy', strip(START, 'safe', 'danger'), 1), /পরীক্ষামূলক/)
-    assert.equal(alertMessage('potato', strip(START, 'safe', 'danger'), 1), 'Crop Guardian: কাল থেকে আলুতে নাবি ধসার ঝুঁকি। আজই পাতা দেখুন।')
+  it('marks the warning of every experimental crop as experimental', () => {
+    for (const crop of CROP_IDS) {
+      if (CROPS[crop].experimental) assert.match(alertMessage(crop, strip(START, 'safe', 'danger'), 1), /পরীক্ষামূলক/, crop)
+    }
+    assert.equal(alertMessage('potato', strip(START, 'safe', 'danger'), 1), 'Crop Guardian: কাল থেকে আলুতে ধসার ঝুঁকি (পরীক্ষামূলক)। পাতা দেখুন।')
   })
 })

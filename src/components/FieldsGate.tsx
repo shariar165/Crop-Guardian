@@ -133,12 +133,12 @@ function FieldNote({ field, many, hasUnion }: { field: Field | null; many: boole
 // Under a decision: "পরীক্ষামূলক" while the crop's rule is not checked against real outbreaks, and
 // a word that leaf photos can't diagnose this crop yet.
 export function ExperimentalNote({ crop }: { crop: CropId }) {
-  const { experimental, diseaseBn } = CROPS[crop]
+  const { experimental, diseaseOfBn } = CROPS[crop]
   const photoNote = canDiagnose(crop) ? null : CROPS[crop].photoNote
   if (!experimental && !photoNote) return null
   return (
     <p className="m-0 text-[13px] leading-[1.4] font-semibold text-amber">
-      {experimental && `পরীক্ষামূলক: ${diseaseBn}ের এই হিসাব এখনো মাঠে যাচাই হয়নি। `}
+      {experimental && `পরীক্ষামূলক: ${diseaseOfBn} এই হিসাব এখনো মাঠে যাচাই হয়নি। `}
       {photoNote}
     </p>
   )

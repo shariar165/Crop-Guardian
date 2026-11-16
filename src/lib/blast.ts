@@ -94,7 +94,7 @@ export function buildBlastReason(days: BlastDayRisk[], today: Risk): string {
 }
 
 export const BLAST_DECISION: Record<Risk, string> = {
-  safe: 'আগামী কয়েক দিন ঝুঁকি কম। শুধু শুধু ওষুধ দিয়ে টাকা নষ্ট করবেন না।',
+  safe: 'কয়েক দিন আবহাওয়া তুলনায় শুকনো। তবু নিয়মিত পাতা দেখতে থাকুন।',
   watch: 'আবহাওয়া মাঝে মাঝে ভেজা। রোজ সকালে পাতায় চোখের মতো দাগ খুঁজুন।',
   danger: 'ব্লাস্ট ছড়ানোর মতো আবহাওয়া চলছে। আজই পাতা আর শীষ পরীক্ষা করুন।',
 }

@@ -27,12 +27,12 @@ export type RiskView = {
 export const RISK_VIEW: Record<Risk, RiskView> = {
   safe: {
     sky: '#D9E9DF', ink: '#1E3A2A', word: 'নিরাপদ', badgeBg: '#2F6B3A', badgeInk: '#FFFFFF',
-    title: 'আজ স্প্রে লাগবে না',
+    title: 'আবহাওয়া তুলনায় শুকনো',
     accent: '#2F6B3A', accentSoft: '#DCEBDD', sunOp: 1, cloudOp: 0, fogOp: 0, rainOp: 0, noSpray: true,
   },
   watch: {
     sky: '#CDD8D4', ink: '#20343A', word: 'সতর্ক', badgeBg: '#E8B931', badgeInk: '#2B1E16',
-    title: 'আজ স্প্রে লাগবে না',
+    title: 'পাতায় নজর রাখুন',
     accent: '#8A5E00', accentSoft: '#F6E7B8', sunOp: 1, cloudOp: 1, fogOp: 1, rainOp: 0, noSpray: true,
   },
   danger: {

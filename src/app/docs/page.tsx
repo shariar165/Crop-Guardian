@@ -7,7 +7,7 @@ import { KB } from '@/lib/assistant/kb'
 import { MODELS } from '@/lib/assistant/models'
 import { PROMPT_VERSION } from '@/lib/assistant/prompts'
 import { DIVISIONS } from '@/lib/areas'
-import { parseBacktest, parseEvalSummary } from '@/lib/docsData'
+import { parseBacktest, parseEvalSummary, parseFindings, parseLeaveOneOut } from '@/lib/docsData'
 
 export const metadata = { title: 'Crop Guardian — how it works' }
 
@@ -40,8 +40,7 @@ const SAFETY = [
 
 const LIMITS = [
   'The diagnosis thresholds were fitted on Indonesian field photos, not Bangladeshi ones; held-out public field datasets are the next step, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.',
-  'The risk rule is checked against two weather reanalyses, not yet against recorded outbreaks.',
-  'The rice-blast rule is a draft, labelled experimental in the app.',
+  'Neither weather rule is validated against dated outbreaks in Bangladesh (see “What we tested and what failed”), so potato and paddy risk are both labelled experimental in the app, and the ledger counts no money saved.',
   'The assistant knows only what the app’s advice says; it is a way to find that advice, not an agronomist.',
 ]
 
@@ -64,6 +63,8 @@ export default function DocsPage() {
   }))
   const winterDays = backtest[0]?.days ?? 90
   const evalSummary = parseEvalSummary(read('assistant-eval.md'))
+  const findings = parseFindings(read('rule-comparison.md'))
+  const heldOut = parseLeaveOneOut(read('model-card-paddy.md'))
 
   return (
     <div className="flex flex-1 flex-col">
@@ -90,11 +91,54 @@ export default function DocsPage() {
           </ul>
         </Section>
 
-        <Section title="Fewer sprays, when they matter">
+        <Section title="Alerts the rule would have sent">
           <p className="m-0">
-            Alerts the app’s rule would have sent each winter, from two independent weather sources, against one spray a week ({Math.floor(winterDays / 7)} a winter).
+            Alerts the app’s potato rule would have sent each winter, from two independent weather sources, with one spray a week ({Math.floor(winterDays / 7)} a winter) drawn for scale.
           </p>
           {chart.length > 0 ? <BacktestChart data={chart} calendarSprays={Math.floor(winterDays / 7)} /> : <p className="m-0 text-muted">Run scripts/find-hutton-periods.ts --write.</p>}
+        </Section>
+
+        <Section title="What we tested and what failed">
+          <h3 className="m-0 text-[16px] font-bold">Potato late-blight rule</h3>
+          {findings.length > 0 ? (
+            <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5">
+              {findings.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="m-0 text-muted">Run scripts/compare-blight-rules.ts --write.</p>
+          )}
+          <p className="m-0 text-[14px] text-muted">From docs/rule-comparison.md. So the app labels potato risk experimental and its ledger no longer counts weeks without danger as money saved.</p>
+          <h3 className="m-0 mt-1 text-[16px] font-bold">Paddy photo model, one dataset held out</h3>
+          {heldOut.length > 0 ? (
+            <table className="w-full border-collapse text-[13px]">
+              <thead>
+                <tr className="border-b border-line text-left">
+                  <th className="py-1 pr-2 font-semibold">Held-out dataset</th>
+                  <th className="py-1 pr-2 text-right font-semibold">Photos</th>
+                  <th className="py-1 pr-2 text-right font-semibold">Accuracy</th>
+                  <th className="py-1 text-right font-semibold">Misleading</th>
+                </tr>
+              </thead>
+              <tbody>
+                {heldOut.map((r) => (
+                  <tr key={r.dataset} className="border-b border-line">
+                    <td className="py-1 pr-2">{r.dataset}</td>
+                    <td className="py-1 pr-2 text-right">{r.photos}</td>
+                    <td className="py-1 pr-2 text-right font-semibold">{r.accuracy}</td>
+                    <td className="py-1 text-right">{r.misleading}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="m-0 text-muted">See docs/model-card-paddy.md.</p>
+          )}
+          <p className="m-0 text-[14px] text-muted">
+            From docs/model-card-paddy.md. Misleading is a confident wrong answer, or a shortlist without the true disease. Trained on the other two datasets each time, the model mostly learned each dataset’s camera and background, not the disease. A farmer’s
+            phone in a new district is this case, so every paddy result is labelled experimental and offers the officer.
+          </p>
         </Section>
 
         <Section title="How AI is used">

@@ -21,16 +21,17 @@ describe('ledgerSpan', () => {
 })
 
 describe('buildLedger', () => {
-  it('counts a safe week without a spray as one calendar spray saved', () => {
+  // Potato's rule isn't validated (calendarBaseline: false), so a quiet week saves no money.
+  it('counts a safe week without a spray as calm, with no money saved', () => {
     const today = addDays(EMERGED, 7)
     const l = buildLedger({ planting: PLANTED, today, days: daysFrom([...week('safe'), 'safe']), sprays: [], cost: COST })
     const [current, first] = l.weeks
-    assert.equal(first.kind, 'saved')
-    assert.equal(first.amount, COST)
+    assert.equal(first.kind, 'calm')
+    assert.equal(first.amount, 0)
     assert.deepEqual([first.dayFrom, first.dayTo], [15, 21])
     assert.equal(current.kind, 'ongoing')
-    assert.equal(l.savedTotal, COST)
-    assert.equal(l.savedCount, 1)
+    assert.equal(l.savedTotal, 0)
+    assert.equal(l.savedCount, 0)
   })
 
   it('tells a spray in time from a missed danger week', () => {
@@ -65,8 +66,8 @@ describe('buildLedger', () => {
     const l = buildLedger({ planting: PLANTED, today, days: all, sprays: [], cost: COST })
     assert.equal(l.weeks[0].end, '2026-12-10')
     assert.equal(l.weeks[0].dayTo, 100)
-    assert.ok(l.weeks.every((w) => w.kind === 'saved'))
-    assert.equal(l.savedTotal, l.weeks.length * COST)
+    assert.ok(l.weeks.every((w) => w.kind === 'calm'))
+    assert.equal(l.savedTotal, 0)
   })
 
   it('is empty before the crop emerges', () => {
