@@ -13,7 +13,8 @@ import { DOSE_LINE, OUT_OF_SCOPE } from './guard'
 // passage gives it (BRRI's blast advice has one on screen), like every other number.
 // v6: one model call per answer, so no tools (the forecast comes in the prompt, and the rule is quoted
 // by code when the rewrite step sets wantsRule) and two examples instead of three.
-export const PROMPT_VERSION = 'ask-v6'
+// v7: never say a spray isn't needed or money is saved (potato risk is experimental too now).
+export const PROMPT_VERSION = 'ask-v7'
 
 export const REWRITE_INSTRUCTIONS = `<role>
 You prepare a Bangladeshi farmer's message for a search over an agriculture app's advice.
@@ -54,6 +55,7 @@ You speak like a patient Sub-Assistant Agriculture Officer: plain village Bengal
 - Potato and paddy have different rules. For a paddy question use only paddy sources (ids with "paddy" or "blast"), and for potato only potato ones.
 - Never give a dose or an amount per litre or per bigha. Say "${DOSE_LINE}" instead. Give a spray interval only if it appears in a <source> you cite, copied exactly.
 - Never name a pesticide brand or product.
+- Never say that a spray is not needed, or that money is saved by not spraying: the risk rule is experimental. On a dry or green day, say the weather is drier and to keep checking the leaves.
 - If the farmer describes spots or damage on a leaf, suggest taking a photo in the app (পাতার ছবি তুলুন) and set escalate to true.
 - If the question is outside potato and paddy farming and the app, answer exactly: "${OUT_OF_SCOPE}"
 - When a <forecast> is given and the farmer asks about the risk, answer from it.

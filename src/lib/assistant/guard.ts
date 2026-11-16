@@ -90,7 +90,24 @@ export const hasBrand = (text: string): boolean => {
   return BRAND_EN.test(plain) || BRANDS_BN.some((b) => plain.includes(b))
 }
 
-export const BRAND_REFERRAL = 'কোন ওষুধ দেবেন, উপসহকারী কৃষি কর্মকর্তার কাছে জেনে নিন। মাত্রা: বোতলের লেবেল অনুযায়ী।'
+// The weather rule isn't validated against outbreaks (docs/rule-comparison.md), so nothing the app
+// says may tell a farmer that spraying isn't needed, or that money is saved by not spraying. Late
+// blight is sprayed before it shows, so a dry forecast or one healthy leaf can't promise either.
+const NO_NEED = [
+  /(?:স্প্রে|ওষুধ|ছত্রাকনাশক|বালাইনাশক)(?:ের|র)?\s*(?:(?:করা|করার|দেওয়া|দেওয়ার|দেয়ার)\s*)?(?:লাগবে না|লাগেনি|লাগে না|দরকার নেই|দরকার হবে না|প্রয়োজন নেই|দেবেন না|দিবেন না|দিতে হবে না|করবেন না|করতে হবে না)/,
+  /(?:টাকা|খরচ|স্প্রে)\S*\s*(?:বাঁচ|নষ্ট)|অপ্রয়োজনীয় স্প্রে/,
+  /\b(?:no need to spray|(?:don't|do not|doesn't|does not) need (?:to )?spray|save[sd]? money|money saved)\b/i,
+]
+
+export const saysNoNeed = (text: string): boolean => {
+  const plain = text.replace(ZERO_WIDTH, '').normalize('NFC')
+  return NO_NEED.some((re) => re.test(plain))
+}
+
+// Takes the place of a dropped sentence that said spraying isn't needed.
+export const KEEP_CHECKING_LINE = 'আবহাওয়া শুকনো থাকলেও নিয়মিত পাতা দেখতে থাকুন।'
+
+export const BRAND_REFERRAL ='কোন ওষুধ দেবেন, উপসহকারী কৃষি কর্মকর্তার কাছে জেনে নিন। মাত্রা: বোতলের লেবেল অনুযায়ী।'
 
 // Sentences end at the dari, a full stop, ! or ? followed by a space, or at a line break; so "২.৫"
 // stays one number.
@@ -102,13 +119,16 @@ const sentencesOf = (text: string): string[] =>
 
 // An answer that names a brand becomes the officer referral: the sentences around a name are about
 // that product too. Otherwise drops any sentence that gives a dose and says to follow the label
-// instead, then caps the length at a sentence boundary.
+// instead, drops any that says spraying isn't needed and says to keep checking the leaves instead,
+// then caps the length at a sentence boundary.
 export function sanitizeAnswer(answer: string): { text: string; redacted: boolean; named: boolean } {
   if (hasBrand(answer)) return { text: BRAND_REFERRAL, redacted: false, named: true }
   const sentences = sentencesOf(answer)
-  const kept = sentences.filter((s) => !hasDose(s))
+  const noDose = sentences.filter((s) => !hasDose(s))
+  const kept = noDose.filter((s) => !saysNoNeed(s))
   const redacted = kept.length < sentences.length
-  if (redacted && !kept.some((s) => s.includes('লেবেল অনুযায়ী'))) kept.push(DOSE_LINE)
+  if (noDose.length < sentences.length && !kept.some((s) => s.includes('লেবেল অনুযায়ী'))) kept.push(DOSE_LINE)
+  if (kept.length < noDose.length && !kept.includes(KEEP_CHECKING_LINE)) kept.push(KEEP_CHECKING_LINE)
 
   let text = ''
   for (const s of kept) {

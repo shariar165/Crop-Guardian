@@ -38,7 +38,7 @@ function weekText(w: LedgerWeek): { note: string; action: string } {
   switch (w.kind) {
     case 'saved':
     case 'calm':
-      return { note: worst, action: 'স্প্রে লাগেনি' }
+      return { note: worst, action: 'স্প্রে লেখা নেই' }
     case 'onTime':
       return { note: danger, action: `সময়মতো স্প্রে করেছেন (${sprays})` }
     case 'missed':
@@ -56,7 +56,7 @@ const dangerWeeks = (ledger: Ledger) => ledger.onTimeCount + ledger.missedCount
 
 function speechFor(ledger: Ledger, season: SeasonId): string {
   if (!cropOf(season).calendarBaseline) {
-    const parts = [`এই মৌসুমে ${toBnDigits(dangerWeeks(ledger))} সপ্তাহে ${cropOf(season).diseaseBn}ের বিপদ ছিল।`]
+    const parts = [`এই মৌসুমে ${toBnDigits(dangerWeeks(ledger))} সপ্তাহে ${cropOf(season).diseaseOfBn} বিপদ ছিল।`]
     parts.push(`${toBnDigits(ledger.onTimeCount)} সপ্তাহে সময়মতো স্প্রে করেছেন, মোট ${toBnDigits(ledger.sprayCount)}টা স্প্রে লেখা আছে।`)
     if (ledger.missedCount) parts.push(`${toBnDigits(ledger.missedCount)} সপ্তাহে বিপদ ছিল কিন্তু স্প্রে লেখা নেই।`)
     return parts.join(' ')
@@ -188,12 +188,12 @@ function Weeks({ ledger }: { ledger: Ledger }) {
 
 const TOTALS = 'mx-4 mt-3.5 flex shrink-0 flex-col gap-1 rounded-[22px] bg-ink px-[18px] pt-[18px] pb-4 text-cream outline-[1.5px] outline-offset-[-8px] outline-sun outline-dashed'
 
-// For a crop with no calendar habit to compare with (paddy), what the weather asked for and what
-// the farmer did, with no money figure.
+// For a crop whose rule isn't validated or has no calendar habit to compare with, what the weather
+// asked for and what the farmer did, with no money figure.
 function DangerTotals({ ledger, season }: { ledger: Ledger; season: SeasonId }) {
   return (
     <section className={TOTALS}>
-      <span className="text-[15px] font-medium text-line">এই মৌসুমে {cropOf(season).diseaseBn}ের বিপদ ছিল</span>
+      <span className="text-[15px] font-medium text-line">এই মৌসুমে {cropOf(season).diseaseOfBn} বিপদ ছিল</span>
       <span className="font-display text-[50px] leading-[1.05] font-extrabold text-sun">{toBnDigits(dangerWeeks(ledger))} সপ্তাহে</span>
       <div className="mt-2 grid grid-cols-2 gap-3 border-t-[1.5px] border-dashed border-[#6E5A45] pt-2.5">
         <div className="flex flex-col">
@@ -218,7 +218,7 @@ function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
     return (
       <Prompt
         title="হিসাব শুরু করতে রোপণের তারিখ দিন"
-        text="কোন ফসল কবে লাগিয়েছেন জানালে, চারা থেকে প্রতি সপ্তাহের আসল আবহাওয়া দেখে হিসাব করব: কোন সপ্তাহে স্প্রে লাগেনি, কোনটায় লেগেছে।"
+        text="কোন ফসল কবে লাগিয়েছেন জানালে, চারা থেকে প্রতি সপ্তাহের আসল আবহাওয়া দেখে হিসাব করব: কোন সপ্তাহে বিপদ ছিল, আর আপনি স্প্রে করেছেন কি না।"
         href="/planting?from=ledger"
         action="তারিখ দিন"
       />
@@ -247,7 +247,7 @@ function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
         <DangerTotals ledger={ledger} season={season} />
         <Weeks ledger={ledger} />
         <p className="mx-[18px] mt-2 mb-0 text-[13px] leading-[1.45] text-muted">
-          {crop.nameBn}ে প্রতি সপ্তাহে স্প্রে করার চল নেই, তাই কত টাকা বাঁচল তা হিসাব করি না। শুধু দেখাই কোন সপ্তাহে বিপদ ছিল আর আপনি স্প্রে করেছেন কি না।
+          পরীক্ষামূলক: {crop.diseaseOfBn} এই হিসাব এখনো মাঠে যাচাই হয়নি, তাই টাকার হিসাব দেখাই না। শুধু দেখাই কোন সপ্তাহে বিপদ ছিল আর আপনি স্প্রে করেছেন কি না।
         </p>
       </>
     )

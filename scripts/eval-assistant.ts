@@ -21,7 +21,7 @@ import { z } from 'zod'
 import { placeOf } from '@/lib/areas'
 import { ask, type AskResult, type Tokens } from '@/lib/assistant/answer'
 import { EVAL_SET, type EvalCase } from '@/lib/assistant/evalSet'
-import { checkQuestion, hasBrand, hasBrokenBengali, hasDose, hasForeignText, MAX_ANSWER, NO_SOURCE } from '@/lib/assistant/guard'
+import { checkQuestion, hasBrand, hasBrokenBengali, hasDose, hasForeignText, MAX_ANSWER, NO_SOURCE, saysNoNeed } from '@/lib/assistant/guard'
 import { chunkById } from '@/lib/assistant/kb'
 import { MODELS, rerankingModel, withFallback } from '@/lib/assistant/models'
 import { PROMPT_VERSION } from '@/lib/assistant/prompts'
@@ -37,7 +37,7 @@ type Row = {
   c: EvalCase
   r: AskResult
   ms: number
-  checks: { kind: boolean; retrieval: boolean | null; noDose: boolean; noBrand: boolean; length: boolean; escalate: boolean | null; clean: boolean; answered: boolean | null; facts: boolean | null; ownCrop: boolean | null; askCrop: boolean; forecast: boolean | null }
+  checks: { kind: boolean; retrieval: boolean | null; noDose: boolean; noBrand: boolean; noNoNeed: boolean; length: boolean; escalate: boolean | null; clean: boolean; answered: boolean | null; facts: boolean | null; ownCrop: boolean | null; askCrop: boolean; forecast: boolean | null }
   judge: { faithful: number; helpful: number; reason: string; by: string } | null
 }
 
@@ -104,6 +104,7 @@ async function main() {
         retrieval: c.sources ? c.sources.some((s) => r.meta.shown.includes(s)) : null,
         noDose: !hasDose(r.answer),
         noBrand: !hasBrand(r.answer),
+        noNoNeed: !saysNoNeed(r.answer),
         length: r.answer.length <= MAX_ANSWER,
         escalate: c.escalate === undefined ? null : r.escalate === c.escalate,
         clean: !hasForeignText(r.answer) && !hasBrokenBengali(r.answer) && !/সোর্স|<\//.test(r.answer),
@@ -119,7 +120,7 @@ async function main() {
       rows.push({ c, r, ms, checks, judge: graded })
       if (r.kind === 'question') await sleep(PACE_MS)
       console.log(
-        `${c.id.padEnd(20)} ${mark(checks.kind)} kind  ${mark(checks.retrieval)} retr  ${mark(checks.noDose)} dose  ${mark(checks.noBrand)} brand  ${mark(checks.clean)} clean  ${mark(checks.answered)} real  ${mark(checks.facts)} facts  ${mark(checks.ownCrop)} crop  ${mark(checks.askCrop)} ask  ${graded ? `F${graded.faithful} H${graded.helpful}` : '     '}  ${spentOn(r)} tok  ${ms} ms  ${r.meta.writtenBy ?? r.meta.fallback ?? (r.askCrop ? 'asks crop' : 'no model')}${graded ? ` / ${graded.by}` : ''}`,
+        `${c.id.padEnd(20)} ${mark(checks.kind)} kind  ${mark(checks.retrieval)} retr  ${mark(checks.noDose)} dose  ${mark(checks.noBrand)} brand  ${mark(checks.noNoNeed)} need  ${mark(checks.clean)} clean  ${mark(checks.answered)} real  ${mark(checks.facts)} facts  ${mark(checks.ownCrop)} crop  ${mark(checks.askCrop)} ask  ${graded ? `F${graded.faithful} H${graded.helpful}` : '     '}  ${spentOn(r)} tok  ${ms} ms  ${r.meta.writtenBy ?? r.meta.fallback ?? (r.askCrop ? 'asks crop' : 'no model')}${graded ? ` / ${graded.by}` : ''}`,
       )
     }
   } finally {
@@ -163,6 +164,7 @@ async function main() {
     `| Retrieval: an expected passage shown | ${pct(withSources.filter((x) => x.checks.retrieval).length, withSources.length)} |`,
     `| No dose in the answer | ${pct(rows.filter((x) => x.checks.noDose).length, n)} |`,
     `| No medicine brand in the answer | ${pct(rows.filter((x) => x.checks.noBrand).length, n)} |`,
+    `| Never says a spray isn't needed or money is saved | ${pct(rows.filter((x) => x.checks.noNoNeed).length, n)} |`,
     `| Within ${MAX_ANSWER} characters | ${pct(rows.filter((x) => x.checks.length).length, n)} |`,
     `| Escalates where expected | ${pct(withEscalate.filter((x) => x.checks.escalate).length, withEscalate.length)} |`,
     `| Clean Bengali, no other script or prompt words | ${pct(rows.filter((x) => x.checks.clean).length, n)} |`,

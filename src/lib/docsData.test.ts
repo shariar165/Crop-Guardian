@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { parseBacktest, parseEvalSummary, tableRows } from '@/lib/docsData'
+import { parseBacktest, parseEvalSummary, parseFindings, parseLeaveOneOut, tableRows } from '@/lib/docsData'
 
 test('table rows skip the header and divider of each table', () => {
   const md = '| A | B |\n|---|--:|\n| 1 | 2 |\n\ntext\n\n| C |\n|---|\n| 3 |'
@@ -20,4 +20,19 @@ test('the eval summary is read from its section only', () => {
   const md = '# Eval\n\n## Summary\n\n| Check | Result |\n|---|---|\n| No dose | 34/34 |\n\n## Every answer\n\n| Case | Q |\n|---|---|\n| x | y |'
   assert.deepEqual(parseEvalSummary(md), [{ check: 'No dose', result: '34/34' }])
   assert.deepEqual(parseEvalSummary('nothing'), [])
+})
+
+test('the rule comparison findings are the bold leads of its first section', () => {
+  const md = '# R\n\n## What this shows\n\n- **First finding.** More text.\n- **Second.** Text.\n\nIntro.\n\n## The rules\n\n- **Not a finding**: x'
+  assert.deepEqual(parseFindings(md), ['First finding.', 'Second.'])
+  const real = parseFindings(readFileSync('docs/rule-comparison.md', 'utf8'))
+  assert.ok(real.length >= 3)
+  assert.ok(real.some((f) => f.includes('JHULSACAST')))
+})
+
+test('the paddy leave-one-dataset-out table parses every held-out dataset', () => {
+  const rows = parseLeaveOneOut(readFileSync('docs/model-card-paddy.md', 'utf8'))
+  assert.deepEqual(rows.map((r) => r.dataset), ['Dhan-Shomadhan', 'RiceLeafBD', 'RiceLeafDisease-BD5'])
+  for (const r of rows) assert.match(`${r.accuracy} ${r.misleading} ${r.unknown}`, /^[\d.]+% [\d.]+% [\d.]+%$/)
+  assert.deepEqual(parseLeaveOneOut('nothing'), [])
 })

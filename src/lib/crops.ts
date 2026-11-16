@@ -38,6 +38,8 @@ export type CropSpec = {
   // "আলুর", "ধানের"
   ofBn: string
   diseaseBn: string
+  // "ধসার", "ব্লাস্টের": diseaseBn with the possessive ending, which depends on its last letter.
+  diseaseOfBn: string
   riskTitle: string
   offSeasonTitle: string
   // "আলু কবে লাগিয়েছেন?"
@@ -50,7 +52,7 @@ export type CropSpec = {
   // Under the decision while leaf photos can't diagnose this crop (no model in diagnosis/crops.ts).
   photoNote: string | null
   // Whether the ledger may count weeks without danger as calendar sprays saved. Only where the
-  // farmers' usual habit is known to be one spray a week.
+  // farmers' usual habit is known to be one spray a week and the rule is validated. None is yet.
   calendarBaseline: boolean
   // The SMS alert after "Crop Guardian: কাল থেকে ". The whole SMS must stay one Bengali SMS (≤ 70).
   smsWarning: string
@@ -67,15 +69,18 @@ export const CROPS: Record<CropId, CropSpec> = {
     nameBn: 'আলু',
     ofBn: 'আলুর',
     diseaseBn: 'ধসা',
+    diseaseOfBn: 'ধসার',
     riskTitle: 'আজকের ধসা রোগের ঝুঁকি',
     offSeasonTitle: 'এখন ধসা রোগের মৌসুম নয়',
     plantedQuestion: 'আলু কবে লাগিয়েছেন?',
     startPhrase: 'চারা গজালে',
     afterHarvest: 'ফসল তোলার সময় পেরিয়ে গেছে। নতুন আলু লাগালে তারিখ দিন।',
-    experimental: false,
+    // The Hutton rule is not checked against outbreaks here (docs/rule-comparison.md), and no
+    // weekly-spray habit is measured, so the ledger counts no money saved either.
+    experimental: true,
     photoNote: null,
-    calendarBaseline: true,
-    smsWarning: 'আলুতে নাবি ধসার ঝুঁকি। আজই পাতা দেখুন।',
+    calendarBaseline: false,
+    smsWarning: 'আলুতে ধসার ঝুঁকি (পরীক্ষামূলক)। পাতা দেখুন।',
     decision: DECISION,
     assess: assessRisk,
     classify: (hourly) => strip(classifyDays(summarizeDays(hourly))),
@@ -84,6 +89,7 @@ export const CROPS: Record<CropId, CropSpec> = {
     nameBn: 'ধান',
     ofBn: 'ধানের',
     diseaseBn: 'ব্লাস্ট',
+    diseaseOfBn: 'ব্লাস্টের',
     riskTitle: 'আজকের ব্লাস্ট রোগের ঝুঁকি',
     offSeasonTitle: 'এখন ব্লাস্ট রোগের মৌসুম নয়',
     plantedQuestion: 'ধান কবে রোপণ করেছেন?',

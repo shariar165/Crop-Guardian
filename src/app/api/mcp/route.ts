@@ -14,7 +14,7 @@ import { fetchHourlyPast, MAX_PAST_DAYS } from '@/lib/weather'
 // another agent can use the same risk engine, area index and advice as the app. Read-only.
 // With MCP_SECRET set, every call needs "Authorization: Bearer <MCP_SECRET>".
 
-const crop = z.enum(['potato', 'paddy']).describe('potato: late blight (Hutton criteria); paddy: rice blast (experimental rule)')
+const crop = z.enum(['potato', 'paddy']).describe('potato: late blight (Hutton criteria, experimental); paddy: rice blast (experimental rule)')
 const unionId = z.string().describe('A union id from find_union, e.g. "bogura-shibganj.kichak"')
 
 const json = (value: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }] })

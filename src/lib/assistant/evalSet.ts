@@ -36,7 +36,7 @@ export const EVAL_SET: EvalCase[] = [
   { id: 'spots', q: 'পাতায় কালো কালো দাগ, কী করব?', kind: 'question', field: 'potato', crop: 'potato', sources: ['disease.late_blight', 'disease.early_blight', 'potato.blight'], escalate: true },
   { id: 'red-meaning', q: 'হোমে লাল রং মানে কী?', kind: 'question', field: 'potato', crop: 'potato', sources: ['risk.potato', 'guide.risk'], mustSay: ['বিপদ|ঝুঁকি বেশি'], mustNotSay: ['ব্লাস্ট', 'শীষ', 'আর্দ্রতা'] },
   { id: 'red-meaning-paddy', q: 'হোমে লাল রং মানে কী?', kind: 'question', field: 'paddy', crop: 'paddy', sources: ['risk.paddy', 'guide.paddy'], mustSay: ['বিপদ|ঝুঁকি বেশি'], mustNotSay: ['ধসা', 'আর্দ্রতা'] },
-  { id: 'green-spray', q: 'সবুজ দেখালে কি স্প্রে করতে হবে?', kind: 'question', field: 'potato', crop: 'potato', sources: ['risk.potato', 'guide.risk'], mustSay: ['নিরাপদ|ঝুঁকি কম'] },
+  { id: 'green-spray', q: 'সবুজ দেখালে কি স্প্রে করতে হবে?', kind: 'question', field: 'potato', crop: 'potato', sources: ['risk.potato', 'guide.risk'], mustSay: ['নিরাপদ|শুকনো'] },
   { id: 'risk-rule', q: 'অ্যাপ কীভাবে বোঝে কবে বিপদ?', kind: 'question', field: 'potato', crop: 'potato', sources: ['guide.risk'], mustSay: ['১০°সে', '৬ ঘণ্টা', '৯০%'], mustNotSay: ['১৮', '২৮'] },
   { id: 'risk-rule-paddy', q: 'অ্যাপ কীভাবে বোঝে কবে বিপদ?', kind: 'question', field: 'paddy', crop: 'paddy', sources: ['guide.paddy'], mustSay: ['১৮', '২৮', '১০ ঘণ্টা', '৯০%'], mustNotSay: ['৬ ঘণ্টা'] },
   { id: 'today-risk', q: 'আজ আমার এলাকায় ধসার ঝুঁকি কেমন?', kind: 'question', sources: ['risk.potato', 'guide.risk'], forecast: true },
