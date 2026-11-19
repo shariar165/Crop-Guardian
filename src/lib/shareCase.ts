@@ -11,8 +11,8 @@ import { finalOf } from '@/lib/diagnosis/flow'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { clientPlace } from '@/lib/placeCookies'
 
-// "Crop Guardian — আলুর পাতা"
-export const shareTitle = (crop: CropId) => `Crop Guardian — ${CROPS[crop].ofBn} পাতা`
+// "সবুজবিধি — আলুর পাতা"
+export const shareTitle = (crop: CropId) => `সবুজবিধি — ${CROPS[crop].ofBn} পাতা`
 
 // The app's result in a few words, e.g. "নিশ্চিত — নাবি ধসা".
 export function caseVerdict({ result }: DiagnosisRecord, config: Pick<DiagnosisConfig, 'labelsBn'>): string {

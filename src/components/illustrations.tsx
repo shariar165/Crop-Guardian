@@ -47,10 +47,14 @@ export function FieldStrip() {
 
 export function LogoMark() {
   return (
+    // Same artwork as src/app/icon.svg (the favicon): a seedling under the sun, on a furrow.
     <svg aria-hidden="true" viewBox="0 0 32 32" className="size-[34px]">
-      <path d="M16 3l11 4v8c0 7-5 12-11 14C10 27 5 22 5 15V7z" fill="#2B1E16" />
-      <path d="M11 20c0-5 3-9 10-9 0 6-4 9-9 9" fill="#E8B931" />
-      <path d="M11 21c2-3 4-5 7-6.5" stroke="#2B1E16" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <rect width="32" height="32" rx="9" fill="#2F6B3A" />
+      <circle cx="22.5" cy="9.5" r="4.5" fill="#E8B931" />
+      <path d="M6.5 26.5c3-1.6 6.2-2.4 9.5-2.4s6.5.8 9.5 2.4" stroke="#E8B931" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M16 24V15.5" stroke="#FBF6EC" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M16 18.5c-5.2 0-8.5-2.9-8.5-7.4 5.2 0 8.5 2.9 8.5 7.4z" fill="#DCEBDD" />
+      <path d="M16 16c0-5.3 3.1-8.7 8.2-8.7 0 5.3-3.1 8.7-8.2 8.7z" fill="#FBF6EC" />
     </svg>
   )
 }

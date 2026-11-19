@@ -8,7 +8,7 @@ import { toBnDigits } from '@/lib/bn'
 import { DAY_STATE } from '@/lib/data'
 import { GUIDE, RISK_MEANING, speechOf } from '@/lib/guide'
 
-export const metadata = { title: 'কীভাবে ব্যবহার করবেন — Crop Guardian' }
+export const metadata = { title: 'কীভাবে ব্যবহার করবেন — সবুজবিধি' }
 
 const RISK_SPEECH = RISK_MEANING.map((m) => `${DAY_STATE[m.risk].word}: ${m.text}`).join(' ')
 

@@ -98,7 +98,7 @@ The app stops showing a daily potato risk level. Three things take its place. Ea
 
 ### SMS alerts (`alerts.ts`, `alertRun.ts`, `crops.ts`)
 
-- **Changes:** potato no longer gets "danger tomorrow" texts, and `cropsToAlert` drops potato. Recommended replacement: one text when first sightings in the farmer's upazila first reach *k* this season, for example «Crop Guardian: আপনার উপজেলায় ৫ জন আলুতে দাগ দেখেছেন (যাচাই হয়নি)», which must fit 70 characters. A clock reminder would need the sprays copied to the server, so it is left as open question 7.
+- **Changes:** potato no longer gets "danger tomorrow" texts, and `cropsToAlert` drops potato. Recommended replacement: one text when first sightings in the farmer's upazila first reach *k* this season, for example «সবুজবিধি: আপনার উপজেলায় ৫ জন আলুতে দাগ দেখেছেন (যাচাই হয়নি)», which must fit 70 characters. A clock reminder would need the sprays copied to the server, so it is left as open question 7.
 - **Removed:** the potato `smsWarning` and potato rows in `"alert_state"`. Their rows are ignored, not deleted, until the change ships.
 - **Tests:**
   - `alerts.test.ts`: potato fields give no danger alert, while paddy alerts are unchanged

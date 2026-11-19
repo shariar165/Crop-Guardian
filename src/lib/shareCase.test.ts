@@ -11,7 +11,7 @@ describe('caseSummary', () => {
     assert.equal(
       caseSummary(fixtureDiagnosis('confident', realConfig), realConfig, DATE, PLACE),
       [
-        'Crop Guardian — আলুর পাতা (পরীক্ষামূলক অ্যাপ)',
+        'সবুজবিধি — আলুর পাতা (পরীক্ষামূলক অ্যাপ)',
         'তারিখ: ১৯ অক্টোবর ২০২৬',
         'এলাকা: কিচক, শিবগঞ্জ',
         'অ্যাপের ফল: নিশ্চিত — নাবি ধসা',
@@ -50,7 +50,7 @@ it('uploads the result, the final answer and the union, not the probabilities', 
 
 it('titles a paddy case as paddy', () => {
   const record = { ...fixtureDiagnosis('confident', realConfig), crop: 'paddy' as const }
-  assert.match(caseSummary(record, realConfig, DATE, PLACE), /^Crop Guardian — ধানের পাতা \(পরীক্ষামূলক অ্যাপ\)\n/)
+  assert.match(caseSummary(record, realConfig, DATE, PLACE), /^সবুজবিধি — ধানের পাতা \(পরীক্ষামূলক অ্যাপ\)\n/)
   assert.equal(uploadFields({ sentAt: 1, diagnosis: record, photos: [], via: 'share' }).crop, 'paddy')
 })
 

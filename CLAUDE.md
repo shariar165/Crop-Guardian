@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Crop Guardian is a Bengali, mobile-first Next.js app that advises potato farmers in Bangladesh on late blight. It has a weather-based daily risk, on-device leaf photo diagnosis that admits when it is unsure, and SMS sign-in for farmers and agriculture officers. README.md is the detailed spec for each feature's behaviour. Read it before changing a feature, and keep it up to date when behaviour changes.
+সবুজবিধি (Sobujbidhi, "green rule"; formerly Crop Guardian) is a Bengali, mobile-first Next.js app that advises potato farmers in Bangladesh on late blight. It has a weather-based daily risk, on-device leaf photo diagnosis that admits when it is unsure, and SMS sign-in for farmers and agriculture officers. README.md is the detailed spec for each feature's behaviour. Read it before changing a feature, and keep it up to date when behaviour changes.
 
 ## Next.js 16 caveat
 

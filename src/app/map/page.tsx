@@ -12,7 +12,7 @@ import { getPlace } from '@/lib/place'
 import { shapesOf } from '@/lib/shapes'
 import { fetchHourlyForecastMany } from '@/lib/weather'
 
-export const metadata = { title: 'এলাকার ঝুঁকি ম্যাপ — Crop Guardian' }
+export const metadata = { title: 'এলাকার ঝুঁকি ম্যাপ — সবুজবিধি' }
 
 // Today's weather risk for every crop at each union's centroid, from one forecast request.
 async function unionRisks(unions: { id: string; lat: number; lon: number }[]): Promise<Record<CropId, UnionRisk[]> | null> {

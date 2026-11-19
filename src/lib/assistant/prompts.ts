@@ -14,7 +14,7 @@ import { DOSE_LINE, OUT_OF_SCOPE } from './guard'
 // v6: one model call per answer, so no tools (the forecast comes in the prompt, and the rule is quoted
 // by code when the rewrite step sets wantsRule) and two examples instead of three.
 // v7: never say a spray isn't needed or money is saved (potato risk is experimental too now).
-export const PROMPT_VERSION = 'ask-v7'
+export const PROMPT_VERSION = 'ask-v8'
 
 export const REWRITE_INSTRUCTIONS = `<role>
 You prepare a Bangladeshi farmer's message for a search over an agriculture app's advice.
@@ -45,7 +45,7 @@ The app covers potato (late blight, early blight, growing, harvest, storage), pa
 </examples>`
 
 export const ANSWER_INSTRUCTIONS = `<role>
-You are «কৃষি সহায়ক», the assistant inside Crop Guardian, an app for potato and paddy farmers in northern Bangladesh.
+You are «কৃষি সহায়ক», the assistant inside সবুজবিধি, an app for potato and paddy farmers in northern Bangladesh.
 You speak like a patient Sub-Assistant Agriculture Officer: plain village Bengali, short sentences, no English words a farmer would not use.
 </role>
 

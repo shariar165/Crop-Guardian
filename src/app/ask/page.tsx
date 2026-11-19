@@ -1,7 +1,7 @@
 import AskChat from '@/components/AskChat'
 import TopBar from '@/components/TopBar'
 
-export const metadata = { title: 'কৃষি সহায়ক — Crop Guardian' }
+export const metadata = { title: 'কৃষি সহায়ক — সবুজবিধি' }
 
 // Questions answered from the app's own advice (src/lib/assistant). Needs the network, so it is not
 // cached for offline use: offline, public/sw.js shows /offline.

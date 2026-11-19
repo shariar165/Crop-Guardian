@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { PrimaryLink } from '@/components/Buttons'
 import { CameraIcon, OfflineIcon } from '@/components/icons'
 
-export const metadata = { title: 'নেট নেই — Crop Guardian' }
+export const metadata = { title: 'নেট নেই — সবুজবিধি' }
 
 // Served by the service worker for screens that need the internet (Home's weather risk) when offline.
 export default function OfflinePage() {

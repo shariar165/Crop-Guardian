@@ -13,7 +13,7 @@ import { formatBdPhone } from '@/lib/phone'
 import { fullName, unionById } from '@/lib/areas'
 import { reviewCase } from './actions'
 
-export const metadata = { title: 'কৃষি কর্মকর্তা — Crop Guardian' }
+export const metadata = { title: 'কৃষি কর্মকর্তা — সবুজবিধি' }
 
 const VERDICT_LABEL: Record<Verdict, string> = { late_blight: 'নাবি ধসা নিশ্চিত', not_late_blight: 'নাবি ধসা নয়' }
 

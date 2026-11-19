@@ -35,7 +35,7 @@ async function main() {
       const { result, modelUsed } = await withFallback('answer', (model, abortSignal) =>
         generateText({
           model,
-          instructions: 'You help a Bangladeshi agriculture officer. Use the Crop Guardian tools; answer in short Bengali. Never give a pesticide dose.',
+          instructions: 'You help a Bangladeshi agriculture officer. Use the সবুজবিধি tools; answer in short Bengali. Never give a pesticide dose.',
           prompt: question,
           tools,
           stopWhen: isStepCount(6),

@@ -10,7 +10,7 @@ import { diagnosisClasses, findUnions } from '@/lib/mcpTools'
 import { riskAt } from '@/lib/riskAt'
 import { fetchHourlyPast, MAX_PAST_DAYS } from '@/lib/weather'
 
-// Crop Guardian as an MCP server (Streamable HTTP), so an agriculture officer's AI assistant or
+// সবুজবিধি as an MCP server (Streamable HTTP), so an agriculture officer's AI assistant or
 // another agent can use the same risk engine, area index and advice as the app. Read-only.
 // With MCP_SECRET set, every call needs "Authorization: Bearer <MCP_SECRET>".
 
@@ -79,7 +79,7 @@ const handler = createMcpHandler(
       'search_guide',
       {
         title: "Search the app's advice",
-        description: "Search Crop Guardian's Bengali advice (potato growing, late blight, storage, paddy blast, using the app). Returns the matching passages with their sources. Never contains doses.",
+        description: "Search সবুজবিধি's Bengali advice (potato growing, late blight, storage, paddy blast, using the app). Returns the matching passages with their sources. Never contains doses.",
         inputSchema: z.object({ query: z.string().min(1).describe('A Bengali question or phrase') }),
         annotations: { readOnlyHint: true },
       },
@@ -108,7 +108,7 @@ const handler = createMcpHandler(
     server.registerResource(
       'advice',
       'crop-guardian://advice',
-      { title: "Crop Guardian's advice", description: 'Every passage the assistant answers from, with its source.', mimeType: 'text/markdown' },
+      { title: "সবুজবিধি's advice", description: 'Every passage the assistant answers from, with its source.', mimeType: 'text/markdown' },
       async (uri) => ({
         contents: [{ uri: uri.href, text: KB.map((c) => `## ${c.title}\n${c.text}\n\nসূত্র: ${c.source}`).join('\n\n') }],
       }),

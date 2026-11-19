@@ -10,7 +10,7 @@ type Env = Record<string, string | undefined>
 export type SmsOptions = { ttlS?: number; priority?: number }
 
 // Kept under 70 characters: a Bengali SMS is UCS-2, so anything longer is sent as two.
-export const otpMessage = (code: string) => `Crop Guardian কোড: ${code}। ৫ মিনিট চলবে।`
+export const otpMessage = (code: string) => `সবুজবিধি কোড: ${code}। ৫ মিনিট চলবে।`
 
 // Without credentials in development, the message is logged instead, so sign-in works without a phone.
 export async function sendSms(
