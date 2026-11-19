@@ -79,6 +79,6 @@ describe('alertMessage', () => {
     for (const crop of CROP_IDS) {
       if (CROPS[crop].experimental) assert.match(alertMessage(crop, strip(START, 'safe', 'danger'), 1), /পরীক্ষামূলক/, crop)
     }
-    assert.equal(alertMessage('potato', strip(START, 'safe', 'danger'), 1), 'Crop Guardian: কাল থেকে আলুতে ধসার ঝুঁকি (পরীক্ষামূলক)। পাতা দেখুন।')
+    assert.equal(alertMessage('potato', strip(START, 'safe', 'danger'), 1), 'সবুজবিধি: কাল থেকে আলুতে ধসার ঝুঁকি (পরীক্ষামূলক)। পাতা দেখুন।')
   })
 })

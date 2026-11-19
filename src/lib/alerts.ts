@@ -37,5 +37,5 @@ export function nextAlert(days: StripDay[], lastDanger: string | null): { send: 
 
 export function alertMessage(crop: CropId, days: StripDay[], index: number): string {
   const from = index === 0 ? 'আজ' : dangerFrom(days, index)
-  return `Crop Guardian: ${from} থেকে ${CROPS[crop].smsWarning}`
+  return `সবুজবিধি: ${from} থেকে ${CROPS[crop].smsWarning}`
 }

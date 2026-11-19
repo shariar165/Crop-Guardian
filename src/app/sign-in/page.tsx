@@ -4,7 +4,7 @@ import TopBar from '@/components/TopBar'
 import { getSession } from '@/lib/auth/session'
 import { safeNext } from '@/lib/auth/signIn'
 
-export const metadata = { title: 'ঢুকুন — Crop Guardian' }
+export const metadata = { title: 'ঢুকুন — সবুজবিধি' }
 
 // ?next= is where to go after signing in (a path on this site; /account otherwise).
 export default async function SignInPage({ searchParams }: PageProps<'/sign-in'>) {

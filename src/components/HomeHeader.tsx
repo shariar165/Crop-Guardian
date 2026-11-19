@@ -24,7 +24,7 @@ export default function HomeHeader({
         <div className="flex items-center gap-2.5">
           <LogoMark />
           <div className="flex flex-col leading-[1.1]">
-            <span className="font-display text-[19px] font-extrabold">Crop Guardian</span>
+            <span className="font-display text-[19px] font-extrabold">সবুজবিধি</span>
             <span className="text-[13px] font-medium">মাঠের সৎ ডাক্তার</span>
           </div>
         </div>

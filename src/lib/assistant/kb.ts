@@ -26,14 +26,14 @@ export type KbPassage = {
 // migration. null means the chunk holds for every crop, or for no one disease of its crop.
 export type KbChunk = KbPassage & { crop: CropId | null; disease: string | null }
 
-const APP_SOURCE = 'Crop Guardian নির্দেশিকা'
+const APP_SOURCE = 'সবুজবিধি নির্দেশিকা'
 
 const potato: KbChunk[] = POTATO_GUIDE.map((s) => ({
   id: `potato.${s.id}`,
   title: s.title,
   source: s.source,
   href: `/potato#${s.id}`,
-  context: `ক্রপ গার্ডিয়ানের «আলু চাষের পরামর্শ» পাতার «${s.title}» অংশ, বাংলাদেশের গবেষণা থেকে।`,
+  context: `সবুজবিধির «আলু চাষের পরামর্শ» পাতার «${s.title}» অংশ, বাংলাদেশের গবেষণা থেকে।`,
   text: s.lines.join(' '),
   crop: 'potato',
   disease: s.id === 'blight' ? 'late_blight' : null,
@@ -56,7 +56,7 @@ const guideChunk = (s: GuideSection, lines = s.lines): KbChunk => ({
   title: s.title,
   source: APP_SOURCE,
   href: `/guide#${s.id}`,
-  context: `ক্রপ গার্ডিয়ান অ্যাপ কীভাবে ব্যবহার করবেন, নির্দেশিকার «${s.title}» অংশ।`,
+  context: `সবুজবিধি অ্যাপ কীভাবে ব্যবহার করবেন, নির্দেশিকার «${s.title}» অংশ।`,
   text: lines.join(' '),
   ...(GUIDE_SCOPE[s.id] ?? { crop: null, disease: null }),
 })

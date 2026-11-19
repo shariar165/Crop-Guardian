@@ -6,7 +6,7 @@ import TopBar from '@/components/TopBar'
 import UnionPicker from '@/components/UnionPicker'
 import { getPlace } from '@/lib/place'
 
-export const metadata = { title: 'আমার জমি — Crop Guardian' }
+export const metadata = { title: 'আমার জমি — সবুজবিধি' }
 
 const SPEECH =
   'প্রথমে আপনার এলাকা বেছে নিন: জেলা, তারপর উপজেলা, তারপর ইউনিয়নের নাম চাপুন। তারপর ফসল বেছে নিন, আলু না ধান। ধান হলে বোরো না আমন, সেটাও বেছে নিন। তারপর কবে লাগিয়েছেন, দিন, মাস আর বছর বেছে নিয়ে তারিখ রাখুন চাপুন। আলু আর ধান, দুই জমিই রাখা যায়।'

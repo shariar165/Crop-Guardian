@@ -2,7 +2,7 @@ import BottomNav from '@/components/BottomNav'
 import LedgerView from '@/components/LedgerView'
 import { getPlace } from '@/lib/place'
 
-export const metadata = { title: 'মৌসুমের হিসাব — Crop Guardian' }
+export const metadata = { title: 'মৌসুমের হিসাব — সবুজবিধি' }
 
 // The season ledger of one field (?field=boro, else the one Home showed), from this phone's
 // planting date and logged sprays and the real weather.

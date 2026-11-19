@@ -1,4 +1,8 @@
-# Crop-Guardian
+# সবুজবিধি (Sobujbidhi)
+
+<img src="public/logo.png" alt="সবুজবিধি — মাঠের সৎ ডাক্তার" width="300">
+
+The name means "green rule" (সবুজ, green; বিধি, rule or prescription). The app was called Crop Guardian until November 2026; browser storage keys, cache names and IndexedDB still use `crop-guardian`, so phones keep their fields, sprays and saved cases. The logo is `src/app/icon.svg` (also the favicon, and `LogoMark` on Home); `src/app/apple-icon.png` and `public/logo.png` are rendered from it.
 
 **মাঠের সৎ ডাক্তার** — a Bengali, mobile-first UI for advising potato farmers on late blight, and paddy farmers on rice blast: daily risk from the weather, leaf photo diagnosis that admits uncertainty (potato, and paddy as an experiment, see [Paddy diagnosis](#paddy-diagnosis)), an area risk map, and a season ledger. Every number on screen comes from a real source: the weather forecast, the farmer's own records on the phone, or cases an agriculture officer has confirmed. There is no sample or demo data.
 
@@ -231,7 +235,7 @@ The risk is only useful if the farmer hears it in time, and most won't open the 
 - **Schedule.** Vercel Cron (`vercel.json`) calls `GET /api/cron/alerts` every day at 10:00 UTC, which is **16:00 in Bangladesh**. The route only runs with `Authorization: Bearer $CRON_SECRET`. In development without `CRON_SECRET` it can be called by hand.
 - **What runs** (`src/lib/alertRun.ts`): it fetches one forecast per union with alerts (Open-Meteo, up to 50 unions per request) and, for each farmer, applies the rule of each crop **in the field today** (`cropsToAlert` in `src/lib/alerts.ts`). Without a field it assumes the usual potato season, as Home does.
 - **When to text** (`nextAlert`): if today or tomorrow is danger, and the farmer wasn't already warned about this run of danger. As in the backtest's alert count (`ALERT_QUIET_DAYS`), a new warning needs two days without danger in between, so a week of fog sends one SMS, not seven. The latest danger day each farmer was warned about is kept per crop in `"alert_state"`. Each run claims a row before sending, so a retried or doubled cron can't send twice, and an SMS that fails is released for the next day.
-- **The message** fits one Bengali SMS (≤ 70 characters, tested), e.g. `Crop Guardian: কাল থেকে আলুতে ধসার ঝুঁকি (পরীক্ষামূলক)। পাতা দেখুন।` (67). The crop's words are `smsWarning` in `src/lib/crops.ts`; every experimental crop's says পরীক্ষামূলক (tested).
+- **The message** fits one Bengali SMS (≤ 70 characters, tested), e.g. `সবুজবিধি: কাল থেকে আলুতে ধসার ঝুঁকি (পরীক্ষামূলক)। পাতা দেখুন।` (62). The crop's words are `smsWarning` in `src/lib/crops.ts`; every experimental crop's says পরীক্ষামূলক (tested).
 - **Sending** goes through the same SMS Gate phone as sign-in codes, one at a time, at a lower priority than codes and with a 6-hour expiry. Without `SMS_GATE_*` in development the texts are printed to the console.
 
 To try it locally: run `npm run db:migrate`, sign in, choose a union on `/planting`, turn SMS on at `/account`, then `curl localhost:3000/api/cron/alerts`. The JSON says how many farmers were checked, texted, skipped (already warned) or failed. A text only goes out on a real danger day, so most days it sends nothing.
@@ -305,7 +309,7 @@ The free tiers have rate limits, enough for a demo and the eval but not for many
 
 ## MCP server
 
-`/api/mcp` serves Crop Guardian as an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP, `mcp-handler`), so an agriculture officer's AI assistant or a partner's agent can use the same engines as the app. Read-only tools: `find_union` (an id from a union, upazila or district name), `get_risk` (today's risk at a union), `get_season_risk` (every past day from a date), `search_guide` (the assistant's search) and `diagnosis_classes`; the advice is also a resource, `crop-guardian://advice`. With `MCP_SECRET` set, calls need `Authorization: Bearer $MCP_SECRET`. Set it in production, since `search_guide` uses the assistant's free-tier quota.
+`/api/mcp` serves সবুজবিধি as an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP, `mcp-handler`), so an agriculture officer's AI assistant or a partner's agent can use the same engines as the app. Read-only tools: `find_union` (an id from a union, upazila or district name), `get_risk` (today's risk at a union), `get_season_risk` (every past day from a date), `search_guide` (the assistant's search) and `diagnosis_classes`; the advice is also a resource, `crop-guardian://advice`. With `MCP_SECRET` set, calls need `Authorization: Bearer $MCP_SECRET`. Set it in production, since `search_guide` uses the assistant's free-tier quota.
 
 ```bash
 npx tsx scripts/mcp-client.ts http://localhost:3000/api/mcp          # lists and calls the tools

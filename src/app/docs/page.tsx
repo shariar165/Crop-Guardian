@@ -9,7 +9,7 @@ import { PROMPT_VERSION } from '@/lib/assistant/prompts'
 import { DIVISIONS } from '@/lib/areas'
 import { parseBacktest, parseEvalSummary, parseFindings, parseLeaveOneOut } from '@/lib/docsData'
 
-export const metadata = { title: 'Crop Guardian — how it works' }
+export const metadata = { title: 'Sobujbidhi (সবুজবিধি) — how it works' }
 
 // A page for judges, partners and agronomists: what the app does, what evidence there is and how
 // AI is used. It is in English, unlike the farmer's screens, because those are its readers.
@@ -71,7 +71,7 @@ export default function DocsPage() {
       <TopBar back="/" title="How it works" right={<span className="size-11" />} />
 
       <div className="flex flex-col gap-3 px-4 pb-6 text-[15px] leading-[1.5]">
-        <Section title="Crop Guardian">
+        <Section title="সবুজবিধি (Sobujbidhi)">
           <p className="m-0">
             A Bengali, phone-first app that tells potato farmers in northern Bangladesh when late blight weather is coming, recognises the disease from a leaf photo on the
             phone, and admits when it is unsure. Late blight can cut the country’s potato yield by up to 30%, and many farmers spray every week by the calendar whatever the

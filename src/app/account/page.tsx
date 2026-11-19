@@ -11,7 +11,7 @@ import { getAlert } from '@/lib/alertDb'
 import { formatBdPhone } from '@/lib/phone'
 import { getPlace } from '@/lib/place'
 
-export const metadata = { title: 'আমার অ্যাকাউন্ট — Crop Guardian' }
+export const metadata = { title: 'আমার অ্যাকাউন্ট — সবুজবিধি' }
 
 const ROLE_LABEL: Record<Role, string> = { farmer: 'কৃষক', officer: 'কৃষি কর্মকর্তা' }
 

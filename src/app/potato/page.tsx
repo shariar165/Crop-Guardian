@@ -7,7 +7,7 @@ import { toBnDigits } from '@/lib/bn'
 import { speechOf } from '@/lib/guide'
 import { POTATO_GUIDE, POTATO_SOURCES } from '@/lib/potatoGuide'
 
-export const metadata = { title: 'আলু চাষের পরামর্শ — Crop Guardian' }
+export const metadata = { title: 'আলু চাষের পরামর্শ — সবুজবিধি' }
 
 // Growing, harvest, storage and disease advice for Bangladesh, each part with its own read-aloud.
 // Cached for offline use (public/sw.js), since it is read in the field.

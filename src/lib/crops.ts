@@ -54,7 +54,7 @@ export type CropSpec = {
   // Whether the ledger may count weeks without danger as calendar sprays saved. Only where the
   // farmers' usual habit is known to be one spray a week and the rule is validated. None is yet.
   calendarBaseline: boolean
-  // The SMS alert after "Crop Guardian: কাল থেকে ". The whole SMS must stay one Bengali SMS (≤ 70).
+  // The SMS alert after "সবুজবিধি: কাল থেকে ". The whole SMS must stay one Bengali SMS (≤ 70).
   smsWarning: string
   decision: Record<Risk, string>
   assess: (hourly: HourlyForecast, today?: string) => RiskAssessment
