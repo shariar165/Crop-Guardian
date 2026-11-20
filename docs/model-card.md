@@ -51,7 +51,7 @@ With 1 − q̂ ≈ 0.89, the set can never hold two classes for one photo, so a 
 
 These are reproducible from the repo today.
 
-- **App = notebook.** `src/lib/diagnosis/__fixtures__/parity/` has 12 images with the notebook's logits and decisions: 4 healthy, 4 late blight, and 4 diseases the model never saw. `parity.test.ts` runs the real ONNX model in Node through the app's own preprocessing and gets the **same decision and candidates for all 12** (the logits drift by 0.1–0.25 because the image resizing isn't bit-identical).
+- **App = notebook.** `src/lib/diagnosis/__fixtures__/parity/` has 12 images with the notebook's logits and decisions: 4 healthy, 4 late blight, and 4 other diseases that are not among its three classes (whether the `other` class trained on any of them is still to be confirmed from notebook 04). `parity.test.ts` runs the real ONNX model in Node through the app's own preprocessing and gets the **same decision and candidates for all 12** (the logits drift by 0.1–0.25 because the image resizing isn't bit-identical).
 - **What those 12 show.** The 8 known leaves are all confident and correct. Of the 4 unseen diseases, **3 are called unknown and 1 is called late blight with confidence**, in the notebook as well as the app. That is 12 images, too few to be a rate, but it shows the OOD check is not perfect.
 - **Field-photo test.** `npx tsx scripts/eval-field-photos.ts <dir> --write` runs any folder of labelled photos through the same code and writes `docs/field-photo-test.md`. It has not been run on Bangladeshi field photos yet.
 

@@ -27,7 +27,7 @@ test('every sample is a parity image the notebook decided as its label says', ()
 })
 
 test('a sample result is labelled, and an unknown id is not a sample', () => {
-  assert.match(SAMPLE_NOTE, /sample image from the test set/)
+  assert.match(SAMPLE_NOTE, /image from the model’s dataset/)
   assert.equal(sampleById(undefined), undefined)
   assert.equal(sampleById('nope'), undefined)
 })

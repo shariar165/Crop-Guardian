@@ -4,7 +4,7 @@ import { outlineClass, PrimaryLink } from '@/components/Buttons'
 import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
-import { BookIcon, CameraIcon, OfflineIcon, SprayIcon, WarnIcon } from '@/components/icons'
+import { BookIcon, CameraIcon, OfflineIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
 import SprayButton from '@/components/SprayButton'
@@ -103,7 +103,7 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           className="flex size-14 shrink-0 items-center justify-center rounded-full"
           style={{ background: view.accentSoft, color: view.accent }}
         >
-          <SprayIcon size={32} crossed={view.noSpray} />
+          {view.icon === 'spray' ? <SprayIcon size={32} /> : <SproutIcon size={32} />}
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] font-semibold text-muted">আজকের সিদ্ধান্ত</span>
