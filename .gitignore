@@ -18,3 +18,6 @@ next-env.d.ts
 
 # Weather downloads kept by the backtest scripts (scripts/fetchCache.ts)
 /.cache/
+
+# Datasets for scripts/eval-field-photos.ts, downloaded by hand (not ours to redistribute)
+/data/
