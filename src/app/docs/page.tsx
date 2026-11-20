@@ -7,7 +7,7 @@ import { KB } from '@/lib/assistant/kb'
 import { MODELS } from '@/lib/assistant/models'
 import { PROMPT_VERSION } from '@/lib/assistant/prompts'
 import { DIVISIONS } from '@/lib/areas'
-import { parseBacktest, parseEvalSummary, parseFindings, parseLeaveOneOut } from '@/lib/docsData'
+import { parseBacktest, parseEvalSummary, parseFieldPhotoHeadline, parseFindings, parseLeaveOneOut } from '@/lib/docsData'
 
 export const metadata = { title: 'Sobujbidhi (সবুজবিধি) — how it works' }
 
@@ -38,8 +38,13 @@ const SAFETY = [
   'Signed-out by default. SMS alerts store only the union and planting dates. Officers’ pages are checked on the server.',
 ]
 
+// The first limit quotes the Bangladeshi field-photo test once docs/field-photo-test.md exists.
+const photoLimit = (misleading: string | undefined) =>
+  misleading
+    ? `The diagnosis thresholds were fitted on Indonesian field photos. On Bangladeshi field photos the model never trained on, ${misleading} of its answers were misleading (see “What we tested and what failed”); recalibrating on such photos is next, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.`
+    : 'The diagnosis thresholds were fitted on Indonesian field photos, not Bangladeshi ones; held-out public field datasets are the next step, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.'
+
 const LIMITS = [
-  'The diagnosis thresholds were fitted on Indonesian field photos, not Bangladeshi ones; held-out public field datasets are the next step, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.',
   'Neither weather rule is validated against dated outbreaks in Bangladesh (see “What we tested and what failed”), so potato and paddy risk are both labelled experimental in the app, and the ledger counts no money saved.',
   'The assistant knows only what the app’s advice says; it is a way to find that advice, not an agronomist.',
 ]
@@ -65,6 +70,8 @@ export default function DocsPage() {
   const evalSummary = parseEvalSummary(read('assistant-eval.md'))
   const findings = parseFindings(read('rule-comparison.md'))
   const heldOut = parseLeaveOneOut(read('model-card-paddy.md'))
+  const fieldPhotos = parseFieldPhotoHeadline(read('field-photo-test.md'))
+  const limits = [photoLimit(fieldPhotos.find((r) => r.measure.startsWith('Misleading'))?.result), ...LIMITS]
 
   return (
     <div className="flex flex-1 flex-col">
@@ -110,6 +117,24 @@ export default function DocsPage() {
             <p className="m-0 text-muted">Run scripts/compare-blight-rules.ts --write.</p>
           )}
           <p className="m-0 text-[14px] text-muted">From docs/rule-comparison.md. So the app labels potato risk experimental and its ledger no longer counts weeks without danger as money saved.</p>
+          <h3 className="m-0 mt-1 text-[16px] font-bold">Potato photo model, Bangladeshi field photos</h3>
+          {fieldPhotos.length > 0 ? (
+            <table className="w-full border-collapse text-[13px]">
+              <tbody>
+                {fieldPhotos.map((r) => (
+                  <tr key={r.measure} className="border-b border-line">
+                    <td className="py-1 pr-2">{r.measure}</td>
+                    <td className="py-1 text-right font-semibold">{r.result}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="m-0 text-muted">Not run yet: scripts/eval-field-photos.ts --write.</p>
+          )}
+          <p className="m-0 text-[14px] text-muted">
+            From docs/field-photo-test.md: photos from Bangladeshi fields, with the real model and thresholds on the phone. Misleading is a confident wrong answer, a shortlist without the true disease, or an unseen disease not called unknown. “Camera would ask to retake” is the share the camera’s photo check would have flagged.
+          </p>
           <h3 className="m-0 mt-1 text-[16px] font-bold">Paddy photo model, one dataset held out</h3>
           {heldOut.length > 0 ? (
             <table className="w-full border-collapse text-[13px]">
@@ -186,7 +211,7 @@ export default function DocsPage() {
 
         <Section title="What it can’t do yet">
           <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5">
-            {LIMITS.map((s) => (
+            {limits.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ul>

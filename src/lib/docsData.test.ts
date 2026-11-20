@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { parseBacktest, parseEvalSummary, parseFindings, parseLeaveOneOut, tableRows } from '@/lib/docsData'
+import { parseBacktest, parseEvalSummary, parseFieldPhotoHeadline, parseFindings, parseLeaveOneOut, tableRows } from '@/lib/docsData'
 
 test('table rows skip the header and divider of each table', () => {
   const md = '| A | B |\n|---|--:|\n| 1 | 2 |\n\ntext\n\n| C |\n|---|\n| 3 |'
@@ -35,4 +35,10 @@ test('the paddy leave-one-dataset-out table parses every held-out dataset', () =
   assert.deepEqual(rows.map((r) => r.dataset), ['Dhan-Shomadhan', 'RiceLeafBD', 'RiceLeafDisease-BD5'])
   for (const r of rows) assert.match(`${r.accuracy} ${r.misleading} ${r.unknown}`, /^[\d.]+% [\d.]+% [\d.]+%$/)
   assert.deepEqual(parseLeaveOneOut('nothing'), [])
+})
+
+test('the field-photo headline is read from its section only', () => {
+  const md = '# Field-photo test\n\n## Headline\n\n| Measure | Result |\n|---|---|\n| Misleading answers | 3 of 30 (10%) |\n\n## Model answers\n\n| Folder | Photos |\n|---|--:|\n| healthy | 10 |'
+  assert.deepEqual(parseFieldPhotoHeadline(md), [{ measure: 'Misleading answers', result: '3 of 30 (10%)' }])
+  assert.deepEqual(parseFieldPhotoHeadline(''), [])
 })

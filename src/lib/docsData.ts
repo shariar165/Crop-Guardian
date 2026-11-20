@@ -55,3 +55,9 @@ export function parseLeaveOneOut(md: string): HeldOutRow[] {
     unknown === undefined ? [] : [{ dataset, photos, accuracy, misleading, unknown }],
   )
 }
+
+// docs/field-photo-test.md's "## Headline": | Measure | Result ("12 of 120 (10%)") |
+export function parseFieldPhotoHeadline(md: string): { measure: string; result: string }[] {
+  const section = md.split('## Headline')[1]?.split('\n## ')[0] ?? ''
+  return tableRows(section).flatMap(([measure, result]) => (result === undefined ? [] : [{ measure, result }]))
+}

@@ -1,6 +1,7 @@
 // Runs the app's photo diagnosis on a folder of labelled leaf photos, e.g. 20–30 taken in
 // Bangladeshi fields, to see how the model holds up outside the data it was calibrated on.
-// It uses the real ONNX model and the app's own preprocessing and decision (as parity.test.ts does).
+// It uses the real ONNX model and the app's own preprocessing and decision (as parity.test.ts does),
+// and the camera's own quality check, to show which photos the camera would have asked to retake.
 //
 //   <dir>/late_blight/*.jpg   <dir>/healthy/*.jpg   <dir>/early_blight/*.jpg   (the crop model's classes)
 //   <dir>/unseen/*.jpg        other diseases or pests the model never saw: it should say "unknown"
@@ -15,11 +16,21 @@ import { configUrlOf } from '@/lib/diagnosis/crops'
 import { decide, type PhotoResult } from '@/lib/diagnosis/decide'
 import { resizeGeometry, toTensor } from '@/lib/diagnosis/preprocess'
 import { todayIn } from '@/lib/dates'
+import { isAcceptable, type QualityReport } from '@/lib/imageQuality'
+import { qualityOfFile } from '@/lib/imageQualityNode'
 
 const UNSEEN = 'unseen'
 const IMAGE = /\.(jpe?g|png|webp)$/i
 
-type Outcome = { file: string; truth: string; result: PhotoResult }
+type Outcome = { file: string; truth: string; result: PhotoResult; quality: QualityReport }
+
+// The camera's hint in English, in topHint's order (light first, since it spoils the other checks).
+function flagOf(q: QualityReport): string | null {
+  if (isAcceptable(q)) return null
+  if (q.light !== 'ok') return q.light === 'dark' ? 'too dark' : 'too bright'
+  if (q.leaf !== 'ok') return q.leaf === 'absent' ? 'no leaf' : 'too far'
+  return 'blurry'
+}
 
 // What a farmer would be told, judged against the truth. "Misleading" is the one that matters:
 // a confident wrong answer, or a shortlist that leaves the real disease out.
@@ -32,6 +43,7 @@ function verdict({ truth, result }: Outcome): 'right' | 'shortlist' | 'unknown' 
 }
 
 const pct = (n: number, of: number) => (of === 0 ? '—' : `${Math.round((100 * n) / of)}%`)
+const share = (n: number, of: number) => (of === 0 ? '—' : `${n} of ${of} (${pct(n, of)})`)
 
 function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir: string, args: string): string {
   const rows = groups.map((g) => {
@@ -42,10 +54,26 @@ function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir
   const confident = outcomes.filter((o) => o.truth !== UNSEEN && o.result.decision === 'confident')
   const total = outcomes.length
   const misleading = rows.reduce((sum, r) => sum + r.misleading, 0)
+  const blight = outcomes.filter((o) => o.truth === 'late_blight')
+  const caught = blight.filter((o) => o.result.decision !== 'unknown' && o.result.candidates.includes('late_blight')).length
+  const unseen = outcomes.filter((o) => o.truth === UNSEEN)
+  const flagged = (g: string) => outcomes.filter((o) => o.truth === g && flagOf(o.quality))
   return [
     '# Field-photo test',
     '',
-    `The app's photo diagnosis on ${total} labelled photos from \`${dir}\`, one photo at a time, with the real model and the app's own preprocessing and thresholds.`,
+    `The app's photo diagnosis on ${total} labelled photos from \`${dir}\`, one photo at a time, with the real model and the app's own preprocessing and thresholds. ` +
+      "Every photo goes to the model, including those the camera would have asked to retake; the camera's check is reported on its own.",
+    '',
+    '## Headline',
+    '',
+    '| Measure | Result |',
+    '|---|---|',
+    `| Misleading answers | ${share(misleading, total)} |`,
+    ...(blight.length ? [`| Late blight caught (confident, or on the shortlist) | ${share(caught, blight.length)} |`] : []),
+    ...(unseen.length ? [`| Unseen diseases called "unknown" | ${share(unseen.filter((o) => o.result.decision === 'unknown').length, unseen.length)} |`] : []),
+    ...groups.map((g) => `| Camera would ask to retake: ${g} | ${share(flagged(g).length, outcomes.filter((o) => o.truth === g).length)} |`),
+    '',
+    '## Model answers',
     '',
     '| Folder | Photos | Right | Shortlist with the right answer | "Unknown" | Misleading |',
     '|---|--:|--:|--:|--:|--:|',
@@ -63,6 +91,19 @@ function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir
       .map((g) => `| ${g} | ${diseases.map((d) => confident.filter((o) => o.truth === g && o.result.candidates[0] === d).length).join(' | ')} |`),
     '',
     `Accuracy of confident answers: ${pct(confident.filter((o) => o.result.candidates[0] === o.truth).length, confident.length)} of ${confident.length}.`,
+    '',
+    '## Camera quality check',
+    '',
+    "What the camera's check (`src/lib/imageQuality.ts`) would have said on each photo as a gallery upload: the whole photo scaled to the analysis width. " +
+      'A flagged photo can still be kept by the farmer.',
+    '',
+    '| Folder | Photos | Would ask to retake | Too dark | Too bright | No leaf | Too far | Blurry |',
+    '|---|--:|--:|--:|--:|--:|--:|--:|',
+    ...groups.map((g) => {
+      const f = flagged(g).map((o) => flagOf(o.quality))
+      const n = (hint: string) => f.filter((x) => x === hint).length
+      return `| ${g} | ${outcomes.filter((o) => o.truth === g).length} | ${pct(f.length, outcomes.filter((o) => o.truth === g).length)} | ${n('too dark')} | ${n('too bright')} | ${n('no leaf')} | ${n('too far')} | ${n('blurry')} |`
+    }),
     '',
     `Generated on ${todayIn()} by \`npx tsx scripts/eval-field-photos.ts <dir>${args} --write\`.`,
     '',
@@ -88,8 +129,9 @@ async function main() {
   const outcomes: Outcome[] = []
   for (const truth of groups) {
     for (const file of readdirSync(join(dir, truth)).filter((f) => IMAGE.test(f))) {
+      const path = join(dir, truth, file)
       // Phone photos carry their rotation in EXIF; the browser applies it, so do the same here.
-      const image = sharp(join(dir, truth, file)).rotate()
+      const image = sharp(path).rotate()
       const { width = 0, height = 0 } = await image.clone().toBuffer({ resolveWithObject: true }).then((r) => r.info)
       const g = resizeGeometry(width, height, config)
       const { data } = await image
@@ -101,9 +143,10 @@ async function main() {
       const input = new ort.Tensor('float32', toTensor(data, g.size, config), [1, 3, g.size, g.size])
       const output = await session.run({ [config.inputName]: input })
       const result = decide(Array.from(output[config.outputName].data as Float32Array), config)
-      const outcome = { file: `${truth}/${file}`, truth, result }
+      const quality = await qualityOfFile(path)
+      const outcome = { file: `${truth}/${file}`, truth, result, quality }
       outcomes.push(outcome)
-      console.log(`${outcome.file}: ${result.decision} [${result.candidates.join(', ')}] → ${verdict(outcome)}`)
+      console.log(`${outcome.file}: ${result.decision} [${result.candidates.join(', ')}] → ${verdict(outcome)}; camera: ${flagOf(quality) ?? 'ok'}`)
     }
   }
   if (outcomes.length === 0) throw new Error(`No photos found under ${dir}`)
