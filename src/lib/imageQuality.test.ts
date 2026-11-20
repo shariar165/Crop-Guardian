@@ -14,6 +14,7 @@ import {
   topHint,
 } from '@/lib/imageQuality'
 import type { Pixels, QualityReport } from '@/lib/imageQuality'
+import { leafNearOf } from '@/lib/diagnosis/crops'
 
 const SIZE = 40
 
@@ -48,6 +49,25 @@ function greenPatch(scale: number): Pixels {
   })
 }
 
+// greenPatch with some of its leaf pixels repainted by `spot` (null keeps the leaf).
+function spotted(scale: number, spot: (x: number, y: number) => RGB | null): Pixels {
+  const base = greenPatch(scale)
+  const px = frame((x, y) => {
+    const p = (y * SIZE + x) * 4
+    return [base.data[p], base.data[p + 1], base.data[p + 2]]
+  })
+  const leaf = greenPatch(scale)
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const p = (y * SIZE + x) * 4
+      const isLeaf = 2 * leaf.data[p + 1] - leaf.data[p] - leaf.data[p + 2] > 20
+      const c = isLeaf ? spot(x, y) : null
+      if (c) [px.data[p], px.data[p + 1], px.data[p + 2]] = c
+    }
+  }
+  return px
+}
+
 const OK: QualityReport = { luma: 120, sharpness: 500, green: 0.5, light: 'ok', focus: 'ok', leaf: 'ok' }
 
 describe('brightness', () => {
@@ -60,6 +80,43 @@ describe('brightness', () => {
     assert.equal(assessQuality(flat(20)).light, 'dark')
     assert.equal(assessQuality(flat(240)).light, 'bright')
     assert.equal(assessQuality(checker()).light, 'ok')
+  })
+})
+
+describe('light on the leaf', () => {
+  it('calls a dark leaf dark, even on a bright background', () => {
+    const shade = (x: number, y: number) => ((x + y) % 2 ? 20 : 0)
+    const px = frame((x, y) => {
+      const inLeaf = x >= 8 && x < 32 && y >= 12 && y < 34
+      return inLeaf ? [10 + shade(x, y), 50 + shade(x, y), 10 + shade(x, y)] : [235, 235, 235]
+    })
+    assert.ok(meanLuma(toGray(px)) > 100)
+    assert.equal(assessQuality(px).light, 'dark')
+  })
+
+  it('passes a well-lit leaf on a white background', () => {
+    // Like the paddy parity photo shot on white paper: little of the leaf frame is blown out.
+    const px = frame((x, y) => {
+      const shade = (x + y) % 2 ? 40 : 0
+      const inLeaf = x >= 6 && x < 34 && y >= 9 && y < 37
+      return inLeaf ? [70 + shade, 140 + shade, 50 + shade] : [252, 252, 252]
+    })
+    const r = assessQuality(px)
+    assert.ok(r.blown! > 0 && r.blown! < 0.3, String(r.blown))
+    assert.equal(r.light, 'ok')
+  })
+
+  it('calls glare on the leaf too bright', () => {
+    const px = spotted(1, (x) => (x % 5 < 2 ? [255, 255, 255] : null))
+    const r = assessQuality(px)
+    assert.equal(r.leaf, 'ok')
+    assert.equal(r.light, 'bright')
+    assert.equal(topHint(r), 'আলো খুব বেশি')
+  })
+
+  it('judges the whole frame when there is no leaf', () => {
+    assert.equal(assessQuality(flat(20)).luma, 20)
+    assert.equal(assessQuality(flat(240)).light, 'bright')
   })
 })
 
@@ -97,6 +154,33 @@ describe('leaf presence', () => {
   it('says "absent" with no green', () => {
     assert.equal(assessQuality(checker()).leaf, 'absent')
     assert.equal(greenFraction(flat(128)), 0)
+  })
+
+  it('still finds no leaf in a photo of soil', () => {
+    const soil = frame((x, y) => {
+      const shade = (x + y) % 2 ? 40 : 0
+      return [120 + shade, 90 + shade, 60 + shade]
+    })
+    for (const leafNear of [undefined, leafNearOf('paddy')]) {
+      const r = assessQuality(soil, { leafNear })
+      assert.equal(r.leaf, 'absent')
+      assert.equal(topHint(r), 'পাতা ফ্রেমের ভেতরে আনুন')
+    }
+  })
+
+  it('passes a leaf with brown lesions', () => {
+    // A third of the leaf is brown spots, which aren't green, so they lower the green share.
+    const r = assessQuality(spotted(1, (x, y) => (x % 5 < 3 && y % 5 < 3 ? [130, 90, 50] : null)))
+    assert.ok(r.green < 0.8, String(r.green))
+    assert.ok(isAcceptable(r), JSON.stringify(r))
+  })
+
+  it('lets a crop set its own "too far" line', () => {
+    // A rice blade close up fills only a tenth of the frame.
+    const px = greenPatch(0.35)
+    assert.equal(assessQuality(px).leaf, 'far')
+    assert.equal(assessQuality(px, { leafNear: leafNearOf('potato') }).leaf, 'far')
+    assert.equal(assessQuality(px, { leafNear: leafNearOf('paddy') }).leaf, 'ok')
   })
 
   it('only counts the given region', () => {

@@ -1,6 +1,7 @@
 // What the leaf-photo diagnosis needs per crop: the exported model's config, the two photos it asks
 // for, and how honest its results can be. The weather side of each crop lives in src/lib/crops.ts.
 import type { CropId } from '@/lib/crops'
+import { LEAF_NEAR_FRACTION } from '@/lib/imageQuality'
 
 export type PhotoStep = {
   // The camera's instruction, and the line under it.
@@ -23,6 +24,8 @@ export type PhotoCropSpec = {
   validation: string
   // The weather risk shown next to a result, e.g. "ধসার আবহাওয়া-ঝুঁকি".
   riskLabel: string
+  // The camera's "too far" line: the green share of the leaf frame below which it asks to come closer.
+  leafNearFraction: number
 }
 
 export const PHOTO_SPECS: Record<CropId, PhotoCropSpec> = {
@@ -35,6 +38,7 @@ export const PHOTO_SPECS: Record<CropId, PhotoCropSpec> = {
     },
     validation: 'পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা',
     riskLabel: 'ধসার আবহাওয়া-ঝুঁকি',
+    leafNearFraction: LEAF_NEAR_FRACTION,
   },
   paddy: {
     configUrl: '/model/paddy/crop_guardian_paddy_config.json',
@@ -56,6 +60,9 @@ export const PHOTO_SPECS: Record<CropId, PhotoCropSpec> = {
     // may well be misread, so the badge says so instead of claiming it was checked.
     validation: 'পরীক্ষামূলক: নতুন এলাকার ছবিতে এখনো নির্ভরযোগ্য নয়',
     riskLabel: 'ব্লাস্টের আবহাওয়া-ঝুঁকি (পরীক্ষামূলক)',
+    // A rice leaf is a narrow blade: close up it still fills a tenth of the frame (the narrow brown
+    // spot parity photos are 0.10–0.16), so potato's 0.25 would always say "come closer".
+    leafNearFraction: 0.08,
   },
 }
 
@@ -69,5 +76,6 @@ export const canDiagnose = (crop: CropId) => PHOTO_CROPS.includes(crop)
 export const cropOfRecord = (record: { crop?: CropId }): CropId => record.crop ?? 'potato'
 
 export const configUrlOf = (crop: CropId) => PHOTO_SPECS[crop].configUrl
+export const leafNearOf = (crop: CropId) => PHOTO_SPECS[crop].leafNearFraction
 
 export const classesOf = (crop: CropId) => Object.keys(PHOTO_SPECS[crop].labelsBn)
