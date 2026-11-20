@@ -99,14 +99,13 @@ export const PinIcon = (p: IconProps) => (
   </Icon>
 )
 
-/** Spray bottle; `crossed` draws the "no spray" slash. */
-export const SprayIcon = ({ crossed = false, ...p }: IconProps & { crossed?: boolean }) => (
+/** Spray bottle with its mist. */
+export const SprayIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M9 10h6v10H9z" />
     <path d="M10 10V7h4v3" />
     <path d="M14 7h3.5" />
     <path d="M19.5 5.5l1.5-1M19.5 8.5l1.5 1" />
-    <path d="M4 4l16 16" strokeWidth={2.4} opacity={crossed ? 1 : 0} />
   </Icon>
 )
 

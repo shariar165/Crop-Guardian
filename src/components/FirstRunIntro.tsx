@@ -11,8 +11,11 @@ import { INTRO, speechOf } from '@/lib/guide'
 
 const SEEN_KEY = 'crop-guardian:intro-seen'
 
-/** Four short cards over Home, the first time the app opens on this phone; then never again. */
-export default function FirstRunIntro() {
+/**
+ * Four short cards over Home, the first time the app opens on this phone; then never again. In
+ * showcase mode (`showcase`, from the server) every card links judges to the English /docs.
+ */
+export default function FirstRunIntro({ showcase = false }: { showcase?: boolean }) {
   const hydrated = useHydrated()
   const seen = useStored(SEEN_KEY)
   const router = useRouter()
@@ -53,6 +56,11 @@ export default function FirstRunIntro() {
       </div>
 
       <div className="flex shrink-0 flex-col gap-2 px-4 pb-6">
+        {showcase && (
+          <button type="button" lang="en" onClick={() => done('/docs')} className="min-h-11 border-0 bg-transparent text-base font-bold text-teal">
+            For judges (English) →
+          </button>
+        )}
         {last ? (
           <>
             <button type="button" onClick={() => done('/planting?from=intro')} className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold`}>

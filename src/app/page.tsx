@@ -4,7 +4,7 @@ import { outlineClass, PrimaryLink } from '@/components/Buttons'
 import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
-import { BookIcon, CameraIcon, OfflineIcon, SprayIcon, WarnIcon } from '@/components/icons'
+import { BookIcon, CameraIcon, OfflineIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
 import SprayButton from '@/components/SprayButton'
@@ -14,6 +14,7 @@ import { viewerHasAlerts } from '@/lib/alertDb'
 import { bnWeekday } from '@/lib/bn'
 import { todayIn } from '@/lib/dates'
 import { getPlace } from '@/lib/place'
+import { showcaseActive } from '@/lib/showcase'
 import { buildDecision, type RiskAssessment } from '@/lib/risk'
 import { fetchHourlyForecast, type HourlyForecast } from '@/lib/weather'
 
@@ -102,7 +103,7 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           className="flex size-14 shrink-0 items-center justify-center rounded-full"
           style={{ background: view.accentSoft, color: view.accent }}
         >
-          <SprayIcon size={32} crossed={view.noSpray} />
+          {view.icon === 'spray' ? <SprayIcon size={32} /> : <SproutIcon size={32} />}
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <span className="text-[13px] font-semibold text-muted">আজকের সিদ্ধান্ত</span>
@@ -129,6 +130,7 @@ export default async function Home() {
   const [place, alerts] = await Promise.all([getPlace(), viewerHasAlerts()])
   const hourly = await loadForecast(place.lat, place.lon)
   const live = hourly && assessAll(hourly)
+  const showcase = showcaseActive()
 
   let gate: React.ReactNode
   if (!live) {
@@ -166,10 +168,16 @@ export default async function Home() {
             প্রশ্ন করুন →
           </Link>
         </div>
+        {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}
+        {showcase && (
+          <Link href="/docs" lang="en" className="self-center text-[15px] font-bold text-teal">
+            For judges (English) →
+          </Link>
+        )}
       </div>
 
       <BottomNav />
-      <FirstRunIntro />
+      <FirstRunIntro showcase={showcase} />
     </div>
   )
 }

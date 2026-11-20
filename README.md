@@ -191,7 +191,7 @@ After one visit with internet, the diagnosis works with none. The model worker k
 
 To try it, run `npm run build && npm start`, open `/camera` once, then stop the server (or switch the phone to airplane mode) and take the photos again. A service worker and the camera both need a secure context: `localhost`, or HTTPS on a phone.
 
-`src/lib/diagnosis/__fixtures__/parity/` holds the notebook's reference outputs. `decide.test.ts` and `parity.test.ts` (which runs the real model with onnxruntime-node) check the app makes the same decisions on 12 notebook images (4 healthy, 4 late blight, 4 diseases the model never saw).
+`src/lib/diagnosis/__fixtures__/parity/` holds the notebook's reference outputs. `decide.test.ts` and `parity.test.ts` (which runs the real model with onnxruntime-node) check the app makes the same decisions on 12 notebook images (4 healthy, 4 late blight, 4 other diseases that are not among its three classes).
 
 ## Sign-in
 
@@ -325,6 +325,14 @@ npx tsx scripts/mcp-client.ts http://localhost:3000/api/mcp --ask "কিচক 
 ## Demo on a phone
 
 The camera and the service worker need HTTPS. To try a local build on a real phone, run it behind a tunnel: `npm run build && npm start`, then `cloudflared tunnel --url http://localhost:3000` (Cloudflare's quick tunnel, no account) or `ngrok http 3000`, and open the `https://` URL it prints. Set `BETTER_AUTH_URL` to that URL to sign in through it. The tunnel is public while it runs, so stop it after the demo.
+
+## Showcase mode
+
+For a demo day, set `SHOWCASE_UNTIL=YYYY-MM-DD` (Production in Vercel, then redeploy). Through that date in Bangladesh time (`src/lib/showcase.ts`), and never after:
+
+- `/account` and `/officer` work without signing in, as a showcase officer, and cases upload without an account.
+- Home and the first-run intro show a "For judges (English)" link to `/docs`.
+- The camera shows «নমুনা ছবি দিয়ে দেখুন / Try a sample leaf» for potato. It offers three images from the notebook's parity set, served from `public/samples/` and listed in `src/lib/diagnosis/samples.ts`: a healthy leaf, late blight, and a virus, which is not one of the model's three diseases. A sample goes through the same steps as a gallery photo, used as both photos, so the real model decides it and the normal result screen shows it, never the `?mock` path. The result carries «মডেলের ডেটাসেটের ছবি · image from the model’s dataset». It doesn't say "test set": which split each image came from isn't confirmed from notebook 04 yet. `/camera` stays static, so it can work offline; it asks `GET /api/showcase` (never cached) whether the mode is on. `samples.test.ts` checks that each sample is its parity image byte for byte and that the notebook decided it as its label says.
 
 ## Limitations and next steps
 

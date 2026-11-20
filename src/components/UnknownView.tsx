@@ -48,7 +48,7 @@ export default function UnknownView() {
       <div className="flex shrink-0 flex-col items-center gap-1.5 px-6 pt-2.5 text-center">
         <h1 className="m-0 font-display text-[30px] leading-[1.15] font-extrabold">এটা আমি চিনতে পারছি না</h1>
         <p className="m-0 text-base leading-[1.45] text-[#4A3B2F]">ভুল পরামর্শ দেওয়ার চেয়ে সৎভাবে না বলা ভালো।</p>
-        <ValidationBadge crop={crop} className="self-center" />
+        <ValidationBadge crop={crop} sample={record.sample} className="self-center" />
       </div>
 
       <section className="stitch-lg mx-4 mt-4 flex shrink-0 flex-col gap-2.5 rounded-[20px] px-4 py-3.5">

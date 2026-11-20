@@ -9,14 +9,15 @@ import ListenButton from '@/components/ListenButton'
 import TopBar from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
 import { clearCaptures, saveCapture, saveDiagnosis } from '@/lib/captureStore'
-import type { Capture } from '@/lib/captureStore'
+import type { Capture, DiagnosisRecord } from '@/lib/captureStore'
 import { type CropId, CROPS } from '@/lib/crops'
 import { todayIn } from '@/lib/dates'
 import { diagnose, loadModel, type ModelState, whenReady } from '@/lib/diagnosis/client'
-import { combine } from '@/lib/diagnosis/combine'
+import { type CombinedResult, combine } from '@/lib/diagnosis/combine'
 import { configUrlOf, PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { RESULT_PATH } from '@/lib/diagnosis/flow'
 import { cropFromParam, defaultPhotoCrop } from '@/lib/diagnosis/pickCrop'
+import { SAMPLE_BUTTON, type SampleLeaf, samplesFor } from '@/lib/diagnosis/samples'
 import { useChosenSeason, useFields } from '@/lib/fields'
 import { ANALYSIS_WIDTH, assessQuality, confirmText, coverSourceRect, isAcceptable, topHint } from '@/lib/imageQuality'
 import type { QualityReport } from '@/lib/imageQuality'
@@ -144,6 +145,11 @@ async function makeCapture(source: CanvasImageSource, crop: Crop): Promise<Captu
   return { blob, takenAt: Date.now(), quality }
 }
 
+// A fresh diagnosis, with the showcase sample it came from if any.
+function newRecord(crop: CropId, result: CombinedResult, sample: string | undefined): DiagnosisRecord {
+  return { createdAt: Date.now(), crop, result, answers: [], ...(sample ? { sample } : {}) }
+}
+
 export default function CameraScreen() {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -157,6 +163,10 @@ export default function CameraScreen() {
   const [model, setModel] = useState<ModelState>({ phase: 'loading' })
   const [analysis, setAnalysis] = useState<'idle' | 'running' | 'failed'>('idle')
   const photos = useRef<Partial<Record<'top' | 'under', Capture>>>({})
+  // The showcase sample the photos came from, if they did (src/lib/diagnosis/samples.ts).
+  const sampleId = useRef<string | undefined>(undefined)
+  const [showcase, setShowcase] = useState(false)
+  const [samplesOpen, setSamplesOpen] = useState(false)
 
   // The crop: picked here, else asked for in the link, else from the farmer's fields.
   const fields = useFields()
@@ -172,10 +182,25 @@ export default function CameraScreen() {
   function pickCrop(c: CropId) {
     setPicked(c)
     photos.current = {}
+    sampleId.current = undefined
     setStep(1)
     setPending(null)
     clearCaptures().catch(() => {})
   }
+
+  // Showcase mode is decided on the server; the page itself stays static so it works offline.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/showcase', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { active?: unknown } | null) => {
+        if (!cancelled && j?.active === true) setShowcase(true)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Each visit starts a fresh pair of photos.
   useEffect(() => {
@@ -244,7 +269,7 @@ export default function CameraScreen() {
     try {
       const config = await whenReady(configUrl)
       const result = combine(await diagnose(configUrl, top.blob), await diagnose(configUrl, under.blob), config)
-      await saveDiagnosis({ createdAt: Date.now(), crop, result, answers: [] })
+      await saveDiagnosis(newRecord(crop, result, sampleId.current))
       router.push(RESULT_PATH[result.decision])
     } catch (err) {
       console.error('Diagnosis failed', err)
@@ -254,6 +279,7 @@ export default function CameraScreen() {
 
   async function keep(capture: Capture) {
     setPending(null)
+    sampleId.current = undefined
     const slot = step === 1 ? 'top' : 'under'
     photos.current[slot] = capture
     try {
@@ -304,12 +330,40 @@ export default function CameraScreen() {
     })
   }
 
+  // A showcase sample goes through the same steps as a photo from the gallery, as both photos, so
+  // the real model decides it and the normal result screen shows it (labelled as a sample).
+  async function trySample(sample: SampleLeaf) {
+    setSamplesOpen(false)
+    if (busy || analysis === 'running') return
+    setBusy(true)
+    try {
+      const res = await fetch(sample.src)
+      if (!res.ok) throw new Error(`Sample ${sample.id}: HTTP ${res.status}`)
+      const bitmap = await createImageBitmap(await res.blob())
+      let capture: Capture
+      try {
+        capture = await makeCapture(bitmap, { sx: 0, sy: 0, sw: bitmap.width, sh: bitmap.height })
+      } finally {
+        bitmap.close()
+      }
+      photos.current = { top: capture, under: capture }
+      sampleId.current = sample.id
+      setPicked(crop)
+      await Promise.all([saveCapture('top', capture), saveCapture('under', capture)]).catch((err) => console.error('Could not save the sample', err))
+      await analyse()
+    } catch (err) {
+      console.error('Could not load the sample', err)
+    }
+    setBusy(false)
+  }
+
   function retry() {
     setStatus('starting')
     setAttempt((a) => a + 1)
   }
 
   const live = status === 'live'
+  const samples = showcase ? samplesFor(crop) : []
   const { title: stepTitle, sub, counter } = PHOTO_SPECS[crop].photos[step === 1 ? 'top' : 'under']
   const hint = live && report ? topHint(report) : null
   const title = hint ?? stepTitle
@@ -436,6 +490,36 @@ export default function CameraScreen() {
           </div>
         )}
 
+        {samplesOpen && (
+          <div className="absolute inset-0 flex items-end bg-black/55 p-3.5">
+            <div role="dialog" aria-modal="true" aria-labelledby="samples-title" className="flex w-full flex-col gap-3 rounded-2xl bg-cream p-4 text-ink">
+              <span id="samples-title" className="font-display text-lg leading-[1.3] font-extrabold">
+                {SAMPLE_BUTTON}
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {samples.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => trySample(s)}
+                    className="flex flex-col items-center gap-1 rounded-xl border-2 border-line bg-paper p-1.5 text-[12px] leading-[1.25] font-semibold text-ink"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local sample, decoded by the model as is */}
+                    <img src={s.src} alt="" className="aspect-square w-full rounded-lg object-cover" />
+                    <span>{s.truthBn}</span>
+                    <span lang="en" className="text-muted">
+                      {s.truthEn}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" autoFocus onClick={() => setSamplesOpen(false)} className="h-11 rounded-full border-2 border-ink bg-transparent text-base font-bold text-ink">
+                বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        )}
+
         {pending && (
           <div className="absolute inset-0 flex items-end bg-black/55 p-3.5">
             <div
@@ -488,6 +572,16 @@ export default function CameraScreen() {
         </div>
         <CameraControls onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
         <ModelStatus state={model} onRetry={() => loadModel(configUrl, setModel)} />
+        {samples.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSamplesOpen(true)}
+            disabled={busy || analysis === 'running'}
+            className="h-11 self-center rounded-full border-2 border-sun bg-transparent px-4 text-[15px] font-bold text-sun disabled:opacity-50"
+          >
+            {SAMPLE_BUTTON}
+          </button>
+        )}
       </div>
     </div>
   )
