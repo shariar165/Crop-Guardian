@@ -3,7 +3,7 @@
 // It skips the app's JPEG re-encode, which barely moves brightness, sharpness or the green share.
 import { ANALYSIS_WIDTH, assessQuality, type QualityReport } from '@/lib/imageQuality'
 
-export async function qualityOfFile(path: string): Promise<QualityReport> {
+export async function qualityOfFile(path: string, leafNear?: number): Promise<QualityReport> {
   const { default: sharp } = await import('sharp')
   const { data, info } = await sharp(path)
     .rotate()
@@ -11,5 +11,5 @@ export async function qualityOfFile(path: string): Promise<QualityReport> {
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
-  return assessQuality({ data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), width: info.width, height: info.height })
+  return assessQuality({ data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), width: info.width, height: info.height }, { leafNear })
 }
