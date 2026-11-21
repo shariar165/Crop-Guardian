@@ -14,7 +14,7 @@ type Variant = 'sand' | 'glass' | 'sky' | 'outline'
 const VARIANT: Record<Variant, string> = {
   sand: 'h-11 px-3.5 rounded-full bg-sand text-ink text-[15px] font-semibold gap-1.5',
   glass: 'h-11 px-3.5 rounded-full bg-white/12 text-cream text-[15px] font-semibold gap-1.5',
-  sky: 'h-11 px-3.5 rounded-full bg-white/78 text-ink text-[15px] font-semibold gap-1.5',
+  sky: 'h-11 px-3 rounded-full bg-white/78 text-ink text-[15px] font-semibold gap-1.5',
   outline: 'min-h-[66px] rounded-[20px] border-2 border-ink bg-transparent text-ink text-lg font-bold gap-2 justify-center',
 }
 
@@ -178,7 +178,7 @@ function VoiceTip({ onClose }: { onClose: () => void }) {
           <button type="button" autoFocus onClick={onClose} className="h-12 flex-1 rounded-full border-0 bg-sun text-base font-bold text-ink">
             ঠিক আছে
           </button>
-          <Link href="/guide#listen" className="text-[15px] font-bold text-teal">
+          <Link href="/guide#listen" className="text-base font-bold text-teal">
             নির্দেশিকায় দেখুন
           </Link>
         </div>

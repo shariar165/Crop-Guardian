@@ -10,7 +10,7 @@ import { type Field, mainField, useChosenSeason, useFields } from '@/lib/fields'
 import { useLedger } from '@/lib/useLedger'
 
 const PILL =
-  'mx-4 mt-2.5 flex min-h-[46px] shrink-0 items-center justify-between gap-2 rounded-full bg-mist px-3.5 text-[15px] font-semibold text-teal-deep no-underline'
+  'mx-4 mt-2.5 flex min-h-[46px] shrink-0 items-center justify-between gap-2 rounded-full bg-mist px-3.5 text-base font-semibold text-teal-deep no-underline'
 
 /**
  * Home's link to a field's ledger (the field Home shows, else the main one), with this season's real

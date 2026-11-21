@@ -31,7 +31,7 @@ export default async function AccountPage() {
             <PersonIcon size={30} />
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-[13px] font-semibold text-muted">{ROLE_LABEL[role]}</span>
+            <span className="text-sm font-semibold text-muted">{ROLE_LABEL[role]}</span>
             <span className="font-display text-[23px] font-extrabold">{formatBdPhone(user.phoneNumber)}</span>
           </div>
         </section>

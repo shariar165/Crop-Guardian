@@ -89,7 +89,7 @@ export default function AskChat() {
             </p>
             <div className="flex flex-wrap gap-1.5">
               {EXAMPLES.map((e) => (
-                <button key={e} type="button" onClick={() => send(e)} className="rounded-full border-0 bg-sand px-3 py-1.5 text-left text-[14px] font-semibold text-ink">
+                <button key={e} type="button" onClick={() => send(e)} className="rounded-full border-0 bg-sand px-3 py-1.5 text-left text-base font-semibold text-ink">
                   {e}
                 </button>
               ))}
@@ -112,7 +112,7 @@ export default function AskChat() {
                 </div>
               )}
               {t.a.sources.length > 0 && (
-                <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px]">
+                <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
                   {t.a.sources.map((s) => (
                     <li key={s.id}>
                       <Link href={s.href} className="font-semibold text-teal">
@@ -125,12 +125,12 @@ export default function AskChat() {
               )}
               {t.a.escalate && (
                 <div className="flex flex-wrap gap-2">
-                  <Link href="/camera" className="rounded-full bg-sun px-3 py-1.5 text-[14px] font-bold text-ink no-underline">
+                  <Link href="/camera" className="rounded-full bg-sun px-3 py-1.5 text-base font-bold text-ink no-underline">
                     পাতার ছবি তুলুন
                   </Link>
                 </div>
               )}
-              {t.a.note && <p className="m-0 text-[12px] leading-[1.4] text-muted">{t.a.note}</p>}
+              {t.a.note && <p className="m-0 text-sm leading-[1.4] text-muted">{t.a.note}</p>}
               <ListenButton text={t.a.answer} label="উত্তর পড়ে শোনান" className="self-start" />
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function AskChat() {
           </>
         )}
         {turns.length > 0 && !pending && (
-          <button type="button" onClick={() => store(STORE, null)} className="self-center border-0 bg-transparent text-[14px] font-semibold text-muted">
+          <button type="button" onClick={() => store(STORE, null)} className="self-center border-0 bg-transparent text-base font-semibold text-muted">
             আলাপ মুছে ফেলুন
           </button>
         )}

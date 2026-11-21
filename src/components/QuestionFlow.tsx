@@ -128,7 +128,7 @@ export default function QuestionFlow() {
                 }`}
               >
                 <span className={gone ? 'line-through decoration-2' : ''}>{labelOf(id, config)}</span>
-                {gone && <span className="rounded-lg bg-danger-soft px-[7px] py-px text-xs font-bold text-[#8A3424]">বাদ</span>}
+                {gone && <span className="rounded-lg bg-danger-soft px-[7px] py-px text-sm font-bold text-[#8A3424]">বাদ</span>}
               </li>
             )
           })}

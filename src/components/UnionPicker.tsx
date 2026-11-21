@@ -72,7 +72,7 @@ export default function UnionPicker({
           <CheckIcon size={18} weight={2.8} className="shrink-0" />
           {fullName(current)}
         </span>
-        <Link href={href('d', upazilaById(current.upazilaId)!.districtId)} className="shrink-0 text-[15px] font-bold text-teal">
+        <Link href={href('d', upazilaById(current.upazilaId)!.districtId)} className="shrink-0 text-base font-bold text-teal">
           বদলান
         </Link>
       </div>

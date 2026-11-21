@@ -75,7 +75,7 @@ function SprayCost({ cost }: { cost: number }) {
 
   if (!editing) {
     return (
-      <div className="mx-[18px] mt-1.5 flex shrink-0 flex-wrap gap-1.5 text-[13px] text-muted">
+      <div className="mx-[18px] mt-1.5 flex shrink-0 flex-wrap gap-1.5 text-sm text-muted">
         <span>প্রতি স্প্রের খরচ ধরা হয়েছে {formatTaka(cost)} (ওষুধ + মজুরি)</span>
         <button
           type="button"
@@ -83,7 +83,7 @@ function SprayCost({ cost }: { cost: number }) {
             setValue(String(cost))
             setEditing(true)
           }}
-          className="border-0 bg-transparent p-0 text-[13px] font-bold text-teal underline"
+          className="border-0 bg-transparent p-0 text-base font-bold text-teal underline"
         >
           বদলান
         </button>
@@ -98,7 +98,7 @@ function SprayCost({ cost }: { cost: number }) {
         if (valid && saveSprayCost(n)) setEditing(false)
       }}
     >
-      <label className="flex flex-1 flex-col gap-1 text-[13px] font-semibold text-muted">
+      <label className="flex flex-1 flex-col gap-1 text-sm font-semibold text-muted">
         এক বার স্প্রের খরচ (টাকা)
         <input
           type="number"
@@ -171,7 +171,7 @@ function Weeks({ ledger }: { ledger: Ledger }) {
               </div>
               <div className={`flex flex-1 justify-between gap-2 ${last ? 'pb-1.5' : 'pb-3'}`}>
                 <div className="flex flex-col">
-                  <span className="text-[13px] font-semibold text-muted">
+                  <span className="text-sm font-semibold text-muted">
                     দিন {toBnDigits(w.dayFrom)}–{toBnDigits(w.dayTo)} · {note}
                   </span>
                   <span className="text-base font-bold">{action}</span>
@@ -246,7 +246,7 @@ function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
       <>
         <DangerTotals ledger={ledger} season={season} />
         <Weeks ledger={ledger} />
-        <p className="mx-[18px] mt-2 mb-0 text-[13px] leading-[1.45] text-muted">
+        <p className="mx-[18px] mt-2 mb-0 text-sm leading-[1.45] text-muted">
           পরীক্ষামূলক: {crop.diseaseOfBn} এই হিসাব এখনো মাঠে যাচাই হয়নি, তাই টাকার হিসাব দেখাই না। শুধু দেখাই কোন সপ্তাহে বিপদ ছিল আর আপনি স্প্রে করেছেন কি না।
         </p>
       </>
@@ -272,7 +272,7 @@ function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
       <Weeks ledger={ledger} />
 
       <SprayCost cost={cost} />
-      <p className="mx-[18px] mt-2 mb-0 text-[13px] leading-[1.45] text-muted">
+      <p className="mx-[18px] mt-2 mb-0 text-sm leading-[1.45] text-muted">
         অনেকে প্রতি সপ্তাহে একবার স্প্রে করেন। যে সপ্তাহে বিপদ ছিল না আর আপনি স্প্রে করেননি, সেই সপ্তাহে একটা স্প্রের খরচ বাঁচল।{' '}
         <Link href="/guide#ledger" className="font-semibold text-teal">
           বিস্তারিত
@@ -295,7 +295,7 @@ function SentCases() {
               <CameraIcon size={18} weight={2.2} />
             </span>
             <div className="flex flex-col">
-              <span className="text-[13px] font-semibold text-muted">
+              <span className="text-sm font-semibold text-muted">
                 {bnDate(c.date)}
                 {c.uploaded === false && ' · কর্মকর্তার তালিকায় এখনো যায়নি'}
               </span>
