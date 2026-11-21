@@ -155,6 +155,8 @@ export default function CameraScreen() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<Status>('starting')
+  // The live video track, for the flash button.
+  const [track, setTrack] = useState<MediaStreamTrack | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [report, setReport] = useState<QualityReport | null>(null)
   const [step, setStep] = useState<Step>(1)
@@ -230,6 +232,7 @@ export default function CameraScreen() {
           video.srcObject = s
           video.play().catch(() => {})
         }
+        setTrack(s.getVideoTracks()[0] ?? null)
         setStatus('live')
       },
       (err: unknown) => {
@@ -243,6 +246,7 @@ export default function CameraScreen() {
       cancelled = true
       stream?.getTracks().forEach((t) => t.stop())
       if (video) video.srcObject = null
+      setTrack(null)
     }
   }, [attempt])
 
@@ -572,7 +576,7 @@ export default function CameraScreen() {
             ছবি {toBnDigits(step)} / ২ · {counter}
           </span>
         </div>
-        <CameraControls onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
+        <CameraControls key={track?.id ?? 'none'} track={track} onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
         <ModelStatus state={model} onRetry={() => loadModel(configUrl, setModel)} />
         {samples.length > 0 && (
           <button
