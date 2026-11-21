@@ -3,11 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { syncAlertFields } from '@/app/account/actions'
-import { BN_MONTHS, bnDate, toBnDigits } from '@/lib/bn'
+import { BN_MONTHS, bnDate, bnDayMonth, toBnDigits } from '@/lib/bn'
 import { type CropId, CROPS, isSeasonId, paddySeasonFor, SEASONS, type SeasonId } from '@/lib/crops'
 import { todayIn } from '@/lib/dates'
 import { useHydrated } from '@/lib/deviceStore'
 import { type Field, readFields, saveField, useFields } from '@/lib/fields'
+import { plantingChips } from '@/lib/plantingChips'
 import { seasonFor } from '@/lib/season'
 import { outlineClass, primaryClass } from './Buttons'
 
@@ -121,6 +122,9 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
   const crop = CROPS[SEASONS[season].crop]
   const [date, setDate] = useState(field?.planted ?? today)
   const [error, setError] = useState<string | null>(null)
+  const chips = plantingChips(today, season)
+  // The dropdowns open for "অন্য তারিখ", or for a saved date no chip matches.
+  const [custom, setCustom] = useState(field !== null && !chips.some((c) => c.date === field.planted))
 
   const [year, month, day] = date.split('-').map(Number)
   const thisYear = Number(today.slice(0, 4))
@@ -149,38 +153,72 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
         {crop.plantedQuestion} তারিখ দিলে চারা থেকে ফসল তোলা পর্যন্ত ঠিক সময়ে {crop.diseaseBn} রোগের ঝুঁকির খবর পাবেন, আর মৌসুমের হিসাব শুরু হবে।
       </p>
 
-      <div className="grid grid-cols-[1fr_1.6fr_1.3fr] gap-2">
-        <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
-          দিন
-          <select className={SELECT} value={day} onChange={(e) => change(year, month, Number(e.target.value))}>
-            {Array.from({ length: daysInMonth(year, month) }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {toBnDigits(i + 1)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
-          মাস
-          <select className={SELECT} value={month} onChange={(e) => change(year, Number(e.target.value), day)}>
-            {BN_MONTHS.map((name, i) => (
-              <option key={name} value={i + 1}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
-          বছর
-          <select className={SELECT} value={year} onChange={(e) => change(Number(e.target.value), month, day)}>
-            {[thisYear - 1, thisYear].map((y) => (
-              <option key={y} value={y}>
-                {toBnDigits(y)}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div role="group" aria-label="কবে লাগিয়েছেন" className="grid grid-cols-3 gap-2">
+        {chips.map((c) => {
+          const on = !custom && c.date === date
+          return (
+            <button
+              key={c.label}
+              type="button"
+              aria-pressed={on}
+              onClick={() => {
+                setCustom(false)
+                setDate(c.date)
+                setError(null)
+              }}
+              className={`flex min-h-[60px] flex-col items-center justify-center rounded-[14px] border-2 px-1 leading-[1.25] ${
+                on ? 'border-ink bg-ink text-cream' : 'border-line bg-paper text-ink'
+              }`}
+            >
+              <span className="text-base font-bold">{c.label}</span>
+              <span className={`text-sm ${on ? 'text-cream/80' : 'text-muted'}`}>{bnDayMonth(c.date)}</span>
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          aria-pressed={custom}
+          onClick={() => setCustom(true)}
+          className={`min-h-[60px] rounded-[14px] border-2 px-1 text-base leading-[1.25] font-bold ${custom ? 'border-ink bg-ink text-cream' : 'border-line bg-paper text-ink'}`}
+        >
+          অন্য তারিখ
+        </button>
       </div>
+
+      {custom && (
+        <div className="grid grid-cols-[1fr_1.6fr_1.3fr] gap-2">
+          <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
+            দিন
+            <select className={SELECT} value={day} onChange={(e) => change(year, month, Number(e.target.value))}>
+              {Array.from({ length: daysInMonth(year, month) }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {toBnDigits(i + 1)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
+            মাস
+            <select className={SELECT} value={month} onChange={(e) => change(year, Number(e.target.value), day)}>
+              {BN_MONTHS.map((name, i) => (
+                <option key={name} value={i + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
+            বছর
+            <select className={SELECT} value={year} onChange={(e) => change(Number(e.target.value), month, day)}>
+              {[thisYear - 1, thisYear].map((y) => (
+                <option key={y} value={y}>
+                  {toBnDigits(y)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       <p role="status" className="stitch m-0 rounded-[16px] px-4 py-3 text-[15px] leading-[1.45]">
         {future ? (

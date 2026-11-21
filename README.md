@@ -49,7 +49,7 @@ On a locked-down network `npm install` can fail because `onnxruntime-node` (used
 | `/unknown` | Can't identify: send to agriculture officer |
 | `/map` | The unions of the farmer's upazila (Shibganj, Bogura, until one is chosen): today's weather risk per crop (আলু · ধসা / ধান · ব্লাস্ট) and officer-confirmed cases |
 | `/ledger` | A field's season (`?field=potato\|boro\|aman`) from the real weather and the sprays the farmer logged |
-| `/planting` | "আমার জমি": the farmer's place (district → upazila → union, `?d=`/`?u=` are the steps), and their fields: crop (আলু, or ধান with বোরো/আমন) and planting date (`?season=` opens one) |
+| `/planting` | "আমার জমি": the farmer's place (district → upazila → union, `?d=`/`?u=` are the steps), and their fields: crop (আলু, or ধান with বোরো/আমন) and planting date, one tap from আজ, ১/২/৩ সপ্তাহ আগে or ১ মাস আগে, or «অন্য তারিখ» for day/month/year (`?season=` opens one) |
 | `/guide` | How to use the app, in plain Bengali, each part read aloud |
 | `/potato` | Potato growing advice for Bangladesh: planting, varieties, late blight, wilt, harvest, storage, stored-tuber diseases, with sources |
 | `/ask` | «কৃষি সহায়ক»: questions answered in Bengali from the app's own advice, with sources |
