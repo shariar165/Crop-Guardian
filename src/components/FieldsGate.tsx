@@ -11,6 +11,7 @@ import { chooseSeason, type Field, mainField, useChosenSeason, useFields } from 
 import { rememberPlaceName } from '@/lib/placeCookies'
 import { offSeasonMessage, riskActive, seasonFor } from '@/lib/season'
 import HomeHeader from './HomeHeader'
+import { PinIcon } from './icons'
 import LedgerPill from './LedgerPill'
 
 // Home's parts for one crop, rendered on the server from that crop's rule.
@@ -59,11 +60,12 @@ export default function FieldsGate({
     return (
       <ShownSeason.Provider value={shown.season}>
         {p.header}
+        {!hasUnion && <SetupCard hasField={field !== null} />}
         {hydrated && active.length > 1 && <FieldChips seasons={active.map((f) => f.season)} shown={shown.season} />}
         {p.strip}
-        <FieldNote field={field} many={fields.length > 1} hasUnion={hasUnion} />
+        {hasUnion && <FieldNote field={field} many={fields.length > 1} />}
         {p.decision}
-        <LedgerPill field={field} />
+        <LedgerPill field={field} hidePlantingPrompt={!hasUnion} />
       </ShownSeason.Provider>
     )
   }
@@ -72,8 +74,8 @@ export default function FieldsGate({
   return (
     <>
       <OffSeasonHeader season={off.season} planted={off.planted} today={today} place={place} />
-      <FieldNote field={main} many={fields.length > 1} hasUnion={hasUnion} />
-      <LedgerPill field={main} />
+      {hasUnion ? <FieldNote field={main} many={fields.length > 1} /> : <SetupCard hasField={main !== null} />}
+      <LedgerPill field={main} hidePlantingPrompt={!hasUnion} />
     </>
   )
 }
@@ -109,16 +111,37 @@ function OffSeasonHeader({ season: id, planted, today, place }: { season: Season
   )
 }
 
-// Asks for the place and a field, or shows the field's date with a way to change it.
-function FieldNote({ field, many, hasUnion }: { field: Field | null; many: boolean; hasUnion: boolean }) {
-  if (!field || !hasUnion) {
-    const ask = !hasUnion && !field ? 'জমি কোন এলাকায়, কোন ফসল কবে লাগিয়েছেন?' : !hasUnion ? 'জমি কোন এলাকায়?' : 'কোন ফসল কবে লাগিয়েছেন?'
+// Until a union is chosen, the one prompt for setup, right under the header: the risk above it is
+// only the default upazila's, shown as an example.
+function SetupCard({ hasField }: { hasField: boolean }) {
+  return (
+    <Link
+      href="/planting"
+      className="mx-4 mt-3 flex shrink-0 items-center gap-3 rounded-[18px] border-2 border-sun bg-sun-soft px-4 py-3 text-ink no-underline"
+    >
+      <PinIcon size={28} weight={2.2} />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-display text-[17px] leading-[1.3] font-extrabold">
+          {hasField ? 'আপনার এলাকা জানান' : 'আপনার এলাকা আর ফসল জানান'} <span className="whitespace-nowrap">— ১ মিনিট</span>
+        </span>
+        <span className="text-[14px] leading-[1.35] font-medium">ওপরের ঝুঁকি শুধু উদাহরণ</span>
+      </span>
+      <span aria-hidden="true" className="shrink-0 text-2xl font-bold text-teal">
+        ›
+      </span>
+    </Link>
+  )
+}
+
+// Asks for a field, or shows the field's date with a way to change it.
+function FieldNote({ field, many }: { field: Field | null; many: boolean }) {
+  if (!field) {
     return (
       <Link
         href="/planting"
         className="mx-4 mt-2 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-[14px] leading-[1.35] font-semibold text-ink no-underline"
       >
-        {ask} জানালে ঝুঁকি আরও ঠিক হবে
+        কোন ফসল কবে লাগিয়েছেন? জানালে ঝুঁকি আরও ঠিক হবে
         <span className="shrink-0 text-teal">জানান</span>
       </Link>
     )

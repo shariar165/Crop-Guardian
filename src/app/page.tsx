@@ -142,6 +142,8 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
 export default async function Home() {
   const [place, alerts] = await Promise.all([getPlace(), viewerHasAlerts()])
   const hourly = await loadForecast(place.lat, place.lon)
+  // Until the farmer picks a union, the default upazila's risk is an example, not theirs.
+  const placeLabel = place.union ? place.name : `উদাহরণ: ${place.name}`
   const live = hourly && assessAll(hourly)
   const showcase = showcaseActive()
 
@@ -149,13 +151,13 @@ export default async function Home() {
   if (!live) {
     gate = (
       <>
-        <NoForecast place={place.name} />
+        <NoForecast place={placeLabel} />
         <LedgerPill />
       </>
     )
   } else {
-    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], place.name, alerts)])) as Record<CropId, CropPanels>
-    gate = <FieldsGate today={todayIn()} place={place.name} hasUnion={place.union !== null} panels={panels} />
+    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], placeLabel, alerts)])) as Record<CropId, CropPanels>
+    gate = <FieldsGate today={todayIn()} place={placeLabel} hasUnion={place.union !== null} panels={panels} />
   }
 
   return (

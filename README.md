@@ -138,6 +138,8 @@ The paddy windows are drafts for common BRRI varieties; harvest varies by variet
 
 The farmer's fields are set on `/planting` and kept on the device in localStorage (`src/lib/fields.ts`): at most one per season, so the season is the field's id. The union stays one per phone. A phone from before fields had one potato date (`crop-guardian:planting-date`); it becomes the potato field, and is kept in step with it so an older version still finds it. Without any field, Home assumes the usual potato season, as before, and asks for the union and a field.
 
+Until the farmer chooses a union, Home shows the default upazila's risk with the place line "উদাহরণ: শিবগঞ্জ, বগুড়া", and one setup card under the header ("আপনার এলাকা আর ফসল জানান — ১ মিনিট", or just the place if a field is set) links to `/planting`. While it shows, the ledger pill doesn't ask for the planting date too. Once a union is chosen, a missing field is asked for by a smaller line under the 5-day strip.
+
 When several fields are in season, Home shows a chip for each. The server renders every crop's header, strip and decision from the one forecast, and `FieldsGate` shows the farmer's last chip, else the riskiest. Outside every window Home shows the crop's off-season title (e.g. "এখন ধসা রোগের মৌসুম নয়") and the date alerts start, instead of a risk.
 
 The server can't read localStorage, so Home is rendered as if no field is set, and the saved fields take over right after the page loads.
