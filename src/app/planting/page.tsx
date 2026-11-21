@@ -2,8 +2,10 @@ import BottomNav from '@/components/BottomNav'
 import { SectionRule } from '@/components/Buttons'
 import ListenButton from '@/components/ListenButton'
 import PlantingPicker from '@/components/PlantingPicker'
+import SmsOffer from '@/components/SmsOffer'
 import TopBar from '@/components/TopBar'
 import UnionPicker from '@/components/UnionPicker'
+import { viewerAlerts } from '@/lib/alertDb'
 import { getPlace } from '@/lib/place'
 
 export const metadata = { title: 'আমার জমি — সবুজবিধি' }
@@ -24,7 +26,7 @@ export default async function PlantingPage({ searchParams }: PageProps<'/plantin
   const season = one(params.season)
   const back = (from && BACK[from]) || '/'
   const keep = new URLSearchParams(Object.entries({ from, season }).filter((e): e is [string, string] => e[1] !== undefined)).toString()
-  const place = await getPlace()
+  const [place, sms] = await Promise.all([getPlace(), viewerAlerts()])
   return (
     <div className="flex flex-1 flex-col">
       <TopBar back={back} title="আমার জমি" right={<ListenButton text={SPEECH} label="পড়ে শোনান" />} />
@@ -35,6 +37,15 @@ export default async function PlantingPage({ searchParams }: PageProps<'/plantin
         <SectionRule label="২. ফসল আর রোপণের তারিখ" className="mt-3" />
       </div>
       <PlantingPicker back={back} start={season ?? null} />
+      {/* `?alerts=1`: back from signing in to turn SMS alerts on (src/components/SmsOffer.tsx). */}
+      <SmsOffer
+        signedIn={sms.signedIn}
+        enabled={sms.enabled}
+        hasUnion={place.union !== null}
+        needsField
+        auto={one(params.alerts) === '1'}
+        className="mx-4 mt-4"
+      />
       <div className="min-h-4 flex-1" />
       <BottomNav />
     </div>
