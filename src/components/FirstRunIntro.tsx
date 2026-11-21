@@ -30,7 +30,7 @@ export default function FirstRunIntro({ showcase = false }: { showcase?: boolean
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="intro-title" className="absolute inset-0 z-20 flex flex-col bg-cream">
+    <div role="dialog" aria-modal="true" aria-labelledby="intro-title" className="fixed inset-0 z-20 mx-auto flex max-w-[390px] flex-col bg-cream">
       <div className="flex shrink-0 items-center justify-between px-4 pt-4">
         <span className="text-sm font-bold text-muted">
           {toBnDigits(step + 1)} / {toBnDigits(INTRO.length)}

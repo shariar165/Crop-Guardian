@@ -44,7 +44,11 @@ export default function AskChat() {
   // The question box; scrolled to after each turn, so the newest answer sits just above it.
   const box = useRef<HTMLFormElement>(null)
 
-  useEffect(() => box.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), [turns, pending])
+  // A block body: newer Chrome returns a Promise from scrollIntoView, and an expression body would
+  // hand it to React as the cleanup, which then crashes the page on the next render.
+  useEffect(() => {
+    box.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [turns, pending])
 
   // `crop` is the farmer's answer to «আলু না ধান?»: the question they asked goes again with it, and
   // that exchange leaves the chat, so it never goes back to a model as history.
