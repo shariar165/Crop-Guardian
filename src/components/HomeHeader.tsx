@@ -29,7 +29,7 @@ export default function HomeHeader({
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
+          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" voiceTip />
           <Link
             href="/guide"
             aria-label="কীভাবে ব্যবহার করবেন"
