@@ -30,6 +30,14 @@ export function bnDayMonth(isoDate: string): string {
   return `${toBnDigits(d)} ${BN_MONTHS[m - 1]}`
 }
 
+// A span of days: "১২–১৮ নভেম্বর", or across months "২৮ নভেম্বর–৪ ডিসেম্বর".
+export function bnDateRange(start: string, end: string): string {
+  if (start === end) return bnDayMonth(start)
+  return start.slice(0, 7) === end.slice(0, 7)
+    ? `${toBnDigits(Number(start.slice(8)))}–${bnDayMonth(end)}`
+    : `${bnDayMonth(start)}–${bnDayMonth(end)}`
+}
+
 // "2026-01-14" → "১৪ জানুয়ারি ২০২৬"
 export function bnDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number)
