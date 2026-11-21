@@ -6,6 +6,7 @@ import { primaryClass } from '@/components/Buttons'
 import GuideIcon from '@/components/GuideIcon'
 import ListenButton from '@/components/ListenButton'
 import { toBnDigits } from '@/lib/bn'
+import { AUDIO_KEY } from '@/lib/audioKeys'
 import { store, useHydrated, useStored } from '@/lib/deviceStore'
 import { INTRO, speechOf } from '@/lib/guide'
 
@@ -46,7 +47,7 @@ export default function FirstRunIntro({ showcase = false }: { showcase?: boolean
           {card.title}
         </h1>
         <p className="m-0 text-[17px] leading-[1.5]">{card.text}</p>
-        <ListenButton text={speechOf(card)} label="পড়ে শোনান" />
+        <ListenButton text={speechOf(card)} audio={AUDIO_KEY.intro(step)} label="পড়ে শোনান" />
       </div>
 
       <div className="flex shrink-0 justify-center gap-2 pb-4" aria-hidden="true">

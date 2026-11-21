@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { audioSrc, type SpeechPart } from '@/lib/audioKeys'
 import { store } from '@/lib/deviceStore'
 import { BENGALI_VOICE_STEPS } from '@/lib/guide'
 import { SpeakerIcon, StopIcon } from './icons'
@@ -19,21 +20,56 @@ const VARIANT: Record<Variant, string> = {
 
 export const bengaliVoice = (synth: SpeechSynthesis) => synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('bn'))
 
+// Recordings found missing on this page load, so a missing file costs one request, not one per tap.
+const MISSING = new Set<string>()
+
+// Plays a recording to the end. Rejects if it can't be played (missing, offline, unsupported).
+function playFile(audio: HTMLAudioElement, src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    audio.onended = () => resolve()
+    audio.onerror = () => reject(new Error(`No audio at ${src}`))
+    audio.src = src
+    audio.play().catch(reject)
+  })
+}
+
+// Resolves when the text has been read, or couldn't be: a failure must not leave the button on থামান.
+function speak(synth: SpeechSynthesis, text: string, voice: SpeechSynthesisVoice | undefined): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = 'bn-BD'
+      if (voice) utterance.voice = voice
+      utterance.rate = 0.9
+      utterance.onend = () => resolve()
+      utterance.onerror = () => resolve()
+      synth.speak(utterance)
+    } catch (err) {
+      console.error('Speech failed', err)
+      resolve()
+    }
+  })
+}
+
 /**
- * Reads `text` aloud in Bengali using the browser's speech synthesis.
- * With `requireVoice`, it stays silent when no Bengali voice is installed. With `voiceTip`, the
- * first tap on a phone without one shows how to install it instead of reading with a voice that
- * can't say Bengali; later taps read with whatever voice there is.
+ * Reads `text` aloud in Bengali, part by part: a part with a recording (`audio`, see
+ * src/lib/audioKeys.ts) plays it when the file is there, and anything else uses the browser's
+ * speech synthesis. `audio` on its own is the recording for the whole `text`.
+ * With `requireVoice`, synthesis stays silent when no Bengali voice is installed (recordings still
+ * play). With `voiceTip`, the first tap on a phone without one shows how to install it instead of
+ * reading with a voice that can't say Bengali; later taps read with whatever voice there is.
  */
 export default function ListenButton({
   text,
+  audio,
   label,
   variant = 'sand',
   className = '',
   requireVoice = false,
   voiceTip = false,
 }: {
-  text: string
+  text: string | SpeechPart[]
+  audio?: string
   label: string
   variant?: Variant
   className?: string
@@ -42,40 +78,63 @@ export default function ListenButton({
 }) {
   const [speaking, setSpeaking] = useState(false)
   const [tip, setTip] = useState(false)
+  // Bumped to stop a reading in progress: each part checks it before starting.
+  const run = useRef(0)
+  const player = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const synth = window.speechSynthesis
-    if (!synth) return
     // Some browsers (Chrome) load voices asynchronously; asking for them starts the load.
-    synth.getVoices()
-    return () => synth.cancel()
+    synth?.getVoices()
+    return () => {
+      // A counter, not a node: the latest value is the one to bump.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      run.current++
+      synth?.cancel()
+      player.current?.pause()
+    }
   }, [])
 
-  function toggle() {
-    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
-    if (!synth) return
-    if (speaking) {
-      synth.cancel()
-      setSpeaking(false)
-      return
+  function stop() {
+    run.current++
+    window.speechSynthesis?.cancel()
+    player.current?.pause()
+    setSpeaking(false)
+  }
+
+  async function play(parts: SpeechPart[], voice: SpeechSynthesisVoice | undefined) {
+    const id = ++run.current
+    const synth = window.speechSynthesis
+    setSpeaking(true)
+    for (const part of parts) {
+      if (run.current !== id) return
+      if (part.audio && !MISSING.has(part.audio)) {
+        player.current ??= new Audio()
+        try {
+          await playFile(player.current, audioSrc(part.audio))
+          continue
+        } catch {
+          MISSING.add(part.audio)
+          if (run.current !== id) return
+        }
+      }
+      if (synth && (voice || !requireVoice)) await speak(synth, part.text, voice)
     }
-    const voice = bengaliVoice(synth)
-    if (!voice && requireVoice) return
+    if (run.current === id) setSpeaking(false)
+  }
+
+  function toggle() {
+    if (speaking) return stop()
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
+    const voice = synth ? bengaliVoice(synth) : undefined
     // An empty list means the voices haven't loaded yet, not that there is no Bengali one.
-    if (!voice && voiceTip && synth.getVoices().length > 0 && localStorage.getItem(TIP_SEEN_KEY) !== '1') {
+    if (synth && !voice && voiceTip && synth.getVoices().length > 0 && localStorage.getItem(TIP_SEEN_KEY) !== '1') {
       store(TIP_SEEN_KEY, '1')
       setTip(true)
       return
     }
-    synth.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'bn-BD'
-    if (voice) utterance.voice = voice
-    utterance.rate = 0.9
-    utterance.onend = () => setSpeaking(false)
-    utterance.onerror = () => setSpeaking(false)
-    setSpeaking(true)
-    synth.speak(utterance)
+    synth?.cancel()
+    play(typeof text === 'string' ? [{ text, audio }] : text, voice)
   }
 
   const Glyph = speaking ? StopIcon : SpeakerIcon

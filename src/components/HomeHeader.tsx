@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { SpeechPart } from '@/lib/audioKeys'
 import type { RiskView } from '@/lib/data'
 import { PersonIcon, PinIcon } from './icons'
 import { FieldStrip, LogoMark, SkyScene } from './illustrations'
@@ -13,7 +14,7 @@ export default function HomeHeader({
 }: {
   view: RiskView
   place: string
-  speech: string
+  speech: string | SpeechPart[]
   children: React.ReactNode
 }) {
   return (

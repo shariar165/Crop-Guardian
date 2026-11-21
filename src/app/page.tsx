@@ -12,6 +12,7 @@ import SprayButton from '@/components/SprayButton'
 import { CROP_IDS, type CropId, CROPS } from '@/lib/crops'
 import { DAY_STATE, type Risk, RISK_VIEW } from '@/lib/data'
 import { viewerAlerts } from '@/lib/alertDb'
+import { AUDIO_KEY, type SpeechPart } from '@/lib/audioKeys'
 import { bnWeekday } from '@/lib/bn'
 import { todayIn } from '@/lib/dates'
 import { getPlace } from '@/lib/place'
@@ -73,7 +74,14 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: V
   const BadgeIcon = BADGE_ICON[risk]
   const days = live.days.map((d, i) => ({ ...d, name: i === 0 ? 'আজ' : bnWeekday(d.date), ...DAY_STATE[d.risk] }))
   const decision = buildDecision(live.days, risk, spec.decision, alerts)
-  const speech = [`${place}। ${spec.riskTitle}:`, view.word + '।', reason + '।', view.title + '।', decision].join(' ')
+  // Fixed parts can be read from a recording (src/lib/audioKeys.ts); the place and the numbers can't.
+  const speech: SpeechPart[] = [
+    { text: `${place}। ${spec.riskTitle}:` },
+    { text: view.word + '।', audio: AUDIO_KEY.riskWord(risk) },
+    { text: reason + '।' },
+    { text: view.title + '।', audio: AUDIO_KEY.riskTitle(risk) },
+    { text: decision, audio: decision === spec.decision[risk] ? AUDIO_KEY.decision(crop, risk) : undefined },
+  ]
 
   return {
     risk,

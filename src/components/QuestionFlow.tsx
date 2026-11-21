@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Loading, NoDiagnosis } from '@/components/DiagnosisParts'
+import { AUDIO_KEY } from '@/lib/audioKeys'
 import { toBnDigits } from '@/lib/bn'
 import { type Answer, saveDiagnosis } from '@/lib/captureStore'
 import { labelOf } from '@/lib/diagnosis/explain'
@@ -106,7 +107,7 @@ export default function QuestionFlow() {
             ))}
           </div>
         </div>
-        <ListenButton text={speech} label="প্রশ্নটি আবার শোনান" />
+        <ListenButton text={speech} audio={q ? AUDIO_KEY.question(q.id) : undefined} label="প্রশ্নটি আবার শোনান" />
       </header>
 
       <section className="stitch-lg mx-4 flex shrink-0 flex-col gap-2.5 rounded-[20px] px-3.5 pt-3.5 pb-4">
