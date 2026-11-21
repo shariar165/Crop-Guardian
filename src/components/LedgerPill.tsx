@@ -12,8 +12,11 @@ import { useLedger } from '@/lib/useLedger'
 const PILL =
   'mx-4 mt-2.5 flex min-h-[46px] shrink-0 items-center justify-between gap-2 rounded-full bg-mist px-3.5 text-[15px] font-semibold text-teal-deep no-underline'
 
-/** Home's link to a field's ledger (the field Home shows, else the main one), with this season's real savings once there are any. */
-export default function LedgerPill({ field }: { field?: Field | null }) {
+/**
+ * Home's link to a field's ledger (the field Home shows, else the main one), with this season's real
+ * savings once there are any. `hidePlantingPrompt`: Home's setup card already asks for the date.
+ */
+export default function LedgerPill({ field, hidePlantingPrompt = false }: { field?: Field | null; hidePlantingPrompt?: boolean }) {
   const fields = useFields()
   const chosen = useChosenSeason()
   const shown = field === undefined ? mainField(fields, todayIn(), chosen) : field
@@ -30,6 +33,7 @@ export default function LedgerPill({ field }: { field?: Field | null }) {
       </Link>
     )
   }
+  if (state.status === 'noPlanting' && hidePlantingPrompt) return null
   const text =
     state.status === 'noPlanting'
       ? 'রোপণের তারিখ দিন, হিসাব শুরু হবে'
