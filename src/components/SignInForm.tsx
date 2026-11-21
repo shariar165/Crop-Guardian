@@ -152,7 +152,7 @@ export default function SignInForm({ next }: { next: string }) {
           setStep({ at: 'phone' })
           setError(null)
         }}
-        className="self-center border-0 bg-transparent text-[15px] font-semibold text-teal"
+        className="self-center border-0 bg-transparent text-base font-semibold text-teal"
       >
         অন্য নম্বর দিন
       </button>

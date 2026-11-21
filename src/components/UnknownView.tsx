@@ -82,7 +82,7 @@ export default function UnknownView() {
           <SendIcon size={28} weight={2.2} />
           <span className="flex flex-col items-start leading-[1.2]">
             <span className="font-display text-xl font-extrabold">কৃষি কর্মকর্তাকে পাঠান</span>
-            <span className="text-[13px] font-medium text-[#D4E6E3]">উপসহকারী কৃষি কর্মকর্তা</span>
+            <span className="text-sm font-medium text-[#D4E6E3]">উপসহকারী কৃষি কর্মকর্তা</span>
           </span>
         </OfficerShareButton>
         <Link href="/camera" className={`${outlineClass} min-h-[58px] gap-2.5 text-lg font-bold`}>

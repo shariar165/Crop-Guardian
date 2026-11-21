@@ -12,6 +12,7 @@ import SprayButton from '@/components/SprayButton'
 import { CROP_IDS, type CropId, CROPS } from '@/lib/crops'
 import { DAY_STATE, type Risk, RISK_VIEW } from '@/lib/data'
 import { viewerAlerts } from '@/lib/alertDb'
+import { AUDIO_KEY, type SpeechPart } from '@/lib/audioKeys'
 import { bnWeekday } from '@/lib/bn'
 import { todayIn } from '@/lib/dates'
 import { getPlace } from '@/lib/place'
@@ -52,7 +53,7 @@ function NoForecast({ place }: { place: string }) {
       <p className="m-0 text-[15px] leading-[1.45]">
         নেট নেই, বা আবহাওয়ার খবর এখন আসছে না। তাই আজকের ঝুঁকি বলতে পারছি না। পাতার ছবি তুলে রোগ চেনা নেট ছাড়াও চলে।
       </p>
-      <Link href="/" className="text-[15px] font-semibold text-teal">
+      <Link href="/" className="text-base font-semibold text-teal">
         আবার চেষ্টা করুন
       </Link>
     </section>
@@ -73,7 +74,14 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: V
   const BadgeIcon = BADGE_ICON[risk]
   const days = live.days.map((d, i) => ({ ...d, name: i === 0 ? 'আজ' : bnWeekday(d.date), ...DAY_STATE[d.risk] }))
   const decision = buildDecision(live.days, risk, spec.decision, alerts)
-  const speech = [`${place}। ${spec.riskTitle}:`, view.word + '।', reason + '।', view.title + '।', decision].join(' ')
+  // Fixed parts can be read from a recording (src/lib/audioKeys.ts); the place and the numbers can't.
+  const speech: SpeechPart[] = [
+    { text: `${place}। ${spec.riskTitle}:` },
+    { text: view.word + '।', audio: AUDIO_KEY.riskWord(risk) },
+    { text: reason + '।' },
+    { text: view.title + '।', audio: AUDIO_KEY.riskTitle(risk) },
+    { text: decision, audio: decision === spec.decision[risk] ? AUDIO_KEY.decision(crop, risk) : undefined },
+  ]
 
   return {
     risk,
@@ -94,9 +102,9 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: V
       <section aria-label="৫ দিনের পূর্বাভাস" className="stitch mx-4 mt-3.5 grid shrink-0 grid-cols-5 gap-1 rounded-[18px] px-2.5 py-3">
         {days.map((d) => (
           <div key={d.date} className="flex flex-col items-center gap-[3px]">
-            <span className="text-[13px] font-semibold">{d.name}</span>
+            <span className="text-sm font-semibold">{d.name}</span>
             <DayGlyph risk={d.risk} />
-            <span className="text-xs font-bold" style={{ color: d.color }}>
+            <span className="text-sm font-bold" style={{ color: d.color }}>
               {d.word}
             </span>
           </div>
@@ -112,11 +120,11 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: V
           {view.icon === 'spray' ? <SprayIcon size={32} /> : <SproutIcon size={32} />}
         </div>
         <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-[13px] font-semibold text-muted">আজকের সিদ্ধান্ত</span>
+          <span className="text-sm font-semibold text-muted">আজকের সিদ্ধান্ত</span>
           <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{view.title}</h1>
           <p className="m-0 text-[15px] leading-[1.45]">{decision}</p>
           <ExperimentalNote crop={crop} />
-          <Link href="/guide#risk" className="mt-0.5 text-[15px] font-semibold text-teal">
+          <Link href="/guide#risk" className="mt-0.5 text-base font-semibold text-teal">
             কেন এই পরামর্শ?
           </Link>
           {risk === 'danger' && (
@@ -172,7 +180,7 @@ export default async function Home() {
           <CameraIcon size={30} weight={2.2} />
           <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
         </PrimaryLink>
-        <Link href="/potato" className="self-center text-[15px] font-bold text-teal">
+        <Link href="/potato" className="self-center text-base font-bold text-teal">
           আলু চাষের পরামর্শ →
         </Link>
         {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}

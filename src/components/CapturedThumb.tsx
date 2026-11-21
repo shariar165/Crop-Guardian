@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { PhotoLeaf } from '@/components/illustrations'
 import { type CaptureSlot, getCapture } from '@/lib/captureStore'
 
-const LABEL = 'text-[11px] font-semibold text-[#F1E8D6]'
+const LABEL = 'text-sm font-semibold text-[#F1E8D6]'
 
 // An object URL for the farmer's photo in `slot`, or null when there isn't one.
 function useCapturedUrl(slot: CaptureSlot): string | null {

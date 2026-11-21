@@ -20,7 +20,7 @@ export default function GuidePage() {
 
       <nav aria-label="নির্দেশিকার অংশ" className="mx-4 flex shrink-0 flex-wrap gap-1.5">
         {GUIDE.map((s, i) => (
-          <a key={s.id} href={`#${s.id}`} className="rounded-full bg-sand px-3 py-1 text-[13px] font-semibold text-muted-2 no-underline">
+          <a key={s.id} href={`#${s.id}`} className="rounded-full bg-sand px-3 py-1 text-base font-semibold text-muted-2 no-underline">
             {toBnDigits(i + 1)}. {s.title.split(':')[0]}
           </a>
         ))}
@@ -42,7 +42,7 @@ export default function GuidePage() {
                   <li key={m.risk} className="flex items-center gap-3 rounded-[14px] bg-cream px-2.5 py-2">
                     <span className="flex w-14 shrink-0 flex-col items-center">
                       <DayGlyph risk={m.risk} />
-                      <span className="text-xs font-bold" style={{ color: DAY_STATE[m.risk].color }}>
+                      <span className="text-sm font-bold" style={{ color: DAY_STATE[m.risk].color }}>
                         {DAY_STATE[m.risk].word}
                       </span>
                     </span>
@@ -61,7 +61,7 @@ export default function GuidePage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <ListenButton text={s.id === 'risk' ? `${speechOf(s)}। ${RISK_SPEECH}` : speechOf(s)} label={`${s.title} পড়ে শোনান`} />
               {s.link && (
-                <Link href={s.link.href} className="text-[15px] font-bold text-teal">
+                <Link href={s.link.href} className="text-base font-bold text-teal">
                   {s.link.label} →
                 </Link>
               )}

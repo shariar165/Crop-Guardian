@@ -32,7 +32,7 @@ export default function AlertToggle({ enabled, place }: { enabled: boolean; plac
           : 'বিপদের আগের দিন বিকেলে আপনার ফোনে SMS যাবে। অ্যাপ না খুললেও জানবেন।'}
       </p>
       {place === null && !enabled ? (
-        <Link href="/planting?from=account" className="text-[15px] font-bold text-teal">
+        <Link href="/planting?from=account" className="text-base font-bold text-teal">
           আগে ইউনিয়ন বেছে নিন →
         </Link>
       ) : (

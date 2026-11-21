@@ -47,6 +47,16 @@ export const RISK_RULE: Record<CropId, string> = {
   paddy: `ধানের জমিতে দেখাই ব্লাস্টের ঝুঁকি। ${toBnDigits(WET_MIN_C)}–${toBnDigits(WET_MAX_C)}°সে তাপমাত্রায় দিনে ${toBnDigits(BLAST_WET_HOURS)} ঘণ্টার বেশি ${toBnDigits(HUMID_RH)}% আর্দ্রতা টানা দুই দিন থাকলে বিপদ।`,
 }
 
+// How to install Google's Bengali voice, for /guide and the tip «শুনুন» shows once when the phone has
+// none. Menus differ between phones, so the settings search comes first and the menu path is a
+// fallback. TODO: confirm on a real phone.
+export const BENGALI_VOICE_STEPS = [
+  'ফোনের সেটিংস খুলে ওপরের সার্চে ‘Text-to-speech’ বা ‘টেক্সট-টু-স্পিচ’ লিখুন।',
+  'সেটা খুলে Google-এর ইঞ্জিনের পাশের ⚙ চাপুন। নাম ‘Speech Services by Google’ হতে পারে।',
+  '‘Install voice data’ চেপে ‘বাংলা (বাংলাদেশ)’ নামিয়ে নিন।',
+  'সার্চ না পেলে: সেটিংস → System বা General management → Language & input → Text-to-speech।',
+]
+
 export const GUIDE: GuideSection[] = [
   {
     id: 'start',
@@ -103,7 +113,7 @@ export const GUIDE: GuideSection[] = [
     title: 'ফলাফল বোঝা',
     icon: 'question',
     lines: [
-      'নিশ্চিত: রোগের নাম আর এখন কী করবেন, ধাপে ধাপে।',
+      'ছবিতে মিলেছে: রোগের নাম আর এখন কী করবেন, ধাপে ধাপে।',
       'নিশ্চিত নই: কয়েকটা রোগ হতে পারে। পাতা দেখে ছোট প্রশ্নের হ্যাঁ বা না উত্তর দিন। না জানলে «জানি না» চাপুন, তাতে কোনো ক্ষতি নেই।',
       'চিনতে পারিনি: ভুল নাম বলার বদলে অ্যাপ সৎভাবে বলে দেয়। কৃষি কর্মকর্তাকে পাঠান, বা আবার ছবি তুলুন।',
       '«কেন মনে হলো?» অংশে দেখবেন ফল কোথা থেকে এল: ছবি, আবহাওয়া আর আপনার উত্তর।',
@@ -170,6 +180,15 @@ export const GUIDE: GuideSection[] = [
       'ওষুধ সবসময় বোতলের লেবেল অনুযায়ী মেপে দিন। স্প্রের সময় মাস্ক আর গ্লাভস পরুন।',
       'অ্যাপটি পরীক্ষামূলক। সন্দেহ হলে উপসহকারী কৃষি কর্মকর্তার পরামর্শ নিন।',
       'যেকোনো পাতায় «শুনুন» বোতাম চাপলে পড়ে শোনাবে।',
+    ],
+  },
+  {
+    id: 'listen',
+    title: 'বাংলায় পড়ে শোনানো',
+    icon: 'doc',
+    lines: [
+      'ফোনে বাংলা কণ্ঠ না থাকলে «শুনুন» ঠিকমতো পড়তে পারে না। একবার নামিয়ে নিলেই হবে, তারপর নেট ছাড়াও চলে।',
+      ...BENGALI_VOICE_STEPS,
     ],
   },
 ]
