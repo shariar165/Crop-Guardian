@@ -341,7 +341,7 @@ The camera and the service worker need HTTPS. To try a local build on a real pho
 
 For a demo day, set `SHOWCASE_UNTIL=YYYY-MM-DD` (Production in Vercel, then redeploy). Through that date in Bangladesh time (`src/lib/showcase.ts`), and never after:
 
-- `/account` and `/officer` work without signing in, as a showcase officer, and cases upload without an account.
+- `/account` and `/officer` work without signing in, as a showcase officer named «ডেমো কর্মকর্তা» (it has no number), and cases upload without an account.
 - Home and the first-run intro show a "For judges (English)" link to `/docs`.
 - The camera shows «নমুনা ছবি দিয়ে দেখুন / Try a sample leaf» for potato. It offers three images from the notebook's parity set, served from `public/samples/` and listed in `src/lib/diagnosis/samples.ts`: a healthy leaf, late blight, and a virus, which is not one of the model's three diseases. A sample goes through the same steps as a gallery photo, used as both photos, so the real model decides it and the normal result screen shows it, never the `?mock` path. The result carries «মডেলের ডেটাসেটের ছবি · image from the model’s dataset». It doesn't say "test set": which split each image came from isn't confirmed from notebook 04 yet. `/camera` stays static, so it can work offline; it asks `GET /api/showcase` (never cached) whether the mode is on. `samples.test.ts` checks that each sample is its parity image byte for byte and that the notebook decided it as its label says.
 
