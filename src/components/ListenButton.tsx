@@ -12,7 +12,7 @@ const VARIANT: Record<Variant, string> = {
   outline: 'min-h-[66px] rounded-[20px] border-2 border-ink bg-transparent text-ink text-lg font-bold gap-2 justify-center',
 }
 
-const bengaliVoice = (synth: SpeechSynthesis) => synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('bn'))
+export const bengaliVoice = (synth: SpeechSynthesis) => synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('bn'))
 
 /**
  * Reads `text` aloud in Bengali using the browser's speech synthesis.
