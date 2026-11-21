@@ -9,12 +9,16 @@ import ListenButton from '@/components/ListenButton'
 import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar, { RoundLink } from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
+import { useEffect } from 'react'
 import { CROPS } from '@/lib/crops'
+import { dateOf } from '@/lib/dates'
+import { store } from '@/lib/deviceStore'
 import { contentOf, sourceOf } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
 import { finalOf } from '@/lib/diagnosis/flow'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
+import { FOLLOW_UP_KEY } from '@/lib/followUp'
 
 const BANNER = {
   danger: 'bg-danger-soft text-[#7E2A1C]',
@@ -22,8 +26,22 @@ const BANNER = {
   ok: 'bg-leaf-soft text-[#24502C]',
 }
 
+// A result that isn't healthy asks Home to remind the farmer to look again (src/lib/followUp.ts),
+// dated from the diagnosis, so opening the result again later doesn't move the reminder.
+function useFollowUp(view: ReturnType<typeof useDiagnosis>) {
+  const ready = view.status === 'ready' ? view : null
+  const final = ready ? finalOf(ready.record) : null
+  const due = ready && final && contentOf(ready.crop, final.id)?.banner.tone !== 'ok'
+  const value = due ? JSON.stringify({ crop: ready.crop, id: final.id, date: dateOf(ready.record.createdAt) }) : null
+  useEffect(() => {
+    if (value) store(FOLLOW_UP_KEY, value)
+  }, [value])
+  return due
+}
+
 export default function ResultView() {
   const view = useDiagnosis()
+  const followUp = useFollowUp(view)
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
@@ -110,6 +128,7 @@ export default function ResultView() {
             </li>
           ))}
         </ol>
+        {followUp && <p className="m-0 text-[15px] font-semibold text-teal">৫ দিন পর হোমে মনে করিয়ে দেব।</p>}
       </section>
 
       <a
