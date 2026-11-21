@@ -122,7 +122,16 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           <Link href="/guide#risk" className="mt-0.5 text-[15px] font-semibold text-teal">
             কেন এই পরামর্শ?
           </Link>
-          {risk === 'danger' && <SprayButton className="mt-1.5 self-start" />}
+          {risk === 'danger' && (
+            <>
+              {/* The title asks the farmer to look at the leaves today; the camera is how. */}
+              <PrimaryLink href={`/camera?crop=${crop}`} className="mt-1.5 min-h-12 gap-2 self-start px-4 text-base font-bold">
+                <CameraIcon size={22} weight={2.2} />
+                পাতার ছবি তুলুন
+              </PrimaryLink>
+              <SprayButton className="mt-1 self-start" />
+            </>
+          )}
         </div>
       </section>
     ),

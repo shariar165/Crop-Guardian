@@ -126,7 +126,8 @@ export function buildReason(days: DayRisk[], today: Risk): string {
 export const DECISION: Record<Risk, string> = {
   safe: 'কয়েক দিন আবহাওয়া তুলনায় শুকনো। তবু নিয়মিত পাতা দেখতে থাকুন।',
   watch: 'আবহাওয়া মাঝে মাঝে ভেজা। রোজ সকালে পাতা দেখে নিন।',
-  danger: 'নাবি ধসা ছড়ানোর মতো আবহাওয়া চলছে। আজই পাতা পরীক্ষা করুন।',
+  // Conditional on what the farmer finds: the rule isn't field-validated, so it never orders a spray.
+  danger: 'নাবি ধসার আবহাওয়া। পাতায় দাগ পেলে ২ দিনের মধ্যে স্প্রে করুন।',
 }
 
 // The body under today's decision title. When a danger day lies ahead it is named from the

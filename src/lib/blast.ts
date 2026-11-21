@@ -96,7 +96,7 @@ export function buildBlastReason(days: BlastDayRisk[], today: Risk): string {
 export const BLAST_DECISION: Record<Risk, string> = {
   safe: 'কয়েক দিন আবহাওয়া তুলনায় শুকনো। তবু নিয়মিত পাতা দেখতে থাকুন।',
   watch: 'আবহাওয়া মাঝে মাঝে ভেজা। রোজ সকালে পাতায় চোখের মতো দাগ খুঁজুন।',
-  danger: 'ব্লাস্ট ছড়ানোর মতো আবহাওয়া চলছে। আজই পাতা আর শীষ পরীক্ষা করুন।',
+  danger: 'ব্লাস্টের আবহাওয়া। পাতা আর শীষে দাগ পেলে দ্রুত স্প্রে করুন।',
 }
 
 // `today` (YYYY-MM-DD) drops days that are already over, after classifying, as assessRisk does.
