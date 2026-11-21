@@ -14,7 +14,7 @@ import { alertMessage } from '@/lib/alerts'
 import { CROP_IDS, CROPS } from '@/lib/crops'
 import { RISK_VIEW } from '@/lib/data'
 import { CLASS_CONTENT } from '@/lib/diagnosis/content'
-import { GUIDE, INTRO, RISK_MEANING, RISK_RULE } from '@/lib/guide'
+import { GUIDE, GUIDE_SUMMARY, INTRO, RISK_MEANING, RISK_RULE } from '@/lib/guide'
 import { POTATO_GUIDE } from '@/lib/potatoGuide'
 
 test('Bengali suffixes are stripped so inflected words find their root', () => {
@@ -118,6 +118,7 @@ test('no text the app shows says spraying is not needed or that money is saved',
     ...GUIDE.flatMap((g) => [g.title, ...g.lines].map((t): [string, string] => [`GUIDE.${g.id}`, t])),
     ...POTATO_GUIDE.flatMap((g) => [g.title, ...g.lines].map((t): [string, string] => [`POTATO_GUIDE.${g.id}`, t])),
     ...INTRO.flatMap((c) => [c.title, c.text].map((t): [string, string] => [`INTRO.${c.icon}`, t])),
+    ...GUIDE_SUMMARY.map((t): [string, string] => ['GUIDE_SUMMARY', t]),
     ...CROP_IDS.flatMap((crop) => [
       ...Object.entries(CROPS[crop].decision).map(([r, t]): [string, string] => [`${crop}.decision.${r}`, t]),
       [`${crop}.sms`, alertMessage(crop, [{ date: '2026-12-01', risk: 'danger' }], 0)] as [string, string],

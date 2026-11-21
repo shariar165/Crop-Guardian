@@ -47,6 +47,14 @@ export const RISK_RULE: Record<CropId, string> = {
   paddy: `ধানের জমিতে দেখাই ব্লাস্টের ঝুঁকি। ${toBnDigits(WET_MIN_C)}–${toBnDigits(WET_MAX_C)}°সে তাপমাত্রায় দিনে ${toBnDigits(BLAST_WET_HOURS)} ঘণ্টার বেশি ${toBnDigits(HUMID_RH)}% আর্দ্রতা টানা দুই দিন থাকলে বিপদ।`,
 }
 
+// "এক নজরে" at the top of /guide: the whole app in four lines, for a farmer who reads nothing else.
+export const GUIDE_SUMMARY = [
+  'রোজ সকালে হোমে ঝুঁকির রং দেখুন: সবুজ নিরাপদ, হলুদ সতর্ক, লাল বিপদ।',
+  'লাল দিনে পাতা দেখুন। দাগ দেখলে নিচের «ছবি» বোতাম চেপে পাতার ছবি তুলুন।',
+  'যেদিন স্প্রে করবেন, «আজ স্প্রে করেছি» চাপুন। মৌসুমের হিসাব থাকবে।',
+  'সন্দেহ হলে উপসহকারী কৃষি কর্মকর্তাকে দেখান। ওষুধ দিন বোতলের লেবেল অনুযায়ী।',
+]
+
 // How to install Google's Bengali voice, for /guide and the tip «শুনুন» shows once when the phone has
 // none. Menus differ between phones, so the settings search comes first and the menu path is a
 // fallback. TODO: confirm on a real phone.
