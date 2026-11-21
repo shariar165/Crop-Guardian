@@ -11,6 +11,7 @@ import { useChosenSeason, useFields } from '@/lib/fields'
 import { primaryClass } from './Buttons'
 import { SendIcon } from './icons'
 import ListenButton from './ListenButton'
+import VoiceInput from './VoiceInput'
 
 type Source = { id: string; title: string; source: string; href: string }
 type Answer = { answer: string; sources: Source[]; escalate: boolean; askCrop?: boolean; note: string | null }
@@ -172,6 +173,7 @@ export default function AskChat() {
           placeholder="প্রশ্ন লিখুন…"
           className="min-h-14 flex-1 resize-none rounded-[14px] border-2 border-line bg-paper px-3 py-2 text-[17px] leading-[1.35] text-ink focus:border-teal focus:outline-none"
         />
+        <VoiceInput value={input} onChange={setInput} disabled={busy} />
         <button type="submit" disabled={busy || !input.trim()} aria-label="পাঠান" className={`${primaryClass} size-14 shrink-0 disabled:opacity-50`}>
           <SendIcon size={24} weight={2.2} />
         </button>
