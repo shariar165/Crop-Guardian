@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import BottomNav from '@/components/BottomNav'
 import GuideIcon from '@/components/GuideIcon'
+import InstallButton from '@/components/InstallButton'
 import { DayGlyph } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
 import OpenOnHash from '@/components/OpenOnHash'
@@ -30,6 +31,7 @@ export default function GuidePage() {
         </ol>
         <ListenButton text={GUIDE_SUMMARY.join(' ')} label="এক নজরে পড়ে শোনান" className="self-start" />
       </section>
+      <InstallButton className="mx-4 mt-3" />
 
       <nav aria-label="নির্দেশিকার অংশ" className="mx-4 mt-3 flex shrink-0 flex-wrap gap-1.5">
         {GUIDE.map((s, i) => (
