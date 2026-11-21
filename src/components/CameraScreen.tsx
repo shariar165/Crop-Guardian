@@ -177,7 +177,9 @@ export default function CameraScreen() {
   const configUrl = configUrlOf(crop)
 
   // Load (or download, the first time) the crop's model while the farmer takes the photos.
-  useEffect(() => loadModel(configUrl, setModel), [configUrl])
+  useEffect(() => {
+    return loadModel(configUrl, setModel)
+  }, [configUrl])
 
   function pickCrop(c: CropId) {
     setPicked(c)
