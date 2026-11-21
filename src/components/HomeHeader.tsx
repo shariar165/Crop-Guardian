@@ -43,6 +43,7 @@ export default function HomeHeader({
         </div>
       </div>
 
+      {/* Text ends 202px from the left; SkyScene sizes itself to stay right of that. */}
       <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5">
         {/* Kept on one line; it may run past the column into empty sky rather than push the text down. */}
         <div className="flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
