@@ -1,8 +1,10 @@
 'use client'
 
-import { tealClass } from '@/components/Buttons'
+import { SectionRule, tealClass } from '@/components/Buttons'
+import CapturedThumb from '@/components/CapturedThumb'
 import { Loading, NoDiagnosis, ValidationBadge, WhyCard } from '@/components/DiagnosisParts'
 import { CheckIcon, DocIcon, HomeIcon, PersonIcon, WarnIcon } from '@/components/icons'
+import { CandidateThumb } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
 import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar, { RoundLink } from '@/components/TopBar'
@@ -71,6 +73,23 @@ export default function ResultView() {
         </div>
         <ValidationBadge crop={crop} sample={record.sample} className="mt-1" />
       </div>
+
+      {/* The farmer's leaf next to a drawing of the disease, so they can compare for themselves. */}
+      <section className="mx-4 mt-4 flex shrink-0 flex-col gap-2">
+        <SectionRule label="এমন দেখায়" />
+        <div className="flex items-start gap-3">
+          <figure className="m-0 flex flex-col items-center gap-1">
+            <div className="stitch relative flex size-24 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[18px] bg-[#1F2A17]!">
+              <CapturedThumb />
+            </div>
+          </figure>
+          <figure className="m-0 flex flex-col items-center gap-1">
+            <CandidateThumb crop={crop} id={final.id} className="size-24" />
+            <figcaption className="text-sm font-semibold text-muted">আঁকা ছবি: {name}</figcaption>
+          </figure>
+        </div>
+        <p className="m-0 text-[15px] leading-[1.4]">{content.sign}</p>
+      </section>
 
       <WhyCard
         crop={crop}
