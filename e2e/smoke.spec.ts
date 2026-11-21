@@ -38,9 +38,27 @@ test('/ask stays up after a question', async ({ page }) => {
   await expect(page.getByText("This page couldn't load")).toHaveCount(0)
 })
 
-test('showcase mode opens /officer and /account without signing in', async ({ page }) => {
+test('showcase mode opens /officer and /account without signing in, as the demo officer', async ({ page }) => {
   for (const path of ['/officer', '/account']) {
     await page.goto(path)
     expect(new URL(page.url()).pathname).toBe(path)
+    await expect(page.getByText('ডেমো কর্মকর্তা')).toBeVisible()
   }
+})
+
+// On a danger day the card's camera button replaces the big one under it; on other days the card
+// has none and the big one shows. Either way there is exactly one, whatever today's weather is.
+test('Home has one «পাতার ছবি তুলুন» besides the nav, in season or out', async ({ page }) => {
+  await page.addInitScript(INTRO_SEEN)
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'পাতার ছবি তুলুন' })).toHaveCount(1)
+  const danger = (await page.getByRole('heading', { name: 'আজই পাতা দেখুন' }).count()) > 0
+  // Planted today, the potato field isn't up yet: no decision card, so the big button shows.
+  await page.evaluate(() =>
+    localStorage.setItem('crop-guardian:fields', JSON.stringify([{ season: 'potato', planted: new Date().toISOString().slice(0, 10) }])),
+  )
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'আজই পাতা দেখুন' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'পাতার ছবি তুলুন' })).toHaveCount(1)
+  test.info().annotations.push({ type: 'weather', description: danger ? 'danger day: checked the card button' : 'not a danger day' })
 })
