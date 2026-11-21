@@ -10,6 +10,7 @@ import { canDiagnose } from '@/lib/diagnosis/crops'
 import { chooseSeason, type Field, mainField, useChosenSeason, useFields } from '@/lib/fields'
 import { rememberPlaceName } from '@/lib/placeCookies'
 import { offSeasonMessage, riskActive, seasonFor } from '@/lib/season'
+import FollowUpCard from './FollowUpCard'
 import HomeHeader from './HomeHeader'
 import { PinIcon } from './icons'
 import LedgerPill from './LedgerPill'
@@ -61,6 +62,7 @@ export default function FieldsGate({
       <ShownSeason.Provider value={shown.season}>
         {p.header}
         {!hasUnion && <SetupCard hasField={field !== null} />}
+        <FollowUpCard />
         {hydrated && active.length > 1 && <FieldChips seasons={active.map((f) => f.season)} shown={shown.season} />}
         {p.strip}
         {hasUnion && <FieldNote field={field} many={fields.length > 1} />}
@@ -75,6 +77,7 @@ export default function FieldsGate({
     <>
       <OffSeasonHeader season={off.season} planted={off.planted} today={today} place={place} />
       {hasUnion ? <FieldNote field={main} many={fields.length > 1} /> : <SetupCard hasField={main !== null} />}
+      <FollowUpCard />
       <LedgerPill field={main} hidePlantingPrompt={!hasUnion} />
     </>
   )

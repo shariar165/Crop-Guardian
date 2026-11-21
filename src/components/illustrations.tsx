@@ -144,16 +144,16 @@ export function PhotoLeaf() {
 }
 
 /* Reference thumbnails for each class the model can name (by crop and class id); other ids get a plain leaf. */
-export function CandidateThumb({ crop, id }: { crop: CropId; id: string }) {
+export function CandidateThumb({ crop, id, className = 'size-14' }: { crop: CropId; id: string; className?: string }) {
   if (crop === 'paddy') {
     return (
-      <svg aria-hidden="true" viewBox="0 -15 150 150" className="size-14 shrink-0 rounded-[14px] bg-[#EEF3E6]">
+      <svg aria-hidden="true" viewBox="0 -15 150 150" className={`${className} shrink-0 rounded-[14px] bg-[#EEF3E6]`}>
         <RiceArt kind={PADDY_THUMB[id] ?? 'riceClean'} />
       </svg>
     )
   }
   return (
-    <svg aria-hidden="true" viewBox="0 0 56 56" className="size-14 shrink-0 rounded-[14px] bg-[#EEF3E6]">
+    <svg aria-hidden="true" viewBox="0 0 56 56" className={`${className} shrink-0 rounded-[14px] bg-[#EEF3E6]`}>
       {id === 'late_blight' && (
         <>
           <path d="M6 44 C 10 16 38 6 50 8 C 50 32 36 50 6 44 Z" fill="#4E8A3E" />

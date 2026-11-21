@@ -54,7 +54,7 @@ export default function OfficerShareButton({
         )}
       </button>
       {sent && (
-        <p role="status" className="m-0 text-center text-[13px] leading-[1.4] font-semibold text-muted">
+        <p role="status" className="m-0 text-center text-sm leading-[1.4] font-semibold text-muted">
           {state === 'signedOut' ? (
             <>
               কর্মকর্তার তালিকা আর ম্যাপে দেখাতে{' '}
