@@ -11,8 +11,9 @@ import { chooseSeason, type Field, mainField, useChosenSeason, useFields } from 
 import { rememberPlaceName } from '@/lib/placeCookies'
 import { offSeasonMessage, riskActive, seasonFor } from '@/lib/season'
 import FollowUpCard from './FollowUpCard'
+import { PrimaryLink } from './Buttons'
 import HomeHeader from './HomeHeader'
-import { PinIcon } from './icons'
+import { CameraIcon, PinIcon } from './icons'
 import LedgerPill from './LedgerPill'
 
 // Home's parts for one crop, rendered on the server from that crop's rule.
@@ -25,6 +26,37 @@ export const useShownSeason = () => useContext(ShownSeason)
 type Candidate = { season: SeasonId; planted: string | null }
 
 const RANK: Record<Risk, number> = { safe: 0, watch: 1, danger: 2 }
+
+const riskOfCrop = (panels: Record<CropId, CropPanels>) =>
+  Object.fromEntries(Object.entries(panels).map(([c, p]) => [c, p.risk])) as Record<CropId, Risk>
+
+// The fields in the field today, and the one Home shows: the farmer's last choice, else the
+// riskiest. None in season means Home shows the off-season header. Shared with HomeCameraButton,
+// so both agree on which risk is on screen.
+function useShown(today: string, risks: Record<CropId, Risk>) {
+  const fields = useFields()
+  const chosen = useChosenSeason()
+  const candidates: Candidate[] = fields.length ? fields : [{ season: 'potato', planted: null }]
+  const active = candidates.filter((f) => riskActive(seasonFor(today, f.planted, f.season)))
+  const riskOf = (f: Candidate) => RANK[risks[SEASONS[f.season].crop]]
+  const shown: Candidate | undefined = active.find((f) => f.season === chosen) ?? [...active].sort((a, b) => riskOf(b) - riskOf(a))[0]
+  return { candidates, active, shown }
+}
+
+/**
+ * Home's big «পাতার ছবি তুলুন» under the decision. Hidden on a danger day, when the decision card
+ * has its own camera button right above it; the nav's is always there too.
+ */
+export function HomeCameraButton({ today, risks }: { today: string; risks: Record<CropId, Risk> | null }) {
+  const { shown } = useShown(today, risks ?? { potato: 'safe', paddy: 'safe' })
+  if (risks && shown && risks[SEASONS[shown.season].crop] === 'danger') return null
+  return (
+    <PrimaryLink href="/camera" className="h-[70px] gap-3">
+      <CameraIcon size={30} weight={2.2} />
+      <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
+    </PrimaryLink>
+  )
+}
 
 /*
  * Shows Home's risk (rendered on the server for every crop) for the fields on this device that are
@@ -50,10 +82,7 @@ export default function FieldsGate({
     if (hasUnion) rememberPlaceName(place)
   }, [hasUnion, place])
   const chosen = useChosenSeason()
-  const candidates: Candidate[] = fields.length ? fields : [{ season: 'potato', planted: null }]
-  const active = candidates.filter((f) => riskActive(seasonFor(today, f.planted, f.season)))
-  const riskOf = (f: Candidate) => RANK[panels[SEASONS[f.season].crop].risk]
-  const shown = active.find((f) => f.season === chosen) ?? [...active].sort((a, b) => riskOf(b) - riskOf(a))[0]
+  const { candidates, active, shown } = useShown(today, riskOfCrop(panels))
 
   if (shown) {
     const p = panels[SEASONS[shown.season].crop]
