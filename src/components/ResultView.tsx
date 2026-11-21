@@ -1,9 +1,9 @@
 'use client'
 
-import { SectionRule, tealClass } from '@/components/Buttons'
+import { PrimaryLink, SectionRule, tealClass } from '@/components/Buttons'
 import CapturedThumb from '@/components/CapturedThumb'
 import { Loading, NoDiagnosis, ValidationBadge, WhyCard } from '@/components/DiagnosisParts'
-import { CheckIcon, DocIcon, HomeIcon, PersonIcon, WarnIcon } from '@/components/icons'
+import { CameraIcon, CheckIcon, DocIcon, HomeIcon, PersonIcon, WarnIcon } from '@/components/icons'
 import { CandidateThumb } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
 import OfficerShareButton from '@/components/OfficerShareButton'
@@ -52,6 +52,7 @@ export default function ResultView() {
   // The tests check every class of every diagnosable crop has advice.
   const content = contentOf(crop, final.id)!
   const source = sourceOf(crop, final.id)
+  const healthy = final.id === 'healthy'
   // Narrowing by the farmer's answers isn't calibrated like the model, so it isn't called "sure".
   const word = final.via === 'model' ? CONFIDENCE_WORD.confident : 'ছবি আর আপনার উত্তর মিলিয়ে'
   const speech =
@@ -143,17 +144,38 @@ export default function ResultView() {
 
       <div className="min-h-4 flex-1" />
 
-      <div className="grid shrink-0 grid-cols-[2fr_3fr] gap-2.5 px-4 pb-[18px]">
-        <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
-        <OfficerShareButton
-          record={record}
-          config={config}
-          className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}
-        >
-          <PersonIcon size={24} />
-          কৃষি কর্মকর্তাকে দেখান
-        </OfficerShareButton>
-      </div>
+      {healthy ? (
+        // Nothing to treat: the next useful step is another leaf, so that leads; the officer stays a tap away.
+        <div className="flex shrink-0 flex-col gap-2 px-4 pb-[18px]">
+          <div className="grid grid-cols-[2fr_3fr] gap-2.5">
+            <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
+            <PrimaryLink href={`/camera?crop=${crop}`} className="min-h-[66px] gap-2 px-2.5 text-[17px] font-bold">
+              <CameraIcon size={24} weight={2.2} />
+              আরেকটা পাতা দেখুন
+            </PrimaryLink>
+          </div>
+          <OfficerShareButton
+            record={record}
+            config={config}
+            className="flex min-h-11 items-center justify-center gap-1.5 self-center border-0 bg-transparent px-2 text-base font-bold text-teal underline"
+          >
+            <PersonIcon size={20} />
+            কৃষি কর্মকর্তাকে দেখান
+          </OfficerShareButton>
+        </div>
+      ) : (
+        <div className="grid shrink-0 grid-cols-[2fr_3fr] gap-2.5 px-4 pb-[18px]">
+          <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
+          <OfficerShareButton
+            record={record}
+            config={config}
+            className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}
+          >
+            <PersonIcon size={24} />
+            কৃষি কর্মকর্তাকে দেখান
+          </OfficerShareButton>
+        </div>
+      )}
     </div>
   )
 }
