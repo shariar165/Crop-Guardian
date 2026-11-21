@@ -31,6 +31,7 @@ npm install
 npm run dev      # http://localhost:3000
 npm run build && npm start
 npm test         # unit tests (node:test)
+npm run test:e2e # smoke test in your installed Chrome at 360×640: builds, then starts in showcase mode
 npm run typecheck
 npm run lint
 ```
