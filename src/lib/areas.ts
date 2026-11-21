@@ -75,3 +75,33 @@ export function placeOf(union: Union | undefined | null): Place {
   const upazila = upazilaOf(union)
   return { lat: union.lat, lon: union.lon, name: `${union.nameBn}, ${upazila.nameBn}`, union, upazila, district: districtOf(upazila) }
 }
+
+const EARTH_RADIUS_KM = 6371
+
+// Great-circle distance in km between two points in degrees.
+export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = Math.PI / 180
+  const dLat = (lat2 - lat1) * rad
+  const dLon = (lon2 - lon1) * rad
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)))
+}
+
+/**
+ * The union whose centre is closest to a point (the phone's location), or null when none is within
+ * `maxKm`: the farmer is outside the areas the app covers. Centres, not boundaries, so near a border
+ * it may pick the neighbour; the farmer confirms it before it is saved.
+ */
+export function nearestUnion(lat: number, lon: number, maxKm = 20): Union | null {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+  let best: Union | null = null
+  let bestKm = maxKm
+  for (const union of UNIONS.values()) {
+    const km = distanceKm(lat, lon, union.lat, union.lon)
+    if (km <= bestKm) {
+      best = union
+      bestKm = km
+    }
+  }
+  return best
+}

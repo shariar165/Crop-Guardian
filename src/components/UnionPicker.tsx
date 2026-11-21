@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { chooseUnion } from '@/app/planting/actions'
 import { BackIcon, CheckIcon } from '@/components/icons'
+import LocateUnion from '@/components/LocateUnion'
 import { DIVISIONS, districtById, fullName, type Union, upazilaById } from '@/lib/areas'
 
 const BUTTON = 'flex min-h-12 items-center justify-center gap-1.5 rounded-[14px] border-2 px-2 text-center text-base leading-[1.2] font-bold no-underline'
@@ -80,6 +81,7 @@ export default function UnionPicker({
 
   return (
     <div className="flex flex-col gap-3">
+      <LocateUnion next={base} />
       {DIVISIONS.map((v) => (
         <section key={v.id} className="flex flex-col gap-2">
           <h3 className="m-0 text-[15px] font-bold text-muted-2">{v.nameBn}</h3>

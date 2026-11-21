@@ -7,10 +7,11 @@ import HomeHeader from '@/components/HomeHeader'
 import { CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
+import SmsOffer from '@/components/SmsOffer'
 import SprayButton from '@/components/SprayButton'
 import { CROP_IDS, type CropId, CROPS } from '@/lib/crops'
 import { DAY_STATE, type Risk, RISK_VIEW } from '@/lib/data'
-import { viewerHasAlerts } from '@/lib/alertDb'
+import { viewerAlerts } from '@/lib/alertDb'
 import { bnWeekday } from '@/lib/bn'
 import { todayIn } from '@/lib/dates'
 import { getPlace } from '@/lib/place'
@@ -61,16 +62,17 @@ function NoForecast({ place }: { place: string }) {
 // The risk badge's icon: a warning only on danger days, so নিরাপদ never shows a triangle.
 const BADGE_ICON: Record<Risk, typeof WarnIcon> = { danger: WarnIcon, watch: SearchIcon, safe: CheckIcon }
 
-// Home's header, 5-day strip and decision for one crop. `alerts`: the viewer gets SMS alerts.
-function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: boolean): CropPanels {
+type Viewer = { signedIn: boolean; alerts: boolean; hasUnion: boolean }
+
+// Home's header, 5-day strip and decision for one crop. `viewer.alerts`: they get SMS alerts.
+function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: Viewer): CropPanels {
+  const { alerts } = viewer
   const spec = CROPS[crop]
   const { today: risk, reason } = live
   const view = RISK_VIEW[risk]
   const BadgeIcon = BADGE_ICON[risk]
   const days = live.days.map((d, i) => ({ ...d, name: i === 0 ? 'আজ' : bnWeekday(d.date), ...DAY_STATE[d.risk] }))
   const decision = buildDecision(live.days, risk, spec.decision, alerts)
-  // A danger day ahead asks the farmer to look again; SMS alerts would save them the trouble.
-  const offerAlerts = !alerts && decision !== spec.decision[risk]
   const speech = [`${place}। ${spec.riskTitle}:`, view.word + '।', reason + '।', view.title + '।', decision].join(' ')
 
   return {
@@ -114,11 +116,6 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{view.title}</h1>
           <p className="m-0 text-[15px] leading-[1.45]">{decision}</p>
           <ExperimentalNote crop={crop} />
-          {offerAlerts && (
-            <Link href="/account" className="mt-0.5 text-[15px] font-semibold text-teal">
-              SMS-এ খবর পেতে চাইলে →
-            </Link>
-          )}
           <Link href="/guide#risk" className="mt-0.5 text-[15px] font-semibold text-teal">
             কেন এই পরামর্শ?
           </Link>
@@ -132,6 +129,9 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
               <SprayButton className="mt-1 self-start" />
             </>
           )}
+          {/* Every day until alerts are on or the farmer says এখন না: most won't open the app daily.
+              Last, so on danger days the camera comes first. */}
+          <SmsOffer signedIn={viewer.signedIn} enabled={alerts} hasUnion={viewer.hasUnion} className="mt-2" />
         </div>
       </section>
     ),
@@ -140,7 +140,8 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
 
 // Today's live risk at the farmer's union (or the upazila) for each field in season (see FieldsGate).
 export default async function Home() {
-  const [place, alerts] = await Promise.all([getPlace(), viewerHasAlerts()])
+  const [place, sms] = await Promise.all([getPlace(), viewerAlerts()])
+  const viewer: Viewer = { signedIn: sms.signedIn, alerts: sms.enabled, hasUnion: place.union !== null }
   const hourly = await loadForecast(place.lat, place.lon)
   // Until the farmer picks a union, the default upazila's risk is an example, not theirs.
   const placeLabel = place.union ? place.name : `উদাহরণ: ${place.name}`
@@ -156,7 +157,7 @@ export default async function Home() {
       </>
     )
   } else {
-    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], placeLabel, alerts)])) as Record<CropId, CropPanels>
+    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], placeLabel, viewer)])) as Record<CropId, CropPanels>
     gate = <FieldsGate today={todayIn()} place={placeLabel} hasUnion={place.union !== null} panels={panels} />
   }
 

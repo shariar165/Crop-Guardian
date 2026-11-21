@@ -13,6 +13,16 @@ export function addDays(isoDate: string, n: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+// The same day `n` months later (earlier if negative), clamped to the month's last day (31 Mar → 28 Feb).
+export function addMonths(isoDate: string, n: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const index = y * 12 + (m - 1) + n
+  const year = Math.floor(index / 12)
+  const month = (index % 12) + 1
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  return `${year}-${String(month).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`
+}
+
 // Whole days from `from` to `to` (negative if `to` is earlier).
 export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86_400_000)
