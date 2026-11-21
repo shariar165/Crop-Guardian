@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import BottomNav from '@/components/BottomNav'
-import { outlineClass, PrimaryLink } from '@/components/Buttons'
+import { PrimaryLink } from '@/components/Buttons'
 import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
-import { BookIcon, CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
+import { CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
 import SprayButton from '@/components/SprayButton'
@@ -169,18 +169,9 @@ export default async function Home() {
           <CameraIcon size={30} weight={2.2} />
           <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
         </PrimaryLink>
-        <Link href="/guide" className={`${outlineClass} h-[58px] gap-2.5 text-lg font-bold`}>
-          <BookIcon size={24} weight={2.2} />
-          কীভাবে ব্যবহার করবেন
+        <Link href="/potato" className="self-center text-[15px] font-bold text-teal">
+          আলু চাষের পরামর্শ →
         </Link>
-        <div className="flex justify-center gap-5">
-          <Link href="/potato" className="text-[15px] font-bold text-teal">
-            আলু চাষের পরামর্শ →
-          </Link>
-          <Link href="/ask" className="text-[15px] font-bold text-teal">
-            প্রশ্ন করুন →
-          </Link>
-        </div>
         {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}
         {showcase && (
           <Link href="/docs" lang="en" className="self-center text-[15px] font-bold text-teal">

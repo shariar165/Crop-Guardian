@@ -58,6 +58,8 @@ On a locked-down network `npm install` can fail because `onnxruntime-node` (used
 | `/account` | The signed-in number and role, SMS risk alerts on/off, sign out (from the person button on Home) |
 | `/officer` | Agriculture officers only: where farmers' cases will be listed |
 
+Home, the map, the ledger, the guide, `/planting`, `/potato` and `/account` share a bottom nav that stays on screen: হোম · ম্যাপ · ছবি · হিসাব · প্রশ্ন. ছবি (`/camera`) is a big round button raised above the bar. The camera and `/ask` have their own layouts without it.
+
 ## Late-blight risk
 
 Home's risk is computed from the weather, with no ML. `src/lib/weather.ts` fetches a 5-day hourly forecast (temperature, relative humidity) at the centroid of the farmer's union (or Shibganj upazila, Bogura, before one is chosen) from [Open-Meteo](https://open-meteo.com/) (no API key, cached for 1 hour, 5 s timeout). `src/lib/risk.ts` applies the Hutton criteria to it:
@@ -273,11 +275,11 @@ npm run db:migrate
 
 ## Guide
 
-`/guide` explains each part of the app in short Bengali, with a read-aloud button per section (`src/lib/guide.ts` holds the text; keep it in step with the screens). Home's "কীভাবে ব্যবহার করবেন" button opens it, "কেন এই পরামর্শ?" links to its risk section, and it is cached for offline use. The first time the app opens, `FirstRunIntro` shows four cards (risk colours, leaf photos, spray log, set up) and ends on `/planting`. It is not shown again on that phone.
+`/guide` explains each part of the app in short Bengali, with a read-aloud button per section (`src/lib/guide.ts` holds the text; keep it in step with the screens). The round "?" in Home's header opens it, "কেন এই পরামর্শ?" links to its risk section, and it is cached for offline use. The first time the app opens, `FirstRunIntro` shows four cards (risk colours, leaf photos, spray log, set up) and ends on `/planting`. It is not shown again on that phone.
 
 ## Assistant (কৃষি সহায়ক)
 
-`/ask` answers a farmer's typed question in Bengali, **only from the advice the app already shows** (`src/lib/assistant/kb.ts`: the potato advice, the guide, the diagnosis advice, the risk colours and each crop's photo steps, 31 passages). It is a faster way to find that advice, not a new source of it. It needs the network, so it is not cached offline. It is linked from Home.
+`/ask` answers a farmer's typed question in Bengali, **only from the advice the app already shows** (`src/lib/assistant/kb.ts`: the potato advice, the guide, the diagnosis advice, the risk colours and each crop's photo steps, 31 passages). It is a faster way to find that advice, not a new source of it. It needs the network, so it is not cached offline. It is the প্রশ্ন tab in the bottom nav.
 
 How a question is answered (`src/lib/assistant/answer.ts`). The models are called directly with free API keys that need no card (`src/lib/assistant/models.ts`). A first question already answered comes from the cache (`cache.ts`, the `ask_cache` table) with no model call: the key is a hash of the question in a normal form, the crop, the advice's version and `PROMPT_VERSION`, so a change to the advice or the prompts starts afresh, and the question's words are never stored. Follow-ups, today's forecast, passages shown in place of an answer and «আলু না ধান?» are never kept, and without the table the app works as if the cache were empty:
 

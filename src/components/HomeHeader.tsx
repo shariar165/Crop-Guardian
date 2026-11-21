@@ -28,8 +28,15 @@ export default function HomeHeader({
             <span className="text-[13px] font-medium">মাঠের সৎ ডাক্তার</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
+          <Link
+            href="/guide"
+            aria-label="কীভাবে ব্যবহার করবেন"
+            className="flex size-11 items-center justify-center rounded-full bg-white/78 font-display text-[22px] font-extrabold text-ink no-underline"
+          >
+            ?
+          </Link>
           <Link href="/account" aria-label="আমার অ্যাকাউন্ট" className="flex size-11 items-center justify-center rounded-full bg-white/78 text-ink">
             <PersonIcon size={22} />
           </Link>
