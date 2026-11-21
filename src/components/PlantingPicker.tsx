@@ -10,7 +10,7 @@ import { useHydrated } from '@/lib/deviceStore'
 import { type Field, readFields, saveField, useFields } from '@/lib/fields'
 import { plantingChips } from '@/lib/plantingChips'
 import { seasonFor } from '@/lib/season'
-import { outlineClass, primaryClass } from './Buttons'
+import { primaryClass } from './Buttons'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate()
@@ -124,12 +124,12 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
   const [error, setError] = useState<string | null>(null)
   const chips = plantingChips(today, season)
   // The dropdowns open for "অন্য তারিখ", or for a saved date no chip matches.
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [custom, setCustom] = useState(field !== null && !chips.some((c) => c.date === field.planted))
 
   const [year, month, day] = date.split('-').map(Number)
   const thisYear = Number(today.slice(0, 4))
   const future = date > today
-  const alerts = seasonFor(today, date, season)
 
   // Keep the day valid when the month or year changes (31 Jan → Feb).
   function change(y: number, m: number, d: number) {
@@ -220,17 +220,12 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
         </div>
       )}
 
-      <p role="status" className="stitch m-0 rounded-[16px] px-4 py-3 text-[15px] leading-[1.45]">
-        {future ? (
-          <span className="font-semibold text-danger">ভবিষ্যতের তারিখ দেওয়া যাবে না।</span>
-        ) : (
-          <>
-            {SEASONS[season].nameBn} রোপণ: <b>{bnDate(date)}</b>
-            <br />
-            ঝুঁকির খবর পাবেন: {bnDate(alerts.start)} থেকে {bnDate(alerts.end)}
-          </>
-        )}
-      </p>
+      {/* Only the dropdowns can reach a future date; the chips show their dates themselves. */}
+      {future && (
+        <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
+          ভবিষ্যতের তারিখ দেওয়া যাবে না।
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
@@ -241,11 +236,25 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
       <button type="button" disabled={future} onClick={() => save(date)} className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold disabled:opacity-50`}>
         তারিখ রাখুন
       </button>
-      {field && (
-        <button type="button" onClick={() => save(null)} className={`${outlineClass} h-[52px] text-base font-bold`}>
-          এই জমি মুছে ফেলুন
-        </button>
-      )}
+      {field &&
+        // Deleting loses the field's date and its ledger, so it asks once, in place.
+        (confirmDelete ? (
+          <div role="alertdialog" aria-labelledby="delete-q" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 py-1">
+            <span id="delete-q" className="text-base font-bold">
+              মুছে ফেলবেন?
+            </span>
+            <button type="button" onClick={() => save(null)} className="min-h-11 rounded-full border-0 bg-danger px-4 text-base font-bold text-white">
+              হ্যাঁ, মুছুন
+            </button>
+            <button type="button" autoFocus onClick={() => setConfirmDelete(false)} className="min-h-11 rounded-full border-2 border-ink bg-transparent px-5 text-base font-bold text-ink">
+              না
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)} className="min-h-11 self-center border-0 bg-transparent px-2 text-base font-bold text-danger underline">
+            এই জমি মুছে ফেলুন
+          </button>
+        ))}
     </>
   )
 }
