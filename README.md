@@ -195,7 +195,7 @@ To try it, run `npm run build && npm start`, open `/camera` once, then stop the 
 
 ## Sign-in
 
-Farmers and agriculture officers sign in with a Bangladeshi mobile number and a 6-digit SMS code. Nothing else needs an account: Home, the map, the ledger and the whole diagnosis flow work signed out, and offline as before. `src/proxy.ts` only guards `/account` and `/officer`.
+Farmers and agriculture officers sign in with a Bangladeshi mobile number and a 6-digit SMS code. Nothing else needs an account: Home, the map, the ledger and the whole diagnosis flow work signed out, and offline as before. `src/proxy.ts` only guards `/account` and `/officer`, and lets everyone through while showcase mode is on.
 
 Accounts use [Better Auth](https://www.better-auth.com/) (`src/lib/auth/auth.ts`, served at `/api/auth/*`) with its phone-number plugin. Users, sessions, codes and rate limits are kept in Postgres ([Neon](https://vercel.com/marketplace/neon), free plan, from the Vercel Marketplace).
 
