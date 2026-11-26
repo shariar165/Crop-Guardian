@@ -13,7 +13,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from '
 import { join } from 'node:path'
 import { isCropId } from '@/lib/crops'
 import { modelUrl, parseConfig } from '@/lib/diagnosis/config'
-import { configUrlOf } from '@/lib/diagnosis/crops'
+import { configUrlOf, leafNearOf } from '@/lib/diagnosis/crops'
 import { decide, type PhotoResult } from '@/lib/diagnosis/decide'
 import { resizeGeometry, toTensor } from '@/lib/diagnosis/preprocess'
 import { todayIn } from '@/lib/dates'
@@ -162,7 +162,7 @@ async function main() {
       const input = new ort.Tensor('float32', toTensor(data, g.size, config), [1, 3, g.size, g.size])
       const output = await session.run({ [config.inputName]: input })
       const result = decide(Array.from(output[config.outputName].data as Float32Array), config)
-      const quality = await qualityOfFile(path)
+      const quality = await qualityOfFile(path, leafNearOf(crop))
       const outcome = { file: `${truth}/${file}`, truth, result, quality, size: `${width}×${height}`, longSide: Math.max(width, height) }
       outcomes.push(outcome)
       console.log(`${outcome.file}: ${result.decision} [${result.candidates.join(', ')}] → ${verdict(outcome)}; camera: ${flagOf(quality) ?? 'ok'}`)

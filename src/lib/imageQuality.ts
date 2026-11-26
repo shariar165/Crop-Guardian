@@ -9,9 +9,18 @@ export type Region = { x: number; y: number; w: number; h: number }
 // Frames are downscaled to this width before analysis.
 export const ANALYSIS_WIDTH = 160
 
-// Mean luma (0–255) outside this range is too dark / too bright.
+// Mean luma (0–255) below DARK_LUMA is too dark. It is measured on the leaf's own pixels, so a
+// well-lit leaf on a bright background isn't called bright, nor a dark leaf on one called fine.
+// With no leaf to measure, the whole frame is judged, against both DARK_LUMA and BRIGHT_LUMA.
 export const DARK_LUMA = 60
 export const BRIGHT_LUMA = 215
+
+// With a leaf in frame, "too bright" is glare: the share of blown-out pixels (luma above
+// BLOWN_LUMA) inside LEAF_REGION, which catches a shine on a wet leaf that mean luma misses.
+// 0.30 lets every parity image through: 23 of 24 have under 1%, but a paddy photo on a white
+// background has 23% (the phone test may tighten this).
+export const BLOWN_LUMA = 250
+export const BRIGHT_BLOWN_FRACTION = 0.3
 
 // Variance of the Laplacian below this is blurry. Tuned on ANALYSIS_WIDTH frames; logged in dev.
 export const BLUR_THRESHOLD = 100
@@ -20,6 +29,7 @@ export const BLUR_THRESHOLD = 100
 export const EXG_GREEN = 20
 
 // Share of green pixels inside LEAF_REGION: below ABSENT there's no leaf, below NEAR it's too far away.
+// NEAR is the default; a crop can set its own (a paddy leaf is narrow, see diagnosis/crops.ts).
 export const LEAF_ABSENT_FRACTION = 0.05
 export const LEAF_NEAR_FRACTION = 0.25
 
@@ -27,9 +37,12 @@ export const LEAF_NEAR_FRACTION = 0.25
 export const LEAF_REGION: Region = { x: 0.1, y: 0.2, w: 0.8, h: 0.7 }
 
 export type QualityReport = {
+  // Mean luma of the leaf's pixels, or of the whole frame when there's no leaf.
   luma: number
   sharpness: number
   green: number
+  // Share of blown-out pixels inside LEAF_REGION (missing in reports saved before it existed).
+  blown?: number
   light: 'ok' | 'dark' | 'bright'
   focus: 'ok' | 'blurry'
   leaf: 'ok' | 'far' | 'absent'
@@ -69,36 +82,55 @@ export function laplacianVariance(gray: Float32Array, width: number, height: num
   return sumSq / n - mean * mean
 }
 
-/** Fraction of pixels inside `region` whose Excess Green index is above EXG_GREEN. */
-export function greenFraction({ data, width, height }: Pixels, region: Region = LEAF_REGION): number {
+type RegionStats = { green: number; leafLuma: number; blown: number }
+
+// One pass over `region`: the green share, the mean luma of the green pixels, and the blown-out share.
+function regionStats({ data, width, height }: Pixels, region: Region): RegionStats {
   const x0 = Math.floor(region.x * width)
   const x1 = Math.min(width, Math.ceil((region.x + region.w) * width))
   const y0 = Math.floor(region.y * height)
   const y1 = Math.min(height, Math.ceil((region.y + region.h) * height))
   let green = 0
+  let greenLuma = 0
+  let blown = 0
   let total = 0
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const p = (y * width + x) * 4
-      if (2 * data[p + 1] - data[p] - data[p + 2] > EXG_GREEN) green++
+      const luma = 0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2]
+      if (2 * data[p + 1] - data[p] - data[p + 2] > EXG_GREEN) {
+        green++
+        greenLuma += luma
+      }
+      if (luma > BLOWN_LUMA) blown++
       total++
     }
   }
-  return total ? green / total : 0
+  return total ? { green: green / total, leafLuma: green ? greenLuma / green : 0, blown: blown / total } : { green: 0, leafLuma: 0, blown: 0 }
 }
 
-export function assessQuality(px: Pixels): QualityReport {
+/** Fraction of pixels inside `region` whose Excess Green index is above EXG_GREEN. */
+export function greenFraction(px: Pixels, region: Region = LEAF_REGION): number {
+  return regionStats(px, region).green
+}
+
+/** `leafNear`: the crop's green share below which the leaf is too far (LEAF_NEAR_FRACTION by default). */
+export function assessQuality(px: Pixels, { leafNear = LEAF_NEAR_FRACTION }: { leafNear?: number } = {}): QualityReport {
   const gray = toGray(px)
-  const luma = meanLuma(gray)
   const sharpness = laplacianVariance(gray, px.width, px.height)
-  const green = greenFraction(px)
+  const { green, leafLuma, blown } = regionStats(px, LEAF_REGION)
+  // Too little green to measure the leaf by (the same line as "no leaf"): judge the whole frame.
+  const hasLeaf = green >= LEAF_ABSENT_FRACTION
+  const luma = hasLeaf ? leafLuma : meanLuma(gray)
+  const bright = blown > BRIGHT_BLOWN_FRACTION || (!hasLeaf && luma > BRIGHT_LUMA)
   return {
     luma,
     sharpness,
     green,
-    light: luma < DARK_LUMA ? 'dark' : luma > BRIGHT_LUMA ? 'bright' : 'ok',
+    blown,
+    light: luma < DARK_LUMA ? 'dark' : bright ? 'bright' : 'ok',
     focus: sharpness < BLUR_THRESHOLD ? 'blurry' : 'ok',
-    leaf: green < LEAF_ABSENT_FRACTION ? 'absent' : green < LEAF_NEAR_FRACTION ? 'far' : 'ok',
+    leaf: green < LEAF_ABSENT_FRACTION ? 'absent' : green < leafNear ? 'far' : 'ok',
   }
 }
 

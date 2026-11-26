@@ -15,7 +15,7 @@ import { todayIn } from '@/lib/dates'
 import { store } from '@/lib/deviceStore'
 import { diagnose, loadModel, type ModelState, whenReady } from '@/lib/diagnosis/client'
 import { type CombinedResult, combine } from '@/lib/diagnosis/combine'
-import { configUrlOf, PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
+import { configUrlOf, leafNearOf, PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { RESULT_PATH } from '@/lib/diagnosis/flow'
 import { cropFromParam, defaultPhotoCrop } from '@/lib/diagnosis/pickCrop'
 import { SAMPLE_BUTTON, type SampleLeaf, samplesFor } from '@/lib/diagnosis/samples'
@@ -137,13 +137,13 @@ function drawScaled(source: CanvasImageSource, crop: Crop, width: number, canvas
 }
 
 /** Compresses the cropped image to a JPEG and checks the quality of what was actually captured. */
-async function makeCapture(source: CanvasImageSource, crop: Crop): Promise<Capture> {
+async function makeCapture(source: CanvasImageSource, crop: Crop, leafNear: number): Promise<Capture> {
   const width = Math.round(crop.sw * Math.min(1, MAX_SIDE / Math.max(crop.sw, crop.sh)))
   const { canvas } = drawScaled(source, crop, width)
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY))
   if (!blob) throw new Error('JPEG encoding failed')
   const small = drawScaled(canvas, { sx: 0, sy: 0, sw: canvas.width, sh: canvas.height }, ANALYSIS_WIDTH)
-  const quality = assessQuality(small.ctx.getImageData(0, 0, ANALYSIS_WIDTH, small.height))
+  const quality = assessQuality(small.ctx.getImageData(0, 0, ANALYSIS_WIDTH, small.height), { leafNear })
   return { blob, takenAt: Date.now(), quality }
 }
 
@@ -179,6 +179,7 @@ export default function CameraScreen() {
   const asked = cropFromParam(useLinkParam('crop'))
   const crop = picked ?? asked ?? defaultPhotoCrop(fields, chosenSeason, todayIn())
   const configUrl = configUrlOf(crop)
+  const leafNear = leafNearOf(crop)
 
   // Load (or download, the first time) the crop's model while the farmer takes the photos.
   useEffect(() => {
@@ -260,14 +261,14 @@ export default function CameraScreen() {
       const video = videoRef.current
       if (!video || video.readyState < 2 || !video.videoWidth || document.hidden) return
       const { ctx, height } = drawScaled(video, visibleCrop(video), ANALYSIS_WIDTH, canvas)
-      const r = assessQuality(ctx.getImageData(0, 0, ANALYSIS_WIDTH, height))
+      const r = assessQuality(ctx.getImageData(0, 0, ANALYSIS_WIDTH, height), { leafNear })
       if (process.env.NODE_ENV === 'development') {
-        console.debug('[quality]', { luma: Math.round(r.luma), sharpness: Math.round(r.sharpness), green: r.green.toFixed(2) })
+        console.debug('[quality]', { luma: Math.round(r.luma), blown: r.blown?.toFixed(2), sharpness: Math.round(r.sharpness), green: r.green.toFixed(2) })
       }
       setReport(r)
     }, ANALYSIS_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [status, pending])
+  }, [status, pending, leafNear])
 
   // Diagnoses each photo on its own, combines them, and opens the matching result screen.
   async function analyse() {
@@ -326,14 +327,14 @@ export default function CameraScreen() {
       fileRef.current?.click()
       return
     }
-    take(() => makeCapture(video, visibleCrop(video)))
+    take(() => makeCapture(video, visibleCrop(video), leafNear))
   }
 
   function onPickFile(file: File) {
     take(async () => {
       const bitmap = await createImageBitmap(file)
       try {
-        return await makeCapture(bitmap, { sx: 0, sy: 0, sw: bitmap.width, sh: bitmap.height })
+        return await makeCapture(bitmap, { sx: 0, sy: 0, sw: bitmap.width, sh: bitmap.height }, leafNear)
       } finally {
         bitmap.close()
       }
@@ -352,7 +353,7 @@ export default function CameraScreen() {
       const bitmap = await createImageBitmap(await res.blob())
       let capture: Capture
       try {
-        capture = await makeCapture(bitmap, { sx: 0, sy: 0, sw: bitmap.width, sh: bitmap.height })
+        capture = await makeCapture(bitmap, { sx: 0, sy: 0, sw: bitmap.width, sh: bitmap.height }, leafNear)
       } finally {
         bitmap.close()
       }

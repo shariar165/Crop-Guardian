@@ -117,9 +117,9 @@ npx tsx scripts/find-blast-periods.ts             # add --write to update docs/b
 
 `/camera` opens the phone's rear camera (`getUserMedia`) inside the leaf frame and checks every ~300 ms, on a 160 px copy of the visible frame, with no ML (`src/lib/imageQuality.ts`):
 
-- **Light**: mean luma below 60 → "আলো কম", above 215 → "আলো খুব বেশি".
+- **Light**: measured on the leaf. Mean luma of the leaf's own (green) pixels below 60 → "আলো কম", so a dark leaf on a bright background is still caught. More than 30% blown-out pixels (luma > 250) inside the leaf frame → "আলো খুব বেশি", which catches glare on a wet leaf, while a well-lit leaf on a white background passes. With no leaf in frame, the whole frame's mean luma is judged (below 60 or above 215). The 30% lets all 24 parity images through; one paddy photo on white paper has 23%.
 - **Focus**: variance of the Laplacian below `BLUR_THRESHOLD` (100) → "ফোন স্থির রাখুন". In dev the values are logged to the console as `[quality]` for tuning.
-- **Leaf**: share of Excess-Green (2G − R − B) pixels inside the leaf frame: almost none → "পাতা ফ্রেমের ভেতরে আনুন", too few → "আরো কাছে আনুন".
+- **Leaf**: share of Excess-Green (2G − R − B) pixels inside the leaf frame: almost none (< 5%) → "পাতা ফ্রেমের ভেতরে আনুন", too few → "আরো কাছে আনুন". "Too few" is per crop (`leafNearFraction` in `src/lib/diagnosis/crops.ts`): 25% for potato, 8% for paddy, whose narrow blade fills only a tenth of the frame close up. `qualityParity.test.ts` checks that every parity image of both crops passes.
 
 The farmer takes two photos: for potato, the top of the leaf, then the underside; for paddy, two different affected leaves (the paddy training photos are single leaves from above). Which crop the camera diagnoses comes from `?crop=` in the link, else the field Home last showed, else the first field in season (`src/lib/diagnosis/pickCrop.ts`); once more than one crop has a model, an আলু / ধান switch under the viewfinder changes it and starts a fresh pair. A photo that fails the checks asks "… তবুও রাখবেন?" before it is kept. Photos are saved on the device as JPEGs (≤ 1024 px, quality 0.85) in IndexedDB (`src/lib/captureStore.ts`), where sharing a case reads them back, and the top photo is shown on `/result/uncertain`.
 
