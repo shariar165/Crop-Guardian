@@ -38,16 +38,16 @@ function CaseCard({ c }: { c: OfficerCase }) {
     <li className="stitch flex flex-col gap-2.5 rounded-[20px] p-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="font-display text-lg font-extrabold">{union ? fullName(union) : 'ইউনিয়ন জানা নেই'}</span>
-        <span className="text-[13px] font-semibold text-muted">
+        <span className="text-[0.8125rem] font-semibold text-muted">
           {CROPS[c.crop].nameBn} · {sentOn(c.sentAt)}
         </span>
       </div>
       {c.phone && (
-        <a href={`tel:${c.phone}`} className="self-start text-[15px] font-bold text-teal">
+        <a href={`tel:${c.phone}`} className="self-start text-[0.9375rem] font-bold text-teal">
           {formatBdPhone(c.phone)}
         </a>
       )}
-      <p className="m-0 text-[15px] leading-[1.4]">
+      <p className="m-0 text-[0.9375rem] leading-[1.4]">
         <span className="font-semibold text-muted">অ্যাপের ফল: </span>
         {appResult(c)}
       </p>
@@ -99,7 +99,7 @@ function CaseCard({ c }: { c: OfficerCase }) {
             type="submit"
             name="verdict"
             value="late_blight"
-            className="min-h-12 rounded-[14px] border-0 bg-danger px-2 text-[15px] font-bold text-white"
+            className="min-h-12 rounded-[14px] border-0 bg-danger px-2 text-[0.9375rem] font-bold text-white"
           >
             {VERDICT_LABEL.late_blight}
           </button>
@@ -107,7 +107,7 @@ function CaseCard({ c }: { c: OfficerCase }) {
             type="submit"
             name="verdict"
             value="not_late_blight"
-            className="min-h-12 rounded-[14px] border-2 border-ink bg-transparent px-2 text-[15px] font-bold text-ink"
+            className="min-h-12 rounded-[14px] border-2 border-ink bg-transparent px-2 text-[0.9375rem] font-bold text-ink"
           >
             {VERDICT_LABEL.not_late_blight}
           </button>
@@ -132,13 +132,13 @@ export default async function OfficerPage() {
     <div className="flex flex-1 flex-col">
       <TopBar back="/account" title="কৃষি কর্মকর্তা" right={<span className="size-11" />} />
       <div className="flex shrink-0 flex-col gap-3 px-4 pb-6">
-        <p className="m-0 text-[15px] font-medium text-muted">ঢুকেছেন: {viewerLabel(user, showcase)}</p>
-        <h1 className="m-0 font-display text-[23px] leading-[1.2] font-extrabold">কৃষকদের পাঠানো কেস</h1>
+        <p className="m-0 text-[0.9375rem] font-medium text-muted">ঢুকেছেন: {viewerLabel(user, showcase)}</p>
+        <h1 className="m-0 font-display text-[1.4375rem] leading-[1.2] font-extrabold">কৃষকদের পাঠানো কেস</h1>
         <p className="m-0 text-sm leading-[1.45] text-muted">
           ছবি দেখে বা মাঠে গিয়ে যাচাই করুন। শুধু “নাবি ধসা নিশ্চিত” কেসগুলোই এলাকার ম্যাপে গোনা হয়।
         </p>
         {cases === null ? (
-          <p role="alert" className="m-0 rounded-[16px] bg-danger-soft px-4 py-3 text-[15px] font-semibold text-danger-deep">
+          <p role="alert" className="m-0 rounded-[16px] bg-danger-soft px-4 py-3 text-[0.9375rem] font-semibold text-danger-deep">
             কেসগুলো আনা যায়নি। একটু পরে আবার চেষ্টা করুন।
           </p>
         ) : cases.length === 0 ? (
@@ -146,7 +146,7 @@ export default async function OfficerPage() {
             <span className="flex size-14 items-center justify-center rounded-full bg-mist text-teal">
               <DocIcon size={30} />
             </span>
-            <p className="m-0 text-[15px] leading-[1.45]">এখনো কোনো কেস আসেনি। কৃষকেরা অ্যাপে ঢুকে ছবি পাঠালে এখানে দেখা যাবে।</p>
+            <p className="m-0 text-[0.9375rem] leading-[1.45]">এখনো কোনো কেস আসেনি। কৃষকেরা অ্যাপে ঢুকে ছবি পাঠালে এখানে দেখা যাবে।</p>
           </section>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">

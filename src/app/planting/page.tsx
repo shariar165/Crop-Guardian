@@ -32,7 +32,7 @@ export default async function PlantingPage({ searchParams }: PageProps<'/plantin
       <TopBar back={back} title="আমার জমি" right={<ListenButton text={SPEECH} label="পড়ে শোনান" />} />
       <div className="flex shrink-0 flex-col gap-3 px-4">
         <SectionRule label="১. আপনার এলাকা" />
-        <p className="m-0 text-[15px] leading-[1.45]">জমি কোথায়? জেলা, উপজেলা আর ইউনিয়ন বেছে নিন। সেখানকার আবহাওয়া দেখে ঝুঁকি বলব, ম্যাপেও দেখাব।</p>
+        <p className="m-0 text-[0.9375rem] leading-[1.45]">জমি কোথায়? জেলা, উপজেলা আর ইউনিয়ন বেছে নিন। সেখানকার আবহাওয়া দেখে ঝুঁকি বলব, ম্যাপেও দেখাব।</p>
         <UnionPicker current={place.union} district={one(params.d)} upazila={one(params.u)} base={keep ? `/planting?${keep}` : '/planting'} />
         <SectionRule label="২. ফসল আর রোপণের তারিখ" className="mt-3" />
       </div>

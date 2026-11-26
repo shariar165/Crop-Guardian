@@ -50,7 +50,7 @@ export default function InstallButton({ className = '' }: { className?: string }
   if (mode === 'none') return null
   if (mode === 'ios') {
     return (
-      <p className={`m-0 rounded-[14px] bg-mist px-3.5 py-2.5 text-[15px] leading-[1.45] text-teal-deep ${className}`}>
+      <p className={`m-0 rounded-[14px] bg-mist px-3.5 py-2.5 text-[0.9375rem] leading-[1.45] text-teal-deep ${className}`}>
         ফোনে অ্যাপ হিসেবে রাখতে: Safari-র নিচে শেয়ার বোতাম (□↑) চাপুন, তারপর «Add to Home Screen»।
       </p>
     )

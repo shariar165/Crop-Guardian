@@ -11,7 +11,7 @@ export default function OfflinePage() {
       <span className="flex size-[72px] items-center justify-center rounded-full bg-mist text-teal">
         <OfflineIcon size={40} />
       </span>
-      <h1 className="m-0 font-display text-[30px] leading-[1.15] font-extrabold">নেট নেই</h1>
+      <h1 className="m-0 font-display text-[1.875rem] leading-[1.15] font-extrabold">নেট নেই</h1>
       <p className="m-0 text-base leading-[1.45] text-muted">
         আবহাওয়ার ঝুঁকি দেখা যাচ্ছে না। নেট ফিরলে আবার খুলুন।
       </p>

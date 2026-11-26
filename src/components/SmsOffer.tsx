@@ -106,7 +106,7 @@ export default function SmsOffer({
       </div>
       {!signedIn && <span className="text-sm leading-[1.4] text-muted">মোবাইল নম্বর দিয়ে ঢুকতে হবে। SMS-এ একটা কোড যাবে।</span>}
       {state === 'error' && (
-        <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
+        <p role="alert" className="m-0 text-[0.9375rem] font-semibold text-danger">
           {error}
         </p>
       )}

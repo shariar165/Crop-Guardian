@@ -43,10 +43,10 @@ export default function FirstRunIntro({ showcase = false }: { showcase?: boolean
 
       <div key={step} className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
         <GuideIcon kind={card.icon} size="lg" />
-        <h1 id="intro-title" className="m-0 font-display text-[28px] leading-[1.2] font-extrabold">
+        <h1 id="intro-title" className="m-0 font-display text-[1.75rem] leading-[1.2] font-extrabold">
           {card.title}
         </h1>
-        <p className="m-0 text-[17px] leading-[1.5]">{card.text}</p>
+        <p className="m-0 text-[1.0625rem] leading-[1.5]">{card.text}</p>
         <ListenButton text={speechOf(card)} audio={AUDIO_KEY.intro(step)} label="পড়ে শোনান" />
       </div>
 
@@ -64,7 +64,7 @@ export default function FirstRunIntro({ showcase = false }: { showcase?: boolean
         )}
         {last ? (
           <>
-            <button type="button" onClick={() => done('/planting?from=intro')} className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold`}>
+            <button type="button" onClick={() => done('/planting?from=intro')} className={`${primaryClass} h-[64px] font-display text-[1.375rem] font-extrabold`}>
               জমির খবর দিন
             </button>
             <button type="button" onClick={() => done()} className="min-h-12 border-0 bg-transparent text-base font-bold text-teal">
@@ -72,7 +72,7 @@ export default function FirstRunIntro({ showcase = false }: { showcase?: boolean
             </button>
           </>
         ) : (
-          <button type="button" onClick={() => setStep(step + 1)} className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold`}>
+          <button type="button" onClick={() => setStep(step + 1)} className={`${primaryClass} h-[64px] font-display text-[1.375rem] font-extrabold`}>
             পরের
           </button>
         )}

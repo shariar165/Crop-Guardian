@@ -38,12 +38,12 @@ export default function UncertainView() {
           <CapturedThumb />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="flex h-8 items-center gap-1.5 self-start rounded-2xl bg-sun px-3 text-[15px] font-bold text-ink">
+          <span className="flex h-8 items-center gap-1.5 self-start rounded-2xl bg-sun px-3 text-[0.9375rem] font-bold text-ink">
             <QuestionIcon size={18} weight={2.4} />
             {CONFIDENCE_WORD.uncertain}
           </span>
-          <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{heading}</h1>
-          <p className="m-0 text-[15px] leading-[1.45]">ভুল ওষুধ এড়াতে আমি আন্দাজে একটা নাম বলব না।</p>
+          <h1 className="m-0 font-display text-[1.5625rem] leading-[1.15] font-extrabold">{heading}</h1>
+          <p className="m-0 text-[0.9375rem] leading-[1.45]">ভুল ওষুধ এড়াতে আমি আন্দাজে একটা নাম বলব না।</p>
         </div>
       </div>
       <ValidationBadge crop={crop} sample={record.sample} className="mx-4 mt-2.5" />
@@ -76,7 +76,7 @@ export default function UncertainView() {
           <PrimaryLink href="/questions" className="min-h-[72px] gap-3 px-4 py-2">
             <ChatQuestionIcon size={30} weight={2.2} />
             <span className="flex flex-col leading-[1.2]">
-              <span className="font-display text-[22px] font-extrabold">{toBnDigits(asks)}টা প্রশ্নের উত্তর দিন</span>
+              <span className="font-display text-[1.375rem] font-extrabold">{toBnDigits(asks)}টা প্রশ্নের উত্তর দিন</span>
               <span className="text-sm font-medium">পাতা দেখে হ্যাঁ বা না বলুন</span>
             </span>
           </PrimaryLink>

@@ -145,8 +145,8 @@ function useSentCases(): SentCase[] {
 function Prompt({ title, text, href, action }: { title: string; text: string; href: string; action: string }) {
   return (
     <section className="stitch-lg mx-4 mt-3.5 flex shrink-0 flex-col gap-2.5 rounded-[20px] p-4">
-      <h2 className="m-0 font-display text-[22px] leading-[1.2] font-extrabold">{title}</h2>
-      <p className="m-0 text-[15px] leading-[1.45]">{text}</p>
+      <h2 className="m-0 font-display text-[1.375rem] leading-[1.2] font-extrabold">{title}</h2>
+      <p className="m-0 text-[0.9375rem] leading-[1.45]">{text}</p>
       <PrimaryLink href={href} className="h-14 font-display text-lg font-extrabold">
         {action}
       </PrimaryLink>
@@ -176,7 +176,7 @@ function Weeks({ ledger }: { ledger: Ledger }) {
                   </span>
                   <span className="text-base font-bold">{action}</span>
                 </div>
-                {w.amount > 0 && <span className="font-display text-[17px] font-extrabold text-leaf">+{formatTaka(w.amount)}</span>}
+                {w.amount > 0 && <span className="font-display text-[1.0625rem] font-extrabold text-leaf">+{formatTaka(w.amount)}</span>}
               </div>
             </li>
           )
@@ -193,8 +193,8 @@ const TOTALS = 'mx-4 mt-3.5 flex shrink-0 flex-col gap-1 rounded-[22px] bg-ink p
 function DangerTotals({ ledger, season }: { ledger: Ledger; season: SeasonId }) {
   return (
     <section className={TOTALS}>
-      <span className="text-[15px] font-medium text-line">এই মৌসুমে {cropOf(season).diseaseOfBn} বিপদ ছিল</span>
-      <span className="font-display text-[50px] leading-[1.05] font-extrabold text-sun">{toBnDigits(dangerWeeks(ledger))} সপ্তাহে</span>
+      <span className="text-[0.9375rem] font-medium text-line">এই মৌসুমে {cropOf(season).diseaseOfBn} বিপদ ছিল</span>
+      <span className="font-display text-[3.125rem] leading-[1.05] font-extrabold text-sun">{toBnDigits(dangerWeeks(ledger))} সপ্তাহে</span>
       <div className="mt-2 grid grid-cols-2 gap-3 border-t-[1.5px] border-dashed border-[#6E5A45] pt-2.5">
         <div className="flex flex-col">
           <span className="font-display text-2xl font-extrabold text-[#BFE3B4]">{toBnDigits(ledger.onTimeCount)} সপ্তাহ</span>
@@ -212,7 +212,7 @@ function DangerTotals({ ledger, season }: { ledger: Ledger; season: SeasonId }) 
 function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
   const crop = cropOf(season)
   if (state.status === 'loading') {
-    return <p className="mx-4 mt-6 text-center text-[15px] text-muted">হিসাব করছি…</p>
+    return <p className="mx-4 mt-6 text-center text-[0.9375rem] text-muted">হিসাব করছি…</p>
   }
   if (state.status === 'noPlanting') {
     return (
@@ -227,14 +227,14 @@ function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
   if (state.status === 'notYet') {
     return (
       <section className="stitch-lg mx-4 mt-3.5 flex shrink-0 flex-col gap-2 rounded-[20px] p-4">
-        <h2 className="m-0 font-display text-[22px] leading-[1.2] font-extrabold">{crop.startPhrase} হিসাব শুরু হবে</h2>
-        <p className="m-0 text-[15px] leading-[1.45]">{bnDate(state.from)} থেকে প্রতি সপ্তাহের হিসাব এখানে দেখাব।</p>
+        <h2 className="m-0 font-display text-[1.375rem] leading-[1.2] font-extrabold">{crop.startPhrase} হিসাব শুরু হবে</h2>
+        <p className="m-0 text-[0.9375rem] leading-[1.45]">{bnDate(state.from)} থেকে প্রতি সপ্তাহের হিসাব এখানে দেখাব।</p>
       </section>
     )
   }
   if (state.status === 'error') {
     return (
-      <p role="alert" className="mx-4 mt-3.5 mb-0 rounded-[16px] bg-amber-soft px-4 py-3 text-[15px] leading-[1.45] font-semibold text-[#6B4A00]">
+      <p role="alert" className="mx-4 mt-3.5 mb-0 rounded-[16px] bg-amber-soft px-4 py-3 text-[0.9375rem] leading-[1.45] font-semibold text-[#6B4A00]">
         আবহাওয়ার তথ্য আনা যায়নি — নেট নেই? নেট এলে হিসাব দেখাব। স্প্রে লিখে রাখা চলবে।
       </p>
     )
@@ -255,8 +255,8 @@ function Body({ state, season }: { state: LedgerState; season: SeasonId }) {
   return (
     <>
       <section className={TOTALS}>
-        <span className="text-[15px] font-medium text-line">এই মৌসুমে বাঁচিয়েছেন</span>
-        <span className="font-display text-[50px] leading-[1.05] font-extrabold text-sun">{formatTaka(ledger.savedTotal)}</span>
+        <span className="text-[0.9375rem] font-medium text-line">এই মৌসুমে বাঁচিয়েছেন</span>
+        <span className="font-display text-[3.125rem] leading-[1.05] font-extrabold text-sun">{formatTaka(ledger.savedTotal)}</span>
         <div className="mt-2 grid grid-cols-2 gap-3 border-t-[1.5px] border-dashed border-[#6E5A45] pt-2.5">
           <div className="flex flex-col">
             <span className="font-display text-2xl font-extrabold text-[#BFE3B4]">{toBnDigits(ledger.savedCount)}টা</span>
@@ -320,7 +320,7 @@ export default function LedgerView({ place, start }: { place: string; start: str
     <>
       <header className="flex shrink-0 items-center justify-between gap-2 pt-4 pr-4 pl-[18px]">
         <div className="flex min-w-0 flex-col leading-[1.2]">
-          <h1 className="m-0 font-display text-[25px] font-extrabold">মৌসুমের হিসাব</h1>
+          <h1 className="m-0 font-display text-[1.5625rem] font-extrabold">মৌসুমের হিসাব</h1>
           <span className="text-sm font-medium text-muted">
             {SEASONS[season].nameBn} · {place} · <PlantingDays field={field} />
           </span>

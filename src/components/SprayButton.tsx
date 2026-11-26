@@ -18,7 +18,7 @@ export default function SprayButton({ season: given, className = '' }: { season?
 
   if (sprays.includes(today)) {
     return (
-      <p role="status" className={`m-0 flex flex-wrap items-center gap-x-2 text-[15px] font-semibold text-leaf ${className}`}>
+      <p role="status" className={`m-0 flex flex-wrap items-center gap-x-2 text-[0.9375rem] font-semibold text-leaf ${className}`}>
         আজকের স্প্রে হিসাবে লেখা হয়েছে
         <button type="button" onClick={() => removeSpray(season, today)} className="border-0 bg-transparent p-0 text-base font-bold text-teal underline">
           মুছুন

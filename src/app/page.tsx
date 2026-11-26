@@ -50,8 +50,8 @@ function NoForecast({ place }: { place: string }) {
         <OfflineIcon size={20} />
         {place}
       </span>
-      <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">আবহাওয়ার তথ্য আনা যায়নি</h1>
-      <p className="m-0 text-[15px] leading-[1.45]">
+      <h1 className="m-0 font-display text-[1.5625rem] leading-[1.15] font-extrabold">আবহাওয়ার তথ্য আনা যায়নি</h1>
+      <p className="m-0 text-[0.9375rem] leading-[1.45]">
         নেট নেই, বা আবহাওয়ার খবর এখন আসছে না। তাই আজকের ঝুঁকি বলতে পারছি না। পাতার ছবি তুলে রোগ চেনা নেট ছাড়াও চলে।
       </p>
       <Link href="/" className="text-base font-semibold text-teal">
@@ -88,15 +88,15 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: V
     risk,
     header: (
       <HomeHeader view={view} place={place} speech={speech}>
-        <span className="text-[15px] font-medium">{spec.riskTitle}</span>
+        <span className="text-[0.9375rem] font-medium">{spec.riskTitle}</span>
         <div
           className="flex items-center gap-2 self-start rounded-[14px] pt-1 pr-4 pb-0.5 pl-3"
           style={{ background: view.badgeBg, color: view.badgeInk }}
         >
           <BadgeIcon size={26} weight={2.4} />
-          <span className="font-display text-[34px] leading-[1.15] font-extrabold">{view.word}</span>
+          <span className="font-display text-[2.125rem] leading-[1.15] font-extrabold">{view.word}</span>
         </div>
-        <span className="text-[15px] leading-[1.4] font-medium">{reason}</span>
+        <span className="text-[0.9375rem] leading-[1.4] font-medium">{reason}</span>
       </HomeHeader>
     ),
     strip: (
@@ -122,8 +122,8 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: V
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-semibold text-muted">আজকের সিদ্ধান্ত</span>
-          <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{view.title}</h1>
-          <p className="m-0 text-[15px] leading-[1.45]">{decision}</p>
+          <h1 className="m-0 font-display text-[1.5625rem] leading-[1.15] font-extrabold">{view.title}</h1>
+          <p className="m-0 text-[0.9375rem] leading-[1.45]">{decision}</p>
           <ExperimentalNote crop={crop} />
           <Link href="/guide#risk" className="mt-0.5 text-base font-semibold text-teal">
             কেন এই পরামর্শ?
@@ -185,7 +185,7 @@ export default async function Home() {
         <InstallButton />
         {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}
         {showcase && (
-          <Link href="/docs" lang="en" className="self-center text-[15px] font-bold text-teal">
+          <Link href="/docs" lang="en" className="self-center text-[0.9375rem] font-bold text-teal">
             For judges (English) →
           </Link>
         )}

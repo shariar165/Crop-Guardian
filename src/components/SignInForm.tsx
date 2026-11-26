@@ -70,7 +70,7 @@ export default function SignInForm({ next }: { next: string }) {
   }
 
   const alert = error && (
-    <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
+    <p role="alert" className="m-0 text-[0.9375rem] font-semibold text-danger">
       {SIGN_IN_ERROR[error]}
     </p>
   )
@@ -78,7 +78,7 @@ export default function SignInForm({ next }: { next: string }) {
   if (step.at === 'phone') {
     return (
       <form onSubmit={submitPhone} className="flex shrink-0 flex-col gap-4 px-4">
-        <p className="m-0 text-[17px] leading-[1.45] font-medium">
+        <p className="m-0 text-[1.0625rem] leading-[1.45] font-medium">
           আপনার মোবাইল নম্বর দিন। নম্বরে একটা কোড পাঠানো হবে, সেটা লিখলেই ঢুকে যাবেন।
         </p>
         <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
@@ -98,7 +98,7 @@ export default function SignInForm({ next }: { next: string }) {
           />
         </label>
         {alert}
-        <button type="submit" disabled={busy} aria-busy={busy} className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold disabled:opacity-50`}>
+        <button type="submit" disabled={busy} aria-busy={busy} className={`${primaryClass} h-[64px] font-display text-[1.375rem] font-extrabold disabled:opacity-50`}>
           {busy ? 'পাঠাচ্ছি…' : 'কোড পাঠান'}
         </button>
         <p className="m-0 text-sm leading-[1.45] text-muted">ছবি দেখে রোগ চেনার জন্য ঢুকতে হয় না।</p>
@@ -109,7 +109,7 @@ export default function SignInForm({ next }: { next: string }) {
   const tooMany = error === 'tooMany' || error === 'expired'
   return (
     <form onSubmit={submitCode} className="flex shrink-0 flex-col gap-4 px-4">
-      <p className="m-0 text-[17px] leading-[1.45] font-medium">
+      <p className="m-0 text-[1.0625rem] leading-[1.45] font-medium">
         <b>{formatBdPhone(step.phone)}</b> নম্বরে SMS-এ {toBnDigits(OTP_LENGTH)} অঙ্কের কোড গেছে। সেটা লিখুন।
       </p>
       <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
@@ -134,7 +134,7 @@ export default function SignInForm({ next }: { next: string }) {
         type="submit"
         disabled={busy || code.length !== OTP_LENGTH || tooMany}
         aria-busy={busy}
-        className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold disabled:opacity-50`}
+        className={`${primaryClass} h-[64px] font-display text-[1.375rem] font-extrabold disabled:opacity-50`}
       >
         {busy ? 'মিলিয়ে দেখছি…' : 'ঢুকুন'}
       </button>

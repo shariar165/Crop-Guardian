@@ -80,7 +80,7 @@ export default async function MapPage() {
     <div className="flex flex-1 flex-col">
       <header className="flex shrink-0 items-center justify-between pt-4 pr-4 pl-[18px]">
         <div className="flex flex-col leading-[1.2]">
-          <h1 className="m-0 font-display text-[25px] font-extrabold">আশেপাশের ঝুঁকি</h1>
+          <h1 className="m-0 font-display text-[1.5625rem] font-extrabold">আশেপাশের ঝুঁকি</h1>
           <span className="text-sm font-medium text-muted">
             {upazila.nameBn} উপজেলা, {district.nameBn} ·{' '}
             <Link href={`/planting?d=${district.id}`} className="font-bold text-teal">

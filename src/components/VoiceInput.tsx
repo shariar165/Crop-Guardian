@@ -113,7 +113,7 @@ export default function VoiceInput({ value, onChange, disabled = false }: { valu
       {(listening || message) && (
         <p
           role={message ? 'alert' : 'status'}
-          className="absolute right-0 bottom-full m-0 mb-2 w-[260px] rounded-[14px] bg-ink px-3 py-2 text-[15px] leading-[1.4] font-semibold text-cream"
+          className="absolute right-0 bottom-full m-0 mb-2 w-[260px] rounded-[14px] bg-ink px-3 py-2 text-[0.9375rem] leading-[1.4] font-semibold text-cream"
         >
           {listening ? 'শুনছি… বলা শেষ হলে থামুন চাপুন' : message}
         </p>

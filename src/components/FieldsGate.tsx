@@ -53,7 +53,7 @@ export function HomeCameraButton({ today, risks }: { today: string; risks: Recor
   return (
     <PrimaryLink href="/camera" className="h-[70px] gap-3">
       <CameraIcon size={30} weight={2.2} />
-      <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
+      <span className="font-display text-[1.4375rem] font-extrabold">পাতার ছবি তুলুন</span>
     </PrimaryLink>
   )
 }
@@ -137,8 +137,8 @@ function OffSeasonHeader({ season: id, planted, today, place }: { season: Season
   const message = offSeasonMessage(seasonFor(today, planted, id), id)
   return (
     <HomeHeader view={RISK_VIEW.safe} place={place} speech={`${place}। ${title}। ${message}।`}>
-      <h1 className="m-0 font-display text-[26px] leading-[1.15] font-extrabold">{title}</h1>
-      <span className="text-[15px] leading-[1.4] font-medium">{message}</span>
+      <h1 className="m-0 font-display text-[1.625rem] leading-[1.15] font-extrabold">{title}</h1>
+      <span className="text-[0.9375rem] leading-[1.4] font-medium">{message}</span>
     </HomeHeader>
   )
 }
@@ -153,10 +153,10 @@ function SetupCard({ hasField }: { hasField: boolean }) {
     >
       <PinIcon size={28} weight={2.2} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="font-display text-[17px] leading-[1.3] font-extrabold">
+        <span className="font-display text-[1.0625rem] leading-[1.3] font-extrabold">
           {hasField ? 'আপনার এলাকা জানান' : 'আপনার এলাকা আর ফসল জানান'} <span className="whitespace-nowrap">— ১ মিনিট</span>
         </span>
-        <span className="text-[14px] leading-[1.35] font-medium">ওপরের ঝুঁকি শুধু উদাহরণ</span>
+        <span className="text-[0.875rem] leading-[1.35] font-medium">ওপরের ঝুঁকি শুধু উদাহরণ</span>
       </span>
       <span aria-hidden="true" className="shrink-0 text-2xl font-bold text-teal">
         ›

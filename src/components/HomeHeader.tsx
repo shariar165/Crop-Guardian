@@ -25,7 +25,7 @@ export default function HomeHeader({
         <div className="flex items-center gap-2.5">
           <LogoMark />
           <div className="flex flex-col leading-[1.1]">
-            <span className="font-display text-[19px] font-extrabold">সবুজবিধি</span>
+            <span className="font-display text-[1.1875rem] font-extrabold">সবুজবিধি</span>
             <span className="text-sm font-medium">মাঠের সৎ ডাক্তার</span>
           </div>
         </div>
@@ -34,7 +34,7 @@ export default function HomeHeader({
           <Link
             href="/guide"
             aria-label="কীভাবে ব্যবহার করবেন"
-            className="flex size-11 items-center justify-center rounded-full bg-white/78 font-display text-[22px] font-extrabold text-ink no-underline"
+            className="flex size-11 items-center justify-center rounded-full bg-white/78 font-display text-[1.375rem] font-extrabold text-ink no-underline"
           >
             ?
           </Link>

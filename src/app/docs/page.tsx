@@ -52,7 +52,7 @@ const LIMITS = [
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="stitch-lg flex flex-col gap-2.5 rounded-[20px] p-4">
-      <h2 className="m-0 font-display text-[19px] leading-[1.2] font-extrabold">{title}</h2>
+      <h2 className="m-0 font-display text-[1.1875rem] leading-[1.2] font-extrabold">{title}</h2>
       {children}
     </section>
   )
@@ -78,7 +78,7 @@ export default function DocsPage() {
     <div className="flex flex-1 flex-col">
       <TopBar back="/" title="How it works" right={<span className="size-11" />} />
 
-      <div className="flex flex-col gap-3 px-4 pb-6 text-[15px] leading-[1.5]">
+      <div className="flex flex-col gap-3 px-4 pb-6 text-[0.9375rem] leading-[1.5]">
         <Section title="সবুজবিধি (Sobujbidhi)">
           <p className="m-0">
             A Bengali, phone-first app that tells potato farmers in northern Bangladesh when late blight weather is coming, recognises the disease from a leaf photo on the
@@ -92,8 +92,8 @@ export default function DocsPage() {
               [String(KB.length), 'advice passages'],
             ].map(([n, label]) => (
               <li key={label} className="flex list-none flex-col rounded-[14px] bg-sand px-2 py-2.5">
-                <span className="font-display text-[22px] font-extrabold">{n}</span>
-                <span className="text-[12px] text-muted">{label}</span>
+                <span className="font-display text-[1.375rem] font-extrabold">{n}</span>
+                <span className="text-[0.75rem] text-muted">{label}</span>
               </li>
             ))}
           </ul>
@@ -107,7 +107,7 @@ export default function DocsPage() {
         </Section>
 
         <Section title="What we tested and what failed">
-          <h3 className="m-0 text-[16px] font-bold">Potato late-blight rule</h3>
+          <h3 className="m-0 text-[1rem] font-bold">Potato late-blight rule</h3>
           {findings.length > 0 ? (
             <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5">
               {findings.map((f) => (
@@ -117,11 +117,11 @@ export default function DocsPage() {
           ) : (
             <p className="m-0 text-muted">Run scripts/compare-blight-rules.ts --write.</p>
           )}
-          <p className="m-0 text-[14px] text-muted">From docs/rule-comparison.md. So the app labels potato risk experimental and its ledger no longer counts weeks without danger as money saved.</p>
-          <h3 className="m-0 mt-1 text-[16px] font-bold">Potato photo model, Bangladeshi field photos</h3>
-          {fieldPhotoAbout && <p className="m-0 text-[14px]">{fieldPhotoAbout}</p>}
+          <p className="m-0 text-[0.875rem] text-muted">From docs/rule-comparison.md. So the app labels potato risk experimental and its ledger no longer counts weeks without danger as money saved.</p>
+          <h3 className="m-0 mt-1 text-[1rem] font-bold">Potato photo model, Bangladeshi field photos</h3>
+          {fieldPhotoAbout && <p className="m-0 text-[0.875rem]">{fieldPhotoAbout}</p>}
           {fieldPhotos.length > 0 ? (
-            <table className="w-full border-collapse text-[13px]">
+            <table className="w-full border-collapse text-[0.8125rem]">
               <tbody>
                 {fieldPhotos.map((r) => (
                   <tr key={r.measure} className="border-b border-line">
@@ -134,12 +134,12 @@ export default function DocsPage() {
           ) : (
             <p className="m-0 text-muted">Not run yet: scripts/eval-field-photos.ts --write.</p>
           )}
-          <p className="m-0 text-[14px] text-muted">
+          <p className="m-0 text-[0.875rem] text-muted">
             From docs/field-photo-test.md, with the real model and thresholds on the phone. Misleading is a confident wrong answer, a shortlist without the true disease, or an unseen disease not called unknown.
           </p>
-          <h3 className="m-0 mt-1 text-[16px] font-bold">Paddy photo model, one dataset held out</h3>
+          <h3 className="m-0 mt-1 text-[1rem] font-bold">Paddy photo model, one dataset held out</h3>
           {heldOut.length > 0 ? (
-            <table className="w-full border-collapse text-[13px]">
+            <table className="w-full border-collapse text-[0.8125rem]">
               <thead>
                 <tr className="border-b border-line text-left">
                   <th className="py-1 pr-2 font-semibold">Held-out dataset</th>
@@ -162,7 +162,7 @@ export default function DocsPage() {
           ) : (
             <p className="m-0 text-muted">See docs/model-card-paddy.md.</p>
           )}
-          <p className="m-0 text-[14px] text-muted">
+          <p className="m-0 text-[0.875rem] text-muted">
             From docs/model-card-paddy.md. Misleading is a confident wrong answer, or a shortlist without the true disease. Trained on the other two datasets each time, the model mostly learned each dataset’s camera and background, not the disease. A farmer’s
             phone in a new district is this case, so every paddy result is labelled experimental and offers the officer.
           </p>
@@ -173,8 +173,8 @@ export default function DocsPage() {
             {AI_STACK.map((a) => (
               <li key={a.part} className="flex flex-col gap-0.5 border-l-4 border-sun pl-3">
                 <span className="font-bold">{a.part}</span>
-                <span className="text-[14px]">{a.how}</span>
-                <span className="text-[13px] text-muted">{a.where}</span>
+                <span className="text-[0.875rem]">{a.how}</span>
+                <span className="text-[0.8125rem] text-muted">{a.where}</span>
               </li>
             ))}
           </ul>
@@ -186,9 +186,9 @@ export default function DocsPage() {
             <li>Risk rule replayed over three winters with two weather reanalyses (docs/risk-backtest.md); rice blast over three Boro and Aman seasons.</li>
             <li>Over 200 automated tests, including no-dose, SMS length and two-line text limits.</li>
           </ul>
-          <h3 className="m-0 mt-1 text-[16px] font-bold">Assistant evaluation (prompt {PROMPT_VERSION})</h3>
+          <h3 className="m-0 mt-1 text-[1rem] font-bold">Assistant evaluation (prompt {PROMPT_VERSION})</h3>
           {evalSummary.length > 0 ? (
-            <table className="w-full border-collapse text-[13px]">
+            <table className="w-full border-collapse text-[0.8125rem]">
               <tbody>
                 {evalSummary.map((r) => (
                   <tr key={r.check} className="border-b border-line">
@@ -219,7 +219,7 @@ export default function DocsPage() {
           </ul>
         </Section>
 
-        <p className="m-0 text-center text-[14px]">
+        <p className="m-0 text-center text-[0.875rem]">
           <Link href="/" className="font-bold text-teal">
             Open the app →
           </Link>

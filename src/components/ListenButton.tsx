@@ -13,9 +13,9 @@ const TIP_SEEN_KEY = 'crop-guardian:voice-tip-seen'
 type Variant = 'sand' | 'glass' | 'sky' | 'outline'
 
 const VARIANT: Record<Variant, string> = {
-  sand: 'h-11 px-3.5 rounded-full bg-sand text-ink text-[15px] font-semibold gap-1.5',
-  glass: 'h-11 px-3.5 rounded-full bg-white/12 text-cream text-[15px] font-semibold gap-1.5',
-  sky: 'h-11 px-3 rounded-full bg-white/78 text-ink text-[15px] font-semibold gap-1.5',
+  sand: 'h-11 px-3.5 rounded-full bg-sand text-ink text-[0.9375rem] font-semibold gap-1.5',
+  glass: 'h-11 px-3.5 rounded-full bg-white/12 text-cream text-[0.9375rem] font-semibold gap-1.5',
+  sky: 'h-11 px-3 rounded-full bg-white/78 text-ink text-[0.9375rem] font-semibold gap-1.5',
   outline: 'min-h-[66px] rounded-[20px] border-2 border-ink bg-transparent text-ink text-lg font-bold gap-2 justify-center',
 }
 
@@ -220,8 +220,8 @@ function Sheet({
         <h2 id="listen-sheet-title" className="m-0 font-display text-xl leading-[1.3] font-extrabold">
           {title}
         </h2>
-        <p className="m-0 text-[15px] leading-[1.45]">{intro}</p>
-        <ol className="m-0 flex flex-col gap-1.5 pl-5 text-[15px] leading-[1.45]">
+        <p className="m-0 text-[0.9375rem] leading-[1.45]">{intro}</p>
+        <ol className="m-0 flex flex-col gap-1.5 pl-5 text-[0.9375rem] leading-[1.45]">
           {steps.map((step) => (
             <li key={step}>{step}</li>
           ))}

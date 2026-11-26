@@ -84,7 +84,7 @@ export default function AskChat() {
       <div className="flex flex-col gap-3 px-4 pb-3">
         {turns.length === 0 && (
           <div className="stitch-lg flex flex-col gap-2.5 rounded-[20px] p-4">
-            <p className="m-0 text-[16px] leading-[1.45]">
+            <p className="m-0 text-[1rem] leading-[1.45]">
               আলুর রোগ, চাষ, ধানের ব্লাস্ট বা অ্যাপ নিয়ে প্রশ্ন লিখুন। অ্যাপের পরামর্শ থেকে উত্তর দেব, সাথে সূত্র।
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -99,9 +99,9 @@ export default function AskChat() {
 
         {turns.map((t, i) => (
           <div key={i} className="flex flex-col gap-2">
-            <p className="m-0 max-w-[85%] self-end rounded-[18px] rounded-br-[6px] bg-teal px-3.5 py-2.5 text-[16px] leading-[1.4] text-white">{t.q}</p>
+            <p className="m-0 max-w-[85%] self-end rounded-[18px] rounded-br-[6px] bg-teal px-3.5 py-2.5 text-[1rem] leading-[1.4] text-white">{t.q}</p>
             <div className="stitch-lg flex max-w-[92%] flex-col gap-2 rounded-[18px] rounded-bl-[6px] p-3.5">
-              <p className="m-0 text-[16px] leading-[1.5]">{t.a.answer}</p>
+              <p className="m-0 text-[1rem] leading-[1.5]">{t.a.answer}</p>
               {t.a.askCrop && i === turns.length - 1 && (
                 <div className="flex flex-wrap gap-2">
                   {CROP_IDS.map((crop) => (
@@ -138,8 +138,8 @@ export default function AskChat() {
 
         {pending && (
           <>
-            <p className="m-0 max-w-[85%] self-end rounded-[18px] rounded-br-[6px] bg-teal px-3.5 py-2.5 text-[16px] leading-[1.4] text-white">{pending}</p>
-            <p role="status" className="m-0 self-start text-[15px] font-semibold text-muted">
+            <p className="m-0 max-w-[85%] self-end rounded-[18px] rounded-br-[6px] bg-teal px-3.5 py-2.5 text-[1rem] leading-[1.4] text-white">{pending}</p>
+            <p role="status" className="m-0 self-start text-[0.9375rem] font-semibold text-muted">
               ভেবে দেখছি…
             </p>
           </>
@@ -171,7 +171,7 @@ export default function AskChat() {
           maxLength={MAX_QUESTION}
           rows={2}
           placeholder="প্রশ্ন লিখুন…"
-          className="min-h-14 flex-1 resize-none rounded-[14px] border-2 border-line bg-paper px-3 py-2 text-[17px] leading-[1.35] text-ink focus:border-teal focus:outline-none"
+          className="min-h-14 flex-1 resize-none rounded-[14px] border-2 border-line bg-paper px-3 py-2 text-[1.0625rem] leading-[1.35] text-ink focus:border-teal focus:outline-none"
         />
         <VoiceInput value={input} onChange={setInput} disabled={busy} />
         <button type="submit" disabled={busy || !input.trim()} aria-label="পাঠান" className={`${primaryClass} size-14 shrink-0 disabled:opacity-50`}>
