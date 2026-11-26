@@ -155,6 +155,8 @@ export default function CameraScreen() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<Status>('starting')
+  // The live video track, for the flash button.
+  const [track, setTrack] = useState<MediaStreamTrack | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [report, setReport] = useState<QualityReport | null>(null)
   const [step, setStep] = useState<Step>(1)
@@ -177,7 +179,9 @@ export default function CameraScreen() {
   const configUrl = configUrlOf(crop)
 
   // Load (or download, the first time) the crop's model while the farmer takes the photos.
-  useEffect(() => loadModel(configUrl, setModel), [configUrl])
+  useEffect(() => {
+    return loadModel(configUrl, setModel)
+  }, [configUrl])
 
   function pickCrop(c: CropId) {
     setPicked(c)
@@ -228,6 +232,7 @@ export default function CameraScreen() {
           video.srcObject = s
           video.play().catch(() => {})
         }
+        setTrack(s.getVideoTracks()[0] ?? null)
         setStatus('live')
       },
       (err: unknown) => {
@@ -241,6 +246,7 @@ export default function CameraScreen() {
       cancelled = true
       stream?.getTracks().forEach((t) => t.stop())
       if (video) video.srcObject = null
+      setTrack(null)
     }
   }, [attempt])
 
@@ -380,10 +386,10 @@ export default function CameraScreen() {
         right={<ListenButton variant="glass" label="নির্দেশনা পড়ে শোনান" text={speech} requireVoice />}
       />
 
-      <div className="relative mx-3 h-[540px] shrink-0 overflow-hidden rounded-3xl bg-[#1F2A17]">
+      <div className="relative mx-3 min-h-[260px] flex-1 overflow-hidden rounded-3xl bg-[#1F2A17]">
         <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 size-full object-cover" />
         {!live && <ViewfinderBackdrop />}
-        <ViewfinderOutline className="absolute top-[104px] left-1/2 h-[380px] w-[300px] -translate-x-1/2" />
+        <ViewfinderOutline className="absolute top-[92px] left-1/2 h-[calc(100%-160px)] w-auto -translate-x-1/2" />
 
         <div
           className="absolute top-3.5 right-3.5 left-3.5 flex items-center gap-2.5 rounded-2xl bg-sun px-3.5 py-3 text-ink"
@@ -556,7 +562,7 @@ export default function CameraScreen() {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col justify-center gap-3 px-6 pt-3 pb-2.5">
+      <div className="flex shrink-0 flex-col justify-center gap-3 px-6 pt-3 pb-2.5">
         <CropSwitch crop={crop} onPick={pickCrop} disabled={busy || analysis === 'running'} />
         <div className="flex items-center justify-center gap-2 text-[15px] font-semibold">
           {([1, 2] as const).map((n) => (
@@ -570,7 +576,7 @@ export default function CameraScreen() {
             ছবি {toBnDigits(step)} / ২ · {counter}
           </span>
         </div>
-        <CameraControls onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
+        <CameraControls key={track?.id ?? 'none'} track={track} onShutter={onShutter} onPickFile={onPickFile} busy={busy || !!pending} />
         <ModelStatus state={model} onRetry={() => loadModel(configUrl, setModel)} />
         {samples.length > 0 && (
           <button

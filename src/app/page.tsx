@@ -4,12 +4,12 @@ import { outlineClass, PrimaryLink } from '@/components/Buttons'
 import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
-import { BookIcon, CameraIcon, OfflineIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
+import { BookIcon, CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
 import SprayButton from '@/components/SprayButton'
 import { CROP_IDS, type CropId, CROPS } from '@/lib/crops'
-import { DAY_STATE, RISK_VIEW } from '@/lib/data'
+import { DAY_STATE, type Risk, RISK_VIEW } from '@/lib/data'
 import { viewerHasAlerts } from '@/lib/alertDb'
 import { bnWeekday } from '@/lib/bn'
 import { todayIn } from '@/lib/dates'
@@ -58,11 +58,15 @@ function NoForecast({ place }: { place: string }) {
   )
 }
 
+// The risk badge's icon: a warning only on danger days, so নিরাপদ never shows a triangle.
+const BADGE_ICON: Record<Risk, typeof WarnIcon> = { danger: WarnIcon, watch: SearchIcon, safe: CheckIcon }
+
 // Home's header, 5-day strip and decision for one crop. `alerts`: the viewer gets SMS alerts.
 function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: boolean): CropPanels {
   const spec = CROPS[crop]
   const { today: risk, reason } = live
   const view = RISK_VIEW[risk]
+  const BadgeIcon = BADGE_ICON[risk]
   const days = live.days.map((d, i) => ({ ...d, name: i === 0 ? 'আজ' : bnWeekday(d.date), ...DAY_STATE[d.risk] }))
   const decision = buildDecision(live.days, risk, spec.decision, alerts)
   // A danger day ahead asks the farmer to look again; SMS alerts would save them the trouble.
@@ -78,7 +82,7 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           className="flex items-center gap-2 self-start rounded-[14px] pt-1 pr-4 pb-0.5 pl-3"
           style={{ background: view.badgeBg, color: view.badgeInk }}
         >
-          <WarnIcon size={26} weight={2.4} />
+          <BadgeIcon size={26} weight={2.4} />
           <span className="font-display text-[34px] leading-[1.15] font-extrabold">{view.word}</span>
         </div>
         <span className="text-[15px] leading-[1.4] font-medium">{reason}</span>

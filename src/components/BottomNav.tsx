@@ -16,7 +16,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="মূল মেনু"
-      className="grid h-[72px] shrink-0 grid-cols-4 border-t-[1.5px] border-dashed border-stitch bg-paper pb-[env(safe-area-inset-bottom)]"
+      className="sticky bottom-0 z-10 grid h-[72px] shrink-0 grid-cols-4 border-t-[1.5px] border-dashed border-stitch bg-paper pb-[env(safe-area-inset-bottom)]"
     >
       {ITEMS.map(({ href, label, Icon }) => {
         const active = pathname === href
