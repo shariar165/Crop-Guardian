@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import type { SpeechPart } from '@/lib/audioKeys'
 import type { RiskView } from '@/lib/data'
-import { PersonIcon, PinIcon } from './icons'
+import { GearIcon, PinIcon } from './icons'
 import { FieldStrip, LogoMark, SkyScene } from './illustrations'
 import ListenButton from './ListenButton'
 
-/* The sky header on Home: logo, read-aloud, the farmer's place, then `children` in the text column. */
+/* The sky header on Home: logo, read-aloud, guide, settings, the farmer's place, then `children` in the text column. */
 export default function HomeHeader({
   view,
   place,
@@ -18,7 +18,7 @@ export default function HomeHeader({
   children: React.ReactNode
 }) {
   return (
-    <header className="relative h-[262px] shrink-0 overflow-hidden transition-colors duration-500" style={{ background: view.sky, color: view.ink }}>
+    <header className="relative min-h-[262px] shrink-0 overflow-hidden transition-colors duration-500" style={{ background: view.sky, color: view.ink }}>
       <SkyScene view={view} />
 
       <div className="relative flex items-center justify-between px-[18px] pt-4">
@@ -38,14 +38,17 @@ export default function HomeHeader({
           >
             ?
           </Link>
-          <Link href="/account" aria-label="আমার অ্যাকাউন্ট" className="flex size-11 items-center justify-center rounded-full bg-white/78 text-ink">
-            <PersonIcon size={22} />
+          {/* Settings, not the account: most farmers never sign in, and the account is its first row. */}
+          <Link href="/settings" aria-label="সেটিংস" className="flex size-11 items-center justify-center rounded-full bg-white/78 text-ink">
+            <GearIcon size={22} />
           </Link>
         </div>
       </div>
 
-      {/* Text ends 202px from the left; SkyScene sizes itself to stay right of that. */}
-      <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5">
+      {/* Text ends 202px from the left; SkyScene sizes itself to stay right of that. The bottom
+          padding keeps the text above FieldStrip, and with large text the header grows instead
+          of cutting it off. */}
+      <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5 pb-[34px]">
         {/* Kept on one line; it may run past the column into empty sky rather than push the text down. */}
         <div className="flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
           <PinIcon size={16} />

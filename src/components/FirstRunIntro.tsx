@@ -10,7 +10,7 @@ import { AUDIO_KEY } from '@/lib/audioKeys'
 import { store, useHydrated, useStored } from '@/lib/deviceStore'
 import { INTRO, speechOf } from '@/lib/guide'
 
-const SEEN_KEY = 'crop-guardian:intro-seen'
+export const INTRO_SEEN_KEY = 'crop-guardian:intro-seen'
 
 /**
  * Four short cards over Home, the first time the app opens on this phone; then never again. In
@@ -18,7 +18,7 @@ const SEEN_KEY = 'crop-guardian:intro-seen'
  */
 export default function FirstRunIntro({ showcase = false }: { showcase?: boolean }) {
   const hydrated = useHydrated()
-  const seen = useStored(SEEN_KEY)
+  const seen = useStored(INTRO_SEEN_KEY)
   const router = useRouter()
   const [step, setStep] = useState(0)
   if (!hydrated || seen) return null
@@ -26,7 +26,7 @@ export default function FirstRunIntro({ showcase = false }: { showcase?: boolean
   const card = INTRO[step]
   const last = step === INTRO.length - 1
   const done = (to?: string) => {
-    store(SEEN_KEY, '1')
+    store(INTRO_SEEN_KEY, '1')
     if (to) router.push(to)
   }
 

@@ -56,7 +56,8 @@ On a locked-down network `npm install` can fail because `onnxruntime-node` (used
 | `/ask` | «কৃষি সহায়ক»: questions answered in Bengali from the app's own advice, with sources |
 | `/docs` | How it works, in English, for judges, partners and agronomists: the evidence and how AI is used |
 | `/sign-in` | Mobile number, then the SMS code (`?next=` is where to go after) |
-| `/account` | The signed-in number and role, SMS risk alerts on/off, sign out (from the person button on Home) |
+| `/account` | The signed-in number and role, SMS risk alerts on/off, sign out (the first row of `/settings`) |
+| `/settings` | Opened from the gear on Home: links to the account and to place and fields, read-aloud speed and Bengali voice check, text size, install, show the intro again, clear this phone's data (see [Settings](#settings)) |
 | `/officer` | Agriculture officers only: where farmers' cases will be listed |
 
 Home, the map, the ledger, the guide, `/planting`, `/potato` and `/account` share a bottom nav that stays on screen: হোম · ম্যাপ · ছবি · হিসাব · প্রশ্ন. ছবি (`/camera`) is a big round button raised above the bar. The camera and `/ask` have their own layouts without it.
@@ -287,6 +288,15 @@ npm run db:migrate
 Recorded audio (optional): «শুনুন» reads in parts, and a fixed part with a key (`src/lib/audioKeys.ts`: the risk words and decision titles, each crop's decisions, the intro cards and the diagnosis questions) plays `public/audio/<key>.mp3` when that key is in `RECORDED`, falling back to the phone's text-to-speech otherwise. `RECORDED` must list exactly the files in `public/audio/` (tested), so no phone downloads a file that isn't there. The place, the weather numbers and a danger day's date are always spoken.
 
 Text-to-speech (`src/lib/speech.ts`): it waits up to 1.2 s for the phone's voice list (Android Chrome fills it late), reads in pieces of at most 200 characters split at sentence ends, and uses the speed chosen in `/settings`. On one Android phone, every «শুনুন» crashed the tab («This page couldn't load»). The cause isn't known yet; it is in the phone's speech engine, not the app's recordings. So the app marks the moment it hands text to the engine and clears the mark when reading ends or the page is left normally. A mark still there on the next load means the tab died while reading. The next tap then explains that and shows how to choose Google's engine (`SPEECH_ENGINE_STEPS` in `guide.ts`), with «আবার চেষ্টা করুন» to try again, and the diagnosis questions stop reading themselves aloud. `npx tsx scripts/audio-script.ts --write` writes [docs/audio-script.md](docs/audio-script.md), each key with the exact Bengali to record; re-run it after changing any of those texts. No recordings are in the repo yet.
+
+### Settings
+
+`/settings` (`SettingsView`) opens from the gear in Home's header, which replaced the account button there: most farmers never sign in, so the account is the page's first row instead. Everything on it is kept on the phone, so it works signed out and is cached for offline use.
+- **আমার অ্যাকাউন্ট ও SMS** links to `/account`, and **জায়গা ও জমি** to `/planting` (showing the union and the fields set).
+- **পড়ে শোনানো**: speed ধীরে (0.75) or স্বাভাবিক (0.9) (`crop-guardian:speech-rate`, used by every «শুনুন» and the questions' auto-read), whether the phone has a Bengali voice (with the install steps if not), a test button, and after a read-aloud crash the steps to choose Google's engine and «আবার চালু করুন».
+- **লেখার আকার**: স্বাভাবিক or বড় (`src/lib/textSize.ts`). Every font size is in rem and Tailwind's `--spacing` is pinned to 4px, so «বড়» (`html[data-text=large]`, root 112.5%) grows the text and not the layout. A head script applies it before the first paint.
+- **অ্যাপ**: the install button and «শুরুর পরিচিতি আবার দেখুন».
+- **ফোনের তথ্য মুছুন** (`src/lib/phoneData.ts`), after a confirm: every `crop-guardian:` localStorage key and the /ask history, the place cookies and the `crop-guardian` IndexedDB (photos, results, shared cases). It keeps the downloaded model and the sign-in session, and says that cases sent to an officer and SMS alerts live with the account. A test checks that every stored key is covered.
 
 ## Assistant (কৃষি সহায়ক)
 

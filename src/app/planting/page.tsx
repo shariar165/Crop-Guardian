@@ -13,11 +13,11 @@ export const metadata = { title: 'আমার জমি — সবুজবি�
 const SPEECH =
   'প্রথমে আপনার এলাকা বেছে নিন: আমার অবস্থান বোতাম চাপুন, অথবা জেলা, তারপর উপজেলা, তারপর ইউনিয়নের নাম চাপুন। তারপর ফসল বেছে নিন, আলু না ধান। ধান হলে বোরো না আমন, সেটাও বেছে নিন। তারপর কবে লাগিয়েছেন: আজ, কয়েক সপ্তাহ আগে, এক মাস আগে, বা অন্য তারিখ চাপুন, তারপর তারিখ রাখুন চাপুন। আলু আর ধান, দুই জমিই রাখা যায়।'
 
-const BACK: Record<string, string> = { ledger: '/ledger', intro: '/', guide: '/guide', account: '/account' }
+const BACK: Record<string, string> = { ledger: '/ledger', intro: '/', guide: '/guide', account: '/account', settings: '/settings' }
 
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined)
 
-// Reached from Home, the Ledger header (?from=ledger), the first-run intro, the guide, the map and
+// Reached from Home, the Ledger header (?from=ledger), the first-run intro, the guide, the map, settings and
 // the SMS alerts on /account, and goes back there. `?season=` opens the form on that field; `?d=`
 // and `?u=` are the place picker's steps.
 export default async function PlantingPage({ searchParams }: PageProps<'/planting'>) {
