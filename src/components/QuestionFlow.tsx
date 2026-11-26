@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { Loading, NoDiagnosis } from '@/components/DiagnosisParts'
+import { AUDIO_KEY } from '@/lib/audioKeys'
 import { toBnDigits } from '@/lib/bn'
 import { type Answer, saveDiagnosis } from '@/lib/captureStore'
 import { labelOf } from '@/lib/diagnosis/explain'
@@ -10,9 +12,53 @@ import { useDiagnosisState } from '@/lib/diagnosis/useDiagnosis'
 import { primaryClass, tealClass } from './Buttons'
 import { AnswerArt } from './illustrations'
 import { BackIcon, CheckIcon, QuestionIcon, RestartIcon, WarnIcon, WaveIcon } from './icons'
-import ListenButton from './ListenButton'
+import ListenButton, { bengaliVoice } from './ListenButton'
 import OfficerShareButton from './OfficerShareButton'
 import { RoundLink } from './TopBar'
+
+/**
+ * Reads the question aloud once when it appears, if the phone has a Bengali voice (the farmer
+ * tapped to get here, so the browser allows speech), and says so only while it is playing.
+ */
+function ReadAloud({ text }: { text: string }) {
+  const [state, setState] = useState<'idle' | 'speaking' | 'done'>('idle')
+
+  useEffect(() => {
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
+    if (!synth) return
+    let started = false
+    const speak = () => {
+      const voice = bengaliVoice(synth)
+      if (!voice || started) return
+      started = true
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = 'bn-BD'
+      utterance.voice = voice
+      utterance.rate = 0.9
+      utterance.onstart = () => setState('speaking')
+      utterance.onend = () => setState('done')
+      utterance.onerror = () => setState('done')
+      synth.cancel()
+      synth.speak(utterance)
+    }
+    speak()
+    // Chrome loads its voices after the page does.
+    synth.addEventListener('voiceschanged', speak)
+    return () => {
+      synth.removeEventListener('voiceschanged', speak)
+      synth.cancel()
+    }
+  }, [text])
+
+  if (state === 'idle') return null
+  // Once read, the line keeps its space, so the question doesn't jump up under the farmer's thumb.
+  return (
+    <div className={`flex items-center gap-2 text-sm font-semibold text-teal ${state === 'done' ? 'invisible' : ''}`} aria-hidden={state === 'done'}>
+      <WaveIcon size={22} />
+      প্রশ্নটা পড়ে শোনানো হচ্ছে
+    </div>
+  )
+}
 
 export default function QuestionFlow() {
   const [view, setRecord] = useDiagnosisState()
@@ -61,7 +107,7 @@ export default function QuestionFlow() {
             ))}
           </div>
         </div>
-        <ListenButton text={speech} label="প্রশ্নটি আবার শোনান" />
+        <ListenButton text={speech} audio={q ? AUDIO_KEY.question(q.id) : undefined} label="প্রশ্নটি আবার শোনান" />
       </header>
 
       <section className="stitch-lg mx-4 flex shrink-0 flex-col gap-2.5 rounded-[20px] px-3.5 pt-3.5 pb-4">
@@ -82,7 +128,7 @@ export default function QuestionFlow() {
                 }`}
               >
                 <span className={gone ? 'line-through decoration-2' : ''}>{labelOf(id, config)}</span>
-                {gone && <span className="rounded-lg bg-danger-soft px-[7px] py-px text-xs font-bold text-[#8A3424]">বাদ</span>}
+                {gone && <span className="rounded-lg bg-danger-soft px-[7px] py-px text-sm font-bold text-[#8A3424]">বাদ</span>}
               </li>
             )
           })}
@@ -91,10 +137,7 @@ export default function QuestionFlow() {
 
       {q ? (
         <div key={q.id} className="flex flex-1 flex-col gap-3.5 px-4 py-[18px]">
-          <div className="flex items-center gap-2 text-sm font-semibold text-teal">
-            <WaveIcon size={22} />
-            প্রশ্নটা পড়ে শোনানো হচ্ছে
-          </div>
+          <ReadAloud text={q.text} />
           <h2 className="m-0 font-display text-[27px] leading-[1.2] font-extrabold">{q.text}</h2>
           <div className="grid grid-cols-2 gap-3">
             {(

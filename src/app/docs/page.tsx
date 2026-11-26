@@ -7,7 +7,7 @@ import { KB } from '@/lib/assistant/kb'
 import { MODELS } from '@/lib/assistant/models'
 import { PROMPT_VERSION } from '@/lib/assistant/prompts'
 import { DIVISIONS } from '@/lib/areas'
-import { parseBacktest, parseEvalSummary, parseFieldPhotoHeadline, parseFindings, parseLeaveOneOut } from '@/lib/docsData'
+import { parseBacktest, parseEvalSummary, parseFieldPhotoAbout, parseFieldPhotoHeadline, parseFindings, parseLeaveOneOut } from '@/lib/docsData'
 
 export const metadata = { title: 'Sobujbidhi (সবুজবিধি) — how it works' }
 
@@ -41,7 +41,7 @@ const SAFETY = [
 // The first limit quotes the Bangladeshi field-photo test once docs/field-photo-test.md exists.
 const photoLimit = (misleading: string | undefined) =>
   misleading
-    ? `The diagnosis thresholds were fitted on Indonesian field photos. On Bangladeshi field photos the model never trained on, ${misleading} of its answers were misleading (see “What we tested and what failed”); recalibrating on such photos is next, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.`
+    ? `The diagnosis thresholds were fitted on Indonesian field photos. On a small set of Bangladeshi field photos from another dataset, misleading answers were ${misleading} (see “What we tested and what failed” for which photos); recalibrating on Bangladeshi photos is next, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.`
     : 'The diagnosis thresholds were fitted on Indonesian field photos, not Bangladeshi ones; held-out public field datasets are the next step, then 7-day follow-ups from farmers, which are weaker labels than an expert gives.'
 
 const LIMITS = [
@@ -71,6 +71,7 @@ export default function DocsPage() {
   const findings = parseFindings(read('rule-comparison.md'))
   const heldOut = parseLeaveOneOut(read('model-card-paddy.md'))
   const fieldPhotos = parseFieldPhotoHeadline(read('field-photo-test.md'))
+  const fieldPhotoAbout = parseFieldPhotoAbout(read('field-photo-test.md'))
   const limits = [photoLimit(fieldPhotos.find((r) => r.measure.startsWith('Misleading'))?.result), ...LIMITS]
 
   return (
@@ -118,6 +119,7 @@ export default function DocsPage() {
           )}
           <p className="m-0 text-[14px] text-muted">From docs/rule-comparison.md. So the app labels potato risk experimental and its ledger no longer counts weeks without danger as money saved.</p>
           <h3 className="m-0 mt-1 text-[16px] font-bold">Potato photo model, Bangladeshi field photos</h3>
+          {fieldPhotoAbout && <p className="m-0 text-[14px]">{fieldPhotoAbout}</p>}
           {fieldPhotos.length > 0 ? (
             <table className="w-full border-collapse text-[13px]">
               <tbody>
@@ -133,7 +135,7 @@ export default function DocsPage() {
             <p className="m-0 text-muted">Not run yet: scripts/eval-field-photos.ts --write.</p>
           )}
           <p className="m-0 text-[14px] text-muted">
-            From docs/field-photo-test.md: photos from Bangladeshi fields, with the real model and thresholds on the phone. Misleading is a confident wrong answer, a shortlist without the true disease, or an unseen disease not called unknown. “Camera would ask to retake” is the share the camera’s photo check would have flagged.
+            From docs/field-photo-test.md, with the real model and thresholds on the phone. Misleading is a confident wrong answer, a shortlist without the true disease, or an unseen disease not called unknown.
           </p>
           <h3 className="m-0 mt-1 text-[16px] font-bold">Paddy photo model, one dataset held out</h3>
           {heldOut.length > 0 ? (

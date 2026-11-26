@@ -3,13 +3,14 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { syncAlertFields } from '@/app/account/actions'
-import { BN_MONTHS, bnDate, toBnDigits } from '@/lib/bn'
+import { BN_MONTHS, bnDate, bnDayMonth, toBnDigits } from '@/lib/bn'
 import { type CropId, CROPS, isSeasonId, paddySeasonFor, SEASONS, type SeasonId } from '@/lib/crops'
 import { todayIn } from '@/lib/dates'
 import { useHydrated } from '@/lib/deviceStore'
 import { type Field, readFields, saveField, useFields } from '@/lib/fields'
+import { plantingChips } from '@/lib/plantingChips'
 import { seasonFor } from '@/lib/season'
-import { outlineClass, primaryClass } from './Buttons'
+import { primaryClass } from './Buttons'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate()
@@ -54,11 +55,11 @@ function FieldList({ fields, onPick }: { fields: Field[]; onPick: (s: SeasonId) 
                 <span className="text-base font-bold">
                   {SEASONS[f.season].nameBn} · রোপণ {bnDate(f.planted)}
                 </span>
-                <span className="text-[13px] text-muted">
+                <span className="text-sm text-muted">
                   ঝুঁকির খবর: {bnDate(s.start)} থেকে {bnDate(s.end)}
                 </span>
               </span>
-              <span className="shrink-0 text-[15px] font-semibold text-teal">বদলান</span>
+              <span className="shrink-0 text-base font-semibold text-teal">বদলান</span>
             </button>
           </li>
         )
@@ -121,11 +122,14 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
   const crop = CROPS[SEASONS[season].crop]
   const [date, setDate] = useState(field?.planted ?? today)
   const [error, setError] = useState<string | null>(null)
+  const chips = plantingChips(today, season)
+  // The dropdowns open for "অন্য তারিখ", or for a saved date no chip matches.
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [custom, setCustom] = useState(field !== null && !chips.some((c) => c.date === field.planted))
 
   const [year, month, day] = date.split('-').map(Number)
   const thisYear = Number(today.slice(0, 4))
   const future = date > today
-  const alerts = seasonFor(today, date, season)
 
   // Keep the day valid when the month or year changes (31 Jan → Feb).
   function change(y: number, m: number, d: number) {
@@ -149,50 +153,79 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
         {crop.plantedQuestion} তারিখ দিলে চারা থেকে ফসল তোলা পর্যন্ত ঠিক সময়ে {crop.diseaseBn} রোগের ঝুঁকির খবর পাবেন, আর মৌসুমের হিসাব শুরু হবে।
       </p>
 
-      <div className="grid grid-cols-[1fr_1.6fr_1.3fr] gap-2">
-        <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
-          দিন
-          <select className={SELECT} value={day} onChange={(e) => change(year, month, Number(e.target.value))}>
-            {Array.from({ length: daysInMonth(year, month) }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {toBnDigits(i + 1)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
-          মাস
-          <select className={SELECT} value={month} onChange={(e) => change(year, Number(e.target.value), day)}>
-            {BN_MONTHS.map((name, i) => (
-              <option key={name} value={i + 1}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
-          বছর
-          <select className={SELECT} value={year} onChange={(e) => change(Number(e.target.value), month, day)}>
-            {[thisYear - 1, thisYear].map((y) => (
-              <option key={y} value={y}>
-                {toBnDigits(y)}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div role="group" aria-label="কবে লাগিয়েছেন" className="grid grid-cols-3 gap-2">
+        {chips.map((c) => {
+          const on = !custom && c.date === date
+          return (
+            <button
+              key={c.label}
+              type="button"
+              aria-pressed={on}
+              onClick={() => {
+                setCustom(false)
+                setDate(c.date)
+                setError(null)
+              }}
+              className={`flex min-h-[60px] flex-col items-center justify-center rounded-[14px] border-2 px-1 leading-[1.25] ${
+                on ? 'border-ink bg-ink text-cream' : 'border-line bg-paper text-ink'
+              }`}
+            >
+              <span className="text-base font-bold">{c.label}</span>
+              <span className={`text-sm ${on ? 'text-cream/80' : 'text-muted'}`}>{bnDayMonth(c.date)}</span>
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          aria-pressed={custom}
+          onClick={() => setCustom(true)}
+          className={`min-h-[60px] rounded-[14px] border-2 px-1 text-base leading-[1.25] font-bold ${custom ? 'border-ink bg-ink text-cream' : 'border-line bg-paper text-ink'}`}
+        >
+          অন্য তারিখ
+        </button>
       </div>
 
-      <p role="status" className="stitch m-0 rounded-[16px] px-4 py-3 text-[15px] leading-[1.45]">
-        {future ? (
-          <span className="font-semibold text-danger">ভবিষ্যতের তারিখ দেওয়া যাবে না।</span>
-        ) : (
-          <>
-            {SEASONS[season].nameBn} রোপণ: <b>{bnDate(date)}</b>
-            <br />
-            ঝুঁকির খবর পাবেন: {bnDate(alerts.start)} থেকে {bnDate(alerts.end)}
-          </>
-        )}
-      </p>
+      {custom && (
+        <div className="grid grid-cols-[1fr_1.6fr_1.3fr] gap-2">
+          <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
+            দিন
+            <select className={SELECT} value={day} onChange={(e) => change(year, month, Number(e.target.value))}>
+              {Array.from({ length: daysInMonth(year, month) }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {toBnDigits(i + 1)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
+            মাস
+            <select className={SELECT} value={month} onChange={(e) => change(year, Number(e.target.value), day)}>
+              {BN_MONTHS.map((name, i) => (
+                <option key={name} value={i + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-semibold text-muted">
+            বছর
+            <select className={SELECT} value={year} onChange={(e) => change(Number(e.target.value), month, day)}>
+              {[thisYear - 1, thisYear].map((y) => (
+                <option key={y} value={y}>
+                  {toBnDigits(y)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {/* Only the dropdowns can reach a future date; the chips show their dates themselves. */}
+      {future && (
+        <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
+          ভবিষ্যতের তারিখ দেওয়া যাবে না।
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
@@ -203,11 +236,25 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
       <button type="button" disabled={future} onClick={() => save(date)} className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold disabled:opacity-50`}>
         তারিখ রাখুন
       </button>
-      {field && (
-        <button type="button" onClick={() => save(null)} className={`${outlineClass} h-[52px] text-base font-bold`}>
-          এই জমি মুছে ফেলুন
-        </button>
-      )}
+      {field &&
+        // Deleting loses the field's date and its ledger, so it asks once, in place.
+        (confirmDelete ? (
+          <div role="alertdialog" aria-labelledby="delete-q" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 py-1">
+            <span id="delete-q" className="text-base font-bold">
+              মুছে ফেলবেন?
+            </span>
+            <button type="button" onClick={() => save(null)} className="min-h-11 rounded-full border-0 bg-danger px-4 text-base font-bold text-white">
+              হ্যাঁ, মুছুন
+            </button>
+            <button type="button" autoFocus onClick={() => setConfirmDelete(false)} className="min-h-11 rounded-full border-2 border-ink bg-transparent px-5 text-base font-bold text-ink">
+              না
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)} className="min-h-11 self-center border-0 bg-transparent px-2 text-base font-bold text-danger underline">
+            এই জমি মুছে ফেলুন
+          </button>
+        ))}
     </>
   )
 }

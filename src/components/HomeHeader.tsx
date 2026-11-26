@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { SpeechPart } from '@/lib/audioKeys'
 import type { RiskView } from '@/lib/data'
 import { PersonIcon, PinIcon } from './icons'
 import { FieldStrip, LogoMark, SkyScene } from './illustrations'
@@ -13,7 +14,7 @@ export default function HomeHeader({
 }: {
   view: RiskView
   place: string
-  speech: string
+  speech: string | SpeechPart[]
   children: React.ReactNode
 }) {
   return (
@@ -25,17 +26,25 @@ export default function HomeHeader({
           <LogoMark />
           <div className="flex flex-col leading-[1.1]">
             <span className="font-display text-[19px] font-extrabold">সবুজবিধি</span>
-            <span className="text-[13px] font-medium">মাঠের সৎ ডাক্তার</span>
+            <span className="text-sm font-medium">মাঠের সৎ ডাক্তার</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
+        <div className="flex items-center gap-1.5">
+          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" voiceTip />
+          <Link
+            href="/guide"
+            aria-label="কীভাবে ব্যবহার করবেন"
+            className="flex size-11 items-center justify-center rounded-full bg-white/78 font-display text-[22px] font-extrabold text-ink no-underline"
+          >
+            ?
+          </Link>
           <Link href="/account" aria-label="আমার অ্যাকাউন্ট" className="flex size-11 items-center justify-center rounded-full bg-white/78 text-ink">
             <PersonIcon size={22} />
           </Link>
         </div>
       </div>
 
+      {/* Text ends 202px from the left; SkyScene sizes itself to stay right of that. */}
       <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5">
         {/* Kept on one line; it may run past the column into empty sky rather than push the text down. */}
         <div className="flex items-center gap-1 text-sm font-semibold whitespace-nowrap">

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
-import { DIVISIONS, districtById, fullName, placeOf, unionById, upazilaById } from '@/lib/areas'
+import { DIVISIONS, distanceKm, districtById, fullName, nearestUnion, placeOf, unionById, upazilaById } from '@/lib/areas'
 
 const districts = DIVISIONS.flatMap((v) => v.districts)
 const upazilas = districts.flatMap((d) => d.upazilas)
@@ -56,5 +56,28 @@ describe('areas', () => {
       const shapes = JSON.parse(readFileSync(path, 'utf8')) as { unions: { id: string }[] }
       assert.deepEqual(shapes.unions.map((s) => s.id).sort(), u.unions.map((x) => x.id).sort(), u.id)
     }
+  })
+
+  describe('nearestUnion', () => {
+    it("returns the union itself at its own centre", () => {
+      for (const x of unions) assert.equal(nearestUnion(x.lat, x.lon)?.id, x.id)
+    })
+
+    it('returns null outside the areas the app covers', () => {
+      assert.equal(nearestUnion(22.3569, 91.7832), null) // Chattogram
+      assert.equal(nearestUnion(24.8949, 91.8687), null) // Sylhet
+      assert.equal(nearestUnion(Number.NaN, 89.4), null)
+    })
+
+    it('finds a union a little way from a centre, and none past maxKm', () => {
+      const x = unionById('bogura-shibganj.kichak')!
+      assert.equal(nearestUnion(x.lat + 0.005, x.lon)?.upazilaId, 'bogura-shibganj')
+      assert.equal(nearestUnion(x.lat + 0.005, x.lon, 0.1), null)
+    })
+
+    it('measures distance in km', () => {
+      // One degree of latitude is about 111 km.
+      assert.ok(Math.abs(distanceKm(24, 89, 25, 89) - 111.2) < 0.5)
+    })
   })
 })

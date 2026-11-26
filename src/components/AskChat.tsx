@@ -11,6 +11,7 @@ import { useChosenSeason, useFields } from '@/lib/fields'
 import { primaryClass } from './Buttons'
 import { SendIcon } from './icons'
 import ListenButton from './ListenButton'
+import VoiceInput from './VoiceInput'
 
 type Source = { id: string; title: string; source: string; href: string }
 type Answer = { answer: string; sources: Source[]; escalate: boolean; askCrop?: boolean; note: string | null }
@@ -44,7 +45,11 @@ export default function AskChat() {
   // The question box; scrolled to after each turn, so the newest answer sits just above it.
   const box = useRef<HTMLFormElement>(null)
 
-  useEffect(() => box.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), [turns, pending])
+  // A block body: newer Chrome returns a Promise from scrollIntoView, and an expression body would
+  // hand it to React as the cleanup, which then crashes the page on the next render.
+  useEffect(() => {
+    box.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [turns, pending])
 
   // `crop` is the farmer's answer to «আলু না ধান?»: the question they asked goes again with it, and
   // that exchange leaves the chat, so it never goes back to a model as history.
@@ -84,7 +89,7 @@ export default function AskChat() {
             </p>
             <div className="flex flex-wrap gap-1.5">
               {EXAMPLES.map((e) => (
-                <button key={e} type="button" onClick={() => send(e)} className="rounded-full border-0 bg-sand px-3 py-1.5 text-left text-[14px] font-semibold text-ink">
+                <button key={e} type="button" onClick={() => send(e)} className="rounded-full border-0 bg-sand px-3 py-1.5 text-left text-base font-semibold text-ink">
                   {e}
                 </button>
               ))}
@@ -107,7 +112,7 @@ export default function AskChat() {
                 </div>
               )}
               {t.a.sources.length > 0 && (
-                <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px]">
+                <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
                   {t.a.sources.map((s) => (
                     <li key={s.id}>
                       <Link href={s.href} className="font-semibold text-teal">
@@ -120,12 +125,12 @@ export default function AskChat() {
               )}
               {t.a.escalate && (
                 <div className="flex flex-wrap gap-2">
-                  <Link href="/camera" className="rounded-full bg-sun px-3 py-1.5 text-[14px] font-bold text-ink no-underline">
+                  <Link href="/camera" className="rounded-full bg-sun px-3 py-1.5 text-base font-bold text-ink no-underline">
                     পাতার ছবি তুলুন
                   </Link>
                 </div>
               )}
-              {t.a.note && <p className="m-0 text-[12px] leading-[1.4] text-muted">{t.a.note}</p>}
+              {t.a.note && <p className="m-0 text-sm leading-[1.4] text-muted">{t.a.note}</p>}
               <ListenButton text={t.a.answer} label="উত্তর পড়ে শোনান" className="self-start" />
             </div>
           </div>
@@ -140,7 +145,7 @@ export default function AskChat() {
           </>
         )}
         {turns.length > 0 && !pending && (
-          <button type="button" onClick={() => store(STORE, null)} className="self-center border-0 bg-transparent text-[14px] font-semibold text-muted">
+          <button type="button" onClick={() => store(STORE, null)} className="self-center border-0 bg-transparent text-base font-semibold text-muted">
             আলাপ মুছে ফেলুন
           </button>
         )}
@@ -168,6 +173,7 @@ export default function AskChat() {
           placeholder="প্রশ্ন লিখুন…"
           className="min-h-14 flex-1 resize-none rounded-[14px] border-2 border-line bg-paper px-3 py-2 text-[17px] leading-[1.35] text-ink focus:border-teal focus:outline-none"
         />
+        <VoiceInput value={input} onChange={setInput} disabled={busy} />
         <button type="submit" disabled={busy || !input.trim()} aria-label="পাঠান" className={`${primaryClass} size-14 shrink-0 disabled:opacity-50`}>
           <SendIcon size={24} weight={2.2} />
         </button>

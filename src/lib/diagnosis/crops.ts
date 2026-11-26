@@ -11,6 +11,8 @@ export type PhotoStep = {
   counter: string
   // This photo in "কেন মনে হলো?" and the officer's summary.
   name: string
+  // "In this photo", when the two photos disagree: "উপরের ছবিতে …, নিচেরটায় …".
+  inPhoto: string
 }
 
 export type PhotoCropSpec = {
@@ -33,8 +35,8 @@ export const PHOTO_SPECS: Record<CropId, PhotoCropSpec> = {
     configUrl: '/model/crop_guardian_config.json',
     labelsBn: { early_blight: 'আগাম ধসা', healthy: 'সুস্থ', late_blight: 'নাবি ধসা' },
     photos: {
-      top: { title: 'পাতার উপরের দিকটা তুলুন', sub: 'পুরো পাতা ফ্রেমের ভেতরে রাখুন', counter: 'পাতার উপরের দিক', name: 'পাতার উপরের দিক' },
-      under: { title: 'এবার পাতার নিচের দিকটা তুলুন', sub: 'দাগ চিনতে নিচের দিকটা জরুরি', counter: 'উপরের দিক তোলা হয়েছে', name: 'নিচের দিক' },
+      top: { title: 'পাতার উপরের দিকটা তুলুন', sub: 'পুরো পাতা ফ্রেমের ভেতরে রাখুন', counter: 'পাতার উপরের দিক', name: 'পাতার উপরের দিক', inPhoto: 'উপরের ছবিতে' },
+      under: { title: 'এবার পাতার নিচের দিকটা তুলুন', sub: 'দাগ চিনতে নিচের দিকটা জরুরি', counter: 'উপরের দিক তোলা হয়েছে', name: 'নিচের দিক', inPhoto: 'নিচেরটায়' },
     },
     validation: 'পরীক্ষামূলক: ইন্দোনেশিয়ার মাঠের ছবিতে যাচাই করা',
     riskLabel: 'ধসার আবহাওয়া-ঝুঁকি',
@@ -53,8 +55,8 @@ export const PHOTO_SPECS: Record<CropId, PhotoCropSpec> = {
     // The training photos are single leaves (or sheaths) from the top, so the second photo is
     // another affected leaf, not the underside.
     photos: {
-      top: { title: 'দাগওয়ালা পাতাটা কাছ থেকে তুলুন', sub: 'দাগ পাতায় বা খোলে থাকলে সেটাই ফ্রেমে রাখুন', counter: 'প্রথম পাতা', name: 'প্রথম পাতা' },
-      under: { title: 'এবার আরেকটা আক্রান্ত পাতা তুলুন', sub: 'অন্য গোছা থেকে নিলে ভালো', counter: 'প্রথম পাতা তোলা হয়েছে', name: 'দ্বিতীয় পাতা' },
+      top: { title: 'দাগওয়ালা পাতাটা কাছ থেকে তুলুন', sub: 'দাগ পাতায় বা খোলে থাকলে সেটাই ফ্রেমে রাখুন', counter: 'প্রথম পাতা', name: 'প্রথম পাতা', inPhoto: 'প্রথম ছবিতে' },
+      under: { title: 'এবার আরেকটা আক্রান্ত পাতা তুলুন', sub: 'অন্য গোছা থেকে নিলে ভালো', counter: 'প্রথম পাতা তোলা হয়েছে', name: 'দ্বিতীয় পাতা', inPhoto: 'দ্বিতীয়টায়' },
     },
     // Leave-one-dataset-out accuracy is 9–37% (docs/model-card-paddy.md): photos from a new area
     // may well be misread, so the badge says so instead of claiming it was checked.

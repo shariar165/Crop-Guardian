@@ -1,16 +1,19 @@
 import Link from 'next/link'
 import BottomNav from '@/components/BottomNav'
-import { outlineClass, PrimaryLink } from '@/components/Buttons'
-import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
+import { PrimaryLink } from '@/components/Buttons'
+import FieldsGate, { type CropPanels, ExperimentalNote, HomeCameraButton } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
-import { BookIcon, CameraIcon, OfflineIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
+import InstallButton from '@/components/InstallButton'
+import { CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
+import SmsOffer from '@/components/SmsOffer'
 import SprayButton from '@/components/SprayButton'
 import { CROP_IDS, type CropId, CROPS } from '@/lib/crops'
-import { DAY_STATE, RISK_VIEW } from '@/lib/data'
-import { viewerHasAlerts } from '@/lib/alertDb'
+import { DAY_STATE, type Risk, RISK_VIEW } from '@/lib/data'
+import { viewerAlerts } from '@/lib/alertDb'
+import { AUDIO_KEY, type SpeechPart } from '@/lib/audioKeys'
 import { bnWeekday } from '@/lib/bn'
 import { todayIn } from '@/lib/dates'
 import { getPlace } from '@/lib/place'
@@ -51,23 +54,35 @@ function NoForecast({ place }: { place: string }) {
       <p className="m-0 text-[15px] leading-[1.45]">
         নেট নেই, বা আবহাওয়ার খবর এখন আসছে না। তাই আজকের ঝুঁকি বলতে পারছি না। পাতার ছবি তুলে রোগ চেনা নেট ছাড়াও চলে।
       </p>
-      <Link href="/" className="text-[15px] font-semibold text-teal">
+      <Link href="/" className="text-base font-semibold text-teal">
         আবার চেষ্টা করুন
       </Link>
     </section>
   )
 }
 
-// Home's header, 5-day strip and decision for one crop. `alerts`: the viewer gets SMS alerts.
-function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: boolean): CropPanels {
+// The risk badge's icon: a warning only on danger days, so নিরাপদ never shows a triangle.
+const BADGE_ICON: Record<Risk, typeof WarnIcon> = { danger: WarnIcon, watch: SearchIcon, safe: CheckIcon }
+
+type Viewer = { signedIn: boolean; alerts: boolean; hasUnion: boolean }
+
+// Home's header, 5-day strip and decision for one crop. `viewer.alerts`: they get SMS alerts.
+function cropPanels(crop: CropId, live: RiskAssessment, place: string, viewer: Viewer): CropPanels {
+  const { alerts } = viewer
   const spec = CROPS[crop]
   const { today: risk, reason } = live
   const view = RISK_VIEW[risk]
+  const BadgeIcon = BADGE_ICON[risk]
   const days = live.days.map((d, i) => ({ ...d, name: i === 0 ? 'আজ' : bnWeekday(d.date), ...DAY_STATE[d.risk] }))
   const decision = buildDecision(live.days, risk, spec.decision, alerts)
-  // A danger day ahead asks the farmer to look again; SMS alerts would save them the trouble.
-  const offerAlerts = !alerts && decision !== spec.decision[risk]
-  const speech = [`${place}। ${spec.riskTitle}:`, view.word + '।', reason + '।', view.title + '।', decision].join(' ')
+  // Fixed parts can be read from a recording (src/lib/audioKeys.ts); the place and the numbers can't.
+  const speech: SpeechPart[] = [
+    { text: `${place}। ${spec.riskTitle}:` },
+    { text: view.word + '।', audio: AUDIO_KEY.riskWord(risk) },
+    { text: reason + '।' },
+    { text: view.title + '।', audio: AUDIO_KEY.riskTitle(risk) },
+    { text: decision, audio: decision === spec.decision[risk] ? AUDIO_KEY.decision(crop, risk) : undefined },
+  ]
 
   return {
     risk,
@@ -78,7 +93,7 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           className="flex items-center gap-2 self-start rounded-[14px] pt-1 pr-4 pb-0.5 pl-3"
           style={{ background: view.badgeBg, color: view.badgeInk }}
         >
-          <WarnIcon size={26} weight={2.4} />
+          <BadgeIcon size={26} weight={2.4} />
           <span className="font-display text-[34px] leading-[1.15] font-extrabold">{view.word}</span>
         </div>
         <span className="text-[15px] leading-[1.4] font-medium">{reason}</span>
@@ -88,9 +103,9 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
       <section aria-label="৫ দিনের পূর্বাভাস" className="stitch mx-4 mt-3.5 grid shrink-0 grid-cols-5 gap-1 rounded-[18px] px-2.5 py-3">
         {days.map((d) => (
           <div key={d.date} className="flex flex-col items-center gap-[3px]">
-            <span className="text-[13px] font-semibold">{d.name}</span>
+            <span className="text-sm font-semibold">{d.name}</span>
             <DayGlyph risk={d.risk} />
-            <span className="text-xs font-bold" style={{ color: d.color }}>
+            <span className="text-sm font-bold" style={{ color: d.color }}>
               {d.word}
             </span>
           </div>
@@ -106,19 +121,26 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           {view.icon === 'spray' ? <SprayIcon size={32} /> : <SproutIcon size={32} />}
         </div>
         <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-[13px] font-semibold text-muted">আজকের সিদ্ধান্ত</span>
+          <span className="text-sm font-semibold text-muted">আজকের সিদ্ধান্ত</span>
           <h1 className="m-0 font-display text-[25px] leading-[1.15] font-extrabold">{view.title}</h1>
           <p className="m-0 text-[15px] leading-[1.45]">{decision}</p>
           <ExperimentalNote crop={crop} />
-          {offerAlerts && (
-            <Link href="/account" className="mt-0.5 text-[15px] font-semibold text-teal">
-              SMS-এ খবর পেতে চাইলে →
-            </Link>
-          )}
-          <Link href="/guide#risk" className="mt-0.5 text-[15px] font-semibold text-teal">
+          <Link href="/guide#risk" className="mt-0.5 text-base font-semibold text-teal">
             কেন এই পরামর্শ?
           </Link>
-          {risk === 'danger' && <SprayButton className="mt-1.5 self-start" />}
+          {risk === 'danger' && (
+            <>
+              {/* The title asks the farmer to look at the leaves today; the camera is how. */}
+              <PrimaryLink href={`/camera?crop=${crop}`} className="mt-1.5 min-h-12 gap-2 self-start px-4 text-base font-bold">
+                <CameraIcon size={22} weight={2.2} />
+                পাতার ছবি তুলুন
+              </PrimaryLink>
+              <SprayButton className="mt-1 self-start" />
+            </>
+          )}
+          {/* Every day until alerts are on or the farmer says এখন না: most won't open the app daily.
+              Last, so on danger days the camera comes first. */}
+          <SmsOffer signedIn={viewer.signedIn} enabled={alerts} hasUnion={viewer.hasUnion} className="mt-2" />
         </div>
       </section>
     ),
@@ -127,22 +149,26 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
 
 // Today's live risk at the farmer's union (or the upazila) for each field in season (see FieldsGate).
 export default async function Home() {
-  const [place, alerts] = await Promise.all([getPlace(), viewerHasAlerts()])
+  const [place, sms] = await Promise.all([getPlace(), viewerAlerts()])
+  const viewer: Viewer = { signedIn: sms.signedIn, alerts: sms.enabled, hasUnion: place.union !== null }
   const hourly = await loadForecast(place.lat, place.lon)
+  // Until the farmer picks a union, the default upazila's risk is an example, not theirs.
+  const placeLabel = place.union ? place.name : `উদাহরণ: ${place.name}`
   const live = hourly && assessAll(hourly)
   const showcase = showcaseActive()
 
+  const riskByCrop = live ? (Object.fromEntries(CROP_IDS.map((c) => [c, live[c].today])) as Record<CropId, Risk>) : null
   let gate: React.ReactNode
   if (!live) {
     gate = (
       <>
-        <NoForecast place={place.name} />
+        <NoForecast place={placeLabel} />
         <LedgerPill />
       </>
     )
   } else {
-    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], place.name, alerts)])) as Record<CropId, CropPanels>
-    gate = <FieldsGate today={todayIn()} place={place.name} hasUnion={place.union !== null} panels={panels} />
+    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], placeLabel, viewer)])) as Record<CropId, CropPanels>
+    gate = <FieldsGate today={todayIn()} place={placeLabel} hasUnion={place.union !== null} panels={panels} />
   }
 
   return (
@@ -152,22 +178,11 @@ export default async function Home() {
       <div className="min-h-4 flex-1" />
 
       <div className="flex shrink-0 flex-col gap-2.5 px-4 pb-3.5">
-        <PrimaryLink href="/camera" className="h-[70px] gap-3">
-          <CameraIcon size={30} weight={2.2} />
-          <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
-        </PrimaryLink>
-        <Link href="/guide" className={`${outlineClass} h-[58px] gap-2.5 text-lg font-bold`}>
-          <BookIcon size={24} weight={2.2} />
-          কীভাবে ব্যবহার করবেন
+        <HomeCameraButton today={todayIn()} risks={riskByCrop} />
+        <Link href="/potato" className="self-center text-base font-bold text-teal">
+          আলু চাষের পরামর্শ →
         </Link>
-        <div className="flex justify-center gap-5">
-          <Link href="/potato" className="text-[15px] font-bold text-teal">
-            আলু চাষের পরামর্শ →
-          </Link>
-          <Link href="/ask" className="text-[15px] font-bold text-teal">
-            প্রশ্ন করুন →
-          </Link>
-        </div>
+        <InstallButton />
         {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}
         {showcase && (
           <Link href="/docs" lang="en" className="self-center text-[15px] font-bold text-teal">

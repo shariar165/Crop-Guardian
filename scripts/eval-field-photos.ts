@@ -5,10 +5,11 @@
 //
 //   <dir>/late_blight/*.jpg   <dir>/healthy/*.jpg   <dir>/early_blight/*.jpg   (the crop model's classes)
 //   <dir>/unseen/*.jpg        other diseases or pests the model never saw: it should say "unknown"
+//   <dir>/ABOUT.md            optional: where the photos came from, put first in the report
 //
 // Run: npx tsx scripts/eval-field-photos.ts <dir> [--crop paddy] [--write]
 // (--write saves docs/field-photo-test.md, or docs/field-photo-test-paddy.md for paddy)
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isCropId } from '@/lib/crops'
 import { modelUrl, parseConfig } from '@/lib/diagnosis/config'
@@ -22,7 +23,11 @@ import { qualityOfFile } from '@/lib/imageQualityNode'
 const UNSEEN = 'unseen'
 const IMAGE = /\.(jpe?g|png|webp)$/i
 
-type Outcome = { file: string; truth: string; result: PhotoResult; quality: QualityReport }
+type Outcome = { file: string; truth: string; result: PhotoResult; quality: QualityReport; size: string; longSide: number }
+
+// A phone photo's longer side is well above this; a smaller photo was resized before it reached us,
+// so the camera's check (made for the phone's own frame) says little about it.
+const PHONE_MIN_SIDE = 1000
 
 // The camera's hint in English, in topHint's order (light first, since it spoils the other checks).
 function flagOf(q: QualityReport): string | null {
@@ -42,10 +47,12 @@ function verdict({ truth, result }: Outcome): 'right' | 'shortlist' | 'unknown' 
   return decision === 'confident' ? 'right' : 'shortlist'
 }
 
-const pct = (n: number, of: number) => (of === 0 ? '—' : `${Math.round((100 * n) / of)}%`)
-const share = (n: number, of: number) => (of === 0 ? '—' : `${n} of ${of} (${pct(n, of)})`)
+// A percentage of a handful of photos looks more certain than it is, so under 10 only the count shows.
+const MIN_FOR_PCT = 10
+const pct = (n: number, of: number) => `${Math.round((100 * n) / of)}%`
+const share = (n: number, of: number) => (of === 0 ? '—' : of < MIN_FOR_PCT ? `${n} of ${of}` : `${n} of ${of} (${pct(n, of)})`)
 
-function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir: string, args: string): string {
+function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir: string, args: string, about: string): string {
   const rows = groups.map((g) => {
     const mine = outcomes.filter((o) => o.truth === g)
     const count = (v: ReturnType<typeof verdict>) => mine.filter((o) => verdict(o) === v).length
@@ -58,8 +65,18 @@ function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir
   const caught = blight.filter((o) => o.result.decision !== 'unknown' && o.result.candidates.includes('late_blight')).length
   const unseen = outcomes.filter((o) => o.truth === UNSEEN)
   const flagged = (g: string) => outcomes.filter((o) => o.truth === g && flagOf(o.quality))
+  const inGroup = (g: string) => outcomes.filter((o) => o.truth === g).length
+  const sizes = new Map<string, number>()
+  for (const o of outcomes) sizes.set(o.size, (sizes.get(o.size) ?? 0) + 1)
+  const resized = outcomes.filter((o) => o.longSide < PHONE_MIN_SIDE).length
   return [
     '# Field-photo test',
+    '',
+    '## Photos',
+    '',
+    ...(about ? [about, ''] : []),
+    `${total} photos: ${groups.map((g) => `${g} ${inGroup(g)}`).join(', ')}. ` +
+      `Sizes: ${[...sizes].sort((a, b) => b[1] - a[1]).map(([s, n]) => (sizes.size === 1 ? `all ${s}` : `${s} (${n})`)).join(', ')}.`,
     '',
     `The app's photo diagnosis on ${total} labelled photos from \`${dir}\`, one photo at a time, with the real model and the app's own preprocessing and thresholds. ` +
       "Every photo goes to the model, including those the camera would have asked to retake; the camera's check is reported on its own.",
@@ -68,10 +85,10 @@ function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir
     '',
     '| Measure | Result |',
     '|---|---|',
+    // The camera's check stays out of the headline: on resized photos it isn't what a phone would see.
     `| Misleading answers | ${share(misleading, total)} |`,
     ...(blight.length ? [`| Late blight caught (confident, or on the shortlist) | ${share(caught, blight.length)} |`] : []),
     ...(unseen.length ? [`| Unseen diseases called "unknown" | ${share(unseen.filter((o) => o.result.decision === 'unknown').length, unseen.length)} |`] : []),
-    ...groups.map((g) => `| Camera would ask to retake: ${g} | ${share(flagged(g).length, outcomes.filter((o) => o.truth === g).length)} |`),
     '',
     '## Model answers',
     '',
@@ -79,21 +96,23 @@ function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir
     '|---|--:|--:|--:|--:|--:|',
     ...rows.map((r) => `| ${r.g} | ${r.n} | ${r.right} | ${r.shortlist} | ${r.unknown} | ${r.misleading} |`),
     '',
-    `**Misleading: ${misleading} of ${total} (${pct(misleading, total)})**: a confident wrong answer, a shortlist without the real disease, or an unseen disease not called "unknown". ` +
+    `**Misleading: ${share(misleading, total)}**: a confident wrong answer, a shortlist without the real disease, or an unseen disease not called "unknown". ` +
       `For \`${UNSEEN}\`, "right" means the app said "unknown".`,
     '',
     '## Confident answers',
     '',
     `| Truth \\ App | ${diseases.join(' | ')} |`,
     `|---|${diseases.map(() => '--:').join('|')}|`,
-    ...groups
-      .filter((g) => g !== UNSEEN)
-      .map((g) => `| ${g} | ${diseases.map((d) => confident.filter((o) => o.truth === g && o.result.candidates[0] === d).length).join(' | ')} |`),
+    // unseen stays in: a confident disease on an unseen one is a false alarm a farmer would act on.
+    ...groups.map((g) => `| ${g} | ${diseases.map((d) => outcomes.filter((o) => o.truth === g && o.result.decision === 'confident' && o.result.candidates[0] === d).length).join(' | ')} |`),
     '',
-    `Accuracy of confident answers: ${pct(confident.filter((o) => o.result.candidates[0] === o.truth).length, confident.length)} of ${confident.length}.`,
+    `Confident answers that were right: ${share(confident.filter((o) => o.result.candidates[0] === o.truth).length, confident.length)}.`,
     '',
     '## Camera quality check',
     '',
+    ...(resized
+      ? [`**Not representative: pre-resized, not phone photos.** ${resized === total ? 'Every photo' : `${resized} of ${total} photos`} had its longer side under ${PHONE_MIN_SIDE} px before the check saw it, so these counts say little about a farmer's camera.`, '']
+      : []),
     "What the camera's check (`src/lib/imageQuality.ts`) would have said on each photo as a gallery upload: the whole photo scaled to the analysis width. " +
       'A flagged photo can still be kept by the farmer.',
     '',
@@ -102,7 +121,7 @@ function markdown(outcomes: Outcome[], groups: string[], diseases: string[], dir
     ...groups.map((g) => {
       const f = flagged(g).map((o) => flagOf(o.quality))
       const n = (hint: string) => f.filter((x) => x === hint).length
-      return `| ${g} | ${outcomes.filter((o) => o.truth === g).length} | ${pct(f.length, outcomes.filter((o) => o.truth === g).length)} | ${n('too dark')} | ${n('too bright')} | ${n('no leaf')} | ${n('too far')} | ${n('blurry')} |`
+      return `| ${g} | ${inGroup(g)} | ${share(f.length, inGroup(g))} | ${n('too dark')} | ${n('too bright')} | ${n('no leaf')} | ${n('too far')} | ${n('blurry')} |`
     }),
     '',
     `Generated on ${todayIn()} by \`npx tsx scripts/eval-field-photos.ts <dir>${args} --write\`.`,
@@ -144,14 +163,16 @@ async function main() {
       const output = await session.run({ [config.inputName]: input })
       const result = decide(Array.from(output[config.outputName].data as Float32Array), config)
       const quality = await qualityOfFile(path, leafNearOf(crop))
-      const outcome = { file: `${truth}/${file}`, truth, result, quality }
+      const outcome = { file: `${truth}/${file}`, truth, result, quality, size: `${width}×${height}`, longSide: Math.max(width, height) }
       outcomes.push(outcome)
       console.log(`${outcome.file}: ${result.decision} [${result.candidates.join(', ')}] → ${verdict(outcome)}; camera: ${flagOf(quality) ?? 'ok'}`)
     }
   }
   if (outcomes.length === 0) throw new Error(`No photos found under ${dir}`)
 
-  const doc = markdown(outcomes, groups, config.diseases, dir, crop === 'potato' ? '' : ` --crop ${crop}`)
+  const aboutPath = join(dir, 'ABOUT.md')
+  const about = existsSync(aboutPath) ? readFileSync(aboutPath, 'utf8').trim() : ''
+  const doc = markdown(outcomes, groups, config.diseases, dir, crop === 'potato' ? '' : ` --crop ${crop}`, about)
   console.log(`\n${doc}`)
   if (argv.includes('--write')) {
     const DOC = crop === 'potato' ? 'docs/field-photo-test.md' : `docs/field-photo-test-${crop}.md`
