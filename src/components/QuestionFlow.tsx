@@ -9,10 +9,11 @@ import { type Answer, saveDiagnosis } from '@/lib/captureStore'
 import { labelOf } from '@/lib/diagnosis/explain'
 import { nextQuestion, questionCount, remainingAfter } from '@/lib/diagnosis/questions'
 import { useDiagnosisState } from '@/lib/diagnosis/useDiagnosis'
+import { bengaliVoice, rateOf, SPEECH_CRASHED_KEY, SPEECH_RATE_KEY, speechEnded, speechStarted } from '@/lib/speech'
 import { primaryClass, tealClass } from './Buttons'
 import { AnswerArt } from './illustrations'
 import { BackIcon, CheckIcon, QuestionIcon, RestartIcon, WarnIcon, WaveIcon } from './icons'
-import ListenButton, { bengaliVoice } from './ListenButton'
+import ListenButton from './ListenButton'
 import OfficerShareButton from './OfficerShareButton'
 import { RoundLink } from './TopBar'
 
@@ -25,20 +26,26 @@ function ReadAloud({ text }: { text: string }) {
 
   useEffect(() => {
     const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
-    if (!synth) return
+    // Not on a phone whose tab died while reading: the farmer can still tap শুনুন, which explains.
+    if (!synth || localStorage.getItem(SPEECH_CRASHED_KEY) === '1') return
     let started = false
     const speak = () => {
-      const voice = bengaliVoice(synth)
+      const voice = bengaliVoice(synth.getVoices())
       if (!voice || started) return
       started = true
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = 'bn-BD'
       utterance.voice = voice
-      utterance.rate = 0.9
+      utterance.rate = rateOf(localStorage.getItem(SPEECH_RATE_KEY))
       utterance.onstart = () => setState('speaking')
-      utterance.onend = () => setState('done')
-      utterance.onerror = () => setState('done')
-      synth.cancel()
+      const done = () => {
+        speechEnded()
+        setState('done')
+      }
+      utterance.onend = done
+      utterance.onerror = done
+      if (synth.speaking || synth.pending) synth.cancel()
+      speechStarted()
       synth.speak(utterance)
     }
     speak()
@@ -46,7 +53,8 @@ function ReadAloud({ text }: { text: string }) {
     synth.addEventListener('voiceschanged', speak)
     return () => {
       synth.removeEventListener('voiceschanged', speak)
-      synth.cancel()
+      if (synth.speaking || synth.pending) synth.cancel()
+      speechEnded()
     }
   }, [text])
 

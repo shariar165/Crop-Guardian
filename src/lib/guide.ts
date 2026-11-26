@@ -65,6 +65,14 @@ export const BENGALI_VOICE_STEPS = [
   'সার্চ না পেলে: সেটিংস → System বা General management → Language & input → Text-to-speech।',
 ]
 
+// After the tab died while reading aloud (src/lib/speech.ts): the phone's own engine is the
+// likely cause, and Google's is the one known to read Bengali.
+export const SPEECH_ENGINE_STEPS = [
+  BENGALI_VOICE_STEPS[0],
+  '‘Preferred engine’ বা ‘পছন্দের ইঞ্জিন’-এ ‘Speech Services by Google’ বেছে নিন।',
+  BENGALI_VOICE_STEPS[2],
+]
+
 export const GUIDE: GuideSection[] = [
   {
     id: 'start',

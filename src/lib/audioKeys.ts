@@ -15,5 +15,9 @@ export const AUDIO_KEY = {
 
 export const audioSrc = (key: string) => `/audio/${key}.mp3`
 
+// The keys with a file in public/audio/ (kept in step by audioKeys.test.ts). Only these are
+// fetched: asking for a missing file costs a farmer's data and a 404 for nothing.
+export const RECORDED: ReadonlySet<string> = new Set<string>([])
+
 // Part of what a ListenButton reads: its text, and the recording that may stand in for it.
 export type SpeechPart = { text: string; audio?: string }
