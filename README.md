@@ -31,6 +31,7 @@ npm install
 npm run dev      # http://localhost:3000
 npm run build && npm start
 npm test         # unit tests (node:test)
+npm run test:e2e # smoke test in your installed Chrome at 360×640: builds, then starts in showcase mode
 npm run typecheck
 npm run lint
 ```
@@ -72,7 +73,7 @@ Home's risk is computed from the weather, with no ML. `src/lib/weather.ts` fetch
 
 The same result is served as JSON at `GET /api/risk` (optional `lat`, `lon`, by default the farmer's union; optional `crop=potato|paddy`, potato by default). If the forecast can't be fetched, Home says so ("আবহাওয়ার তথ্য আনা যায়নি") and shows no risk at all, never an old or made-up one.
 
-The header line under the risk and the text under today's decision are generated from the forecast numbers. When a danger day is ahead it is named from the forecast, never as a fixed weekday, with the afternoon before it. A farmer with [SMS alerts](#sms-alerts) on is promised a text then ("বুধবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে SMS-এ জানাব।"); anyone else is asked to look again ("… কাল বিকেলে আবার দেখে নিন।"). The app never promises a message it won't send. On a danger day the decision's title is "আজই পাতা দেখুন", and the text makes the spray conditional on what the farmer finds ("পাতায় দাগ পেলে ২ দিনের মধ্যে স্প্রে করুন"; for paddy, "পাতা আর শীষে দাগ পেলে দ্রুত স্প্রে করুন"), because the rule isn't field-validated. The card has a "পাতার ছবি তুলুন" button for that crop above "আজ স্প্রে করেছি". Both lines are kept to two lines on a phone; the tests guard their length.
+The header line under the risk and the text under today's decision are generated from the forecast numbers. When a danger day is ahead it is named from the forecast, never as a fixed weekday, with the afternoon before it. A farmer with [SMS alerts](#sms-alerts) on is promised a text then ("বুধবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে SMS-এ জানাব।"); anyone else is asked to look again ("… কাল বিকেলে আবার দেখে নিন।"). The app never promises a message it won't send. On a danger day the decision's title is "আজই পাতা দেখুন", and the text makes the spray conditional on what the farmer finds ("পাতায় দাগ পেলে ২ দিনের মধ্যে স্প্রে করুন"; for paddy, "পাতা আর শীষে দাগ পেলে দ্রুত স্প্রে করুন"), because the rule isn't field-validated. The card has a "পাতার ছবি তুলুন" button for that crop above "আজ স্প্রে করেছি", and on those days the big camera button under the card is hidden (`HomeCameraButton`, which follows the same field `FieldsGate` shows), so only the card's and the nav's remain. Both lines are kept to two lines on a phone; the tests guard their length.
 
 Potato risk is labelled পরীক্ষামূলক (`experimental: true` in `crops.ts`) under the decision, on the map legend, on the ledger and in the SMS, as paddy's is. No text tells a farmer that spraying isn't needed or that money is saved by not spraying: a quiet day says the weather is drier and to keep checking the leaves («কয়েক দিন আবহাওয়া তুলনায় শুকনো। তবু নিয়মিত পাতা দেখতে থাকুন।»). `saysNoNeed` in `src/lib/assistant/guard.ts` recognises such text; the tests run it over every screen text, card, result, SMS and knowledge-base chunk, and the assistant drops any sentence it matches (as it drops a dose) and says to keep checking instead.
 
@@ -340,7 +341,7 @@ The camera and the service worker need HTTPS. To try a local build on a real pho
 
 For a demo day, set `SHOWCASE_UNTIL=YYYY-MM-DD` (Production in Vercel, then redeploy). Through that date in Bangladesh time (`src/lib/showcase.ts`), and never after:
 
-- `/account` and `/officer` work without signing in, as a showcase officer, and cases upload without an account.
+- `/account` and `/officer` work without signing in, as a showcase officer named «ডেমো কর্মকর্তা» (it has no number), and cases upload without an account.
 - Home and the first-run intro show a "For judges (English)" link to `/docs`.
 - The camera shows «নমুনা ছবি দিয়ে দেখুন / Try a sample leaf» for potato. It offers three images from the notebook's parity set, served from `public/samples/` and listed in `src/lib/diagnosis/samples.ts`: a healthy leaf, late blight, and a virus, which is not one of the model's three diseases. A sample goes through the same steps as a gallery photo, used as both photos, so the real model decides it and the normal result screen shows it, never the `?mock` path. The result carries «মডেলের ডেটাসেটের ছবি · image from the model’s dataset». It doesn't say "test set": which split each image came from isn't confirmed from notebook 04 yet. `/camera` stays static, so it can work offline; it asks `GET /api/showcase` (never cached) whether the mode is on. `samples.test.ts` checks that each sample is its parity image byte for byte and that the notebook decided it as its label says.
 

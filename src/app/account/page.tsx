@@ -8,7 +8,7 @@ import TopBar from '@/components/TopBar'
 import { isRole, type Role } from '@/lib/auth/roles'
 import { requireUser } from '@/lib/auth/session'
 import { getAlert } from '@/lib/alertDb'
-import { formatBdPhone } from '@/lib/phone'
+import { viewerLabel } from '@/lib/showcase'
 import { getPlace } from '@/lib/place'
 
 export const metadata = { title: 'আমার অ্যাকাউন্ট — সবুজবিধি' }
@@ -32,7 +32,7 @@ export default async function AccountPage() {
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-sm font-semibold text-muted">{ROLE_LABEL[role]}</span>
-            <span className="font-display text-[23px] font-extrabold">{formatBdPhone(user.phoneNumber)}</span>
+            <span className="font-display text-[23px] font-extrabold">{viewerLabel(user, showcase)}</span>
           </div>
         </section>
         {place && <AlertToggle enabled={alert?.enabled === true} place={place.union ? place.name : null} />}

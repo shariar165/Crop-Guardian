@@ -18,3 +18,7 @@ next-env.d.ts
 
 # Weather downloads kept by the backtest scripts (scripts/fetchCache.ts)
 /.cache/
+
+# Playwright
+/test-results/
+/playwright-report/

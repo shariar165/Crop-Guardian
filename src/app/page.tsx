@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import BottomNav from '@/components/BottomNav'
 import { PrimaryLink } from '@/components/Buttons'
-import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
+import FieldsGate, { type CropPanels, ExperimentalNote, HomeCameraButton } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
 import InstallButton from '@/components/InstallButton'
@@ -157,6 +157,7 @@ export default async function Home() {
   const live = hourly && assessAll(hourly)
   const showcase = showcaseActive()
 
+  const riskByCrop = live ? (Object.fromEntries(CROP_IDS.map((c) => [c, live[c].today])) as Record<CropId, Risk>) : null
   let gate: React.ReactNode
   if (!live) {
     gate = (
@@ -177,10 +178,7 @@ export default async function Home() {
       <div className="min-h-4 flex-1" />
 
       <div className="flex shrink-0 flex-col gap-2.5 px-4 pb-3.5">
-        <PrimaryLink href="/camera" className="h-[70px] gap-3">
-          <CameraIcon size={30} weight={2.2} />
-          <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
-        </PrimaryLink>
+        <HomeCameraButton today={todayIn()} risks={riskByCrop} />
         <Link href="/potato" className="self-center text-base font-bold text-teal">
           আলু চাষের পরামর্শ →
         </Link>

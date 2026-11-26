@@ -3,7 +3,7 @@
 // visitor who isn't signed in gets the showcase officer instead of the sign-in page.
 import 'server-only'
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { redirect, unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
 import { auth, type Session } from '@/lib/auth/auth'
 import { SHOWCASE_USER_ID, showcaseActive } from '@/lib/showcase'
@@ -24,6 +24,8 @@ const viewerOf = ({ user }: Session): Viewer => ({
 async function sessionOrNull(): Promise<Session | null> {
   if (!showcaseActive()) return getSession()
   return getSession().catch((err) => {
+    // Next's own signals (e.g. that the page is dynamic) must pass through, not be logged as failures.
+    unstable_rethrow(err)
     console.error('Session check failed', err)
     return null
   })

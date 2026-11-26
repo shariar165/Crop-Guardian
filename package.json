@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test:e2e": "playwright test",
     "auth:migrate": "node --env-file=.env.local node_modules/auth/dist/index.mjs migrate --config src/lib/auth/auth.ts",
     "db:migrate": "tsx scripts/migrate-cases.ts"
   },
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@ai-sdk/mcp": "^2.0.83",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",

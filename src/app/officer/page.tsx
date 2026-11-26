@@ -10,6 +10,7 @@ import { PHOTO_SPECS } from '@/lib/diagnosis/crops'
 import { CONFIDENCE_WORD, labelOf, orList } from '@/lib/diagnosis/explain'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { formatBdPhone } from '@/lib/phone'
+import { viewerLabel } from '@/lib/showcase'
 import { fullName, unionById } from '@/lib/areas'
 import { reviewCase } from './actions'
 
@@ -119,7 +120,7 @@ function CaseCard({ c }: { c: OfficerCase }) {
 // Agriculture officers only: the cases farmers sent, to check and confirm. Only confirmed late
 // blight is counted on the map.
 export default async function OfficerPage() {
-  const { user } = await requireOfficer('/officer')
+  const { user, showcase } = await requireOfficer('/officer')
   let cases: OfficerCase[] | null = null
   try {
     cases = await listCases()
@@ -131,7 +132,7 @@ export default async function OfficerPage() {
     <div className="flex flex-1 flex-col">
       <TopBar back="/account" title="কৃষি কর্মকর্তা" right={<span className="size-11" />} />
       <div className="flex shrink-0 flex-col gap-3 px-4 pb-6">
-        <p className="m-0 text-[15px] font-medium text-muted">ঢুকেছেন: {formatBdPhone(user.phoneNumber)}</p>
+        <p className="m-0 text-[15px] font-medium text-muted">ঢুকেছেন: {viewerLabel(user, showcase)}</p>
         <h1 className="m-0 font-display text-[23px] leading-[1.2] font-extrabold">কৃষকদের পাঠানো কেস</h1>
         <p className="m-0 text-sm leading-[1.45] text-muted">
           ছবি দেখে বা মাঠে গিয়ে যাচাই করুন। শুধু “নাবি ধসা নিশ্চিত” কেসগুলোই এলাকার ম্যাপে গোনা হয়।

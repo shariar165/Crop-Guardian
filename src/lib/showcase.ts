@@ -3,6 +3,7 @@
 // and /officer as a showcase agriculture officer, and cases upload without an account. It switches
 // itself off the day after, so it can't be left on by mistake. Unset or invalid means off.
 import { isIsoDate, todayIn } from '@/lib/dates'
+import { formatBdPhone } from '@/lib/phone'
 
 // The account that cases sent and reviewed in showcase mode belong to. It has no phone number, so
 // no one can ever sign in as it, and its stored role is farmer.
@@ -16,4 +17,12 @@ export function showcaseUntil(env: Record<string, string | undefined> = process.
 export function showcaseActive(env: Record<string, string | undefined> = process.env, today = todayIn()): boolean {
   const until = showcaseUntil(env)
   return until !== null && today <= until
+}
+
+// Who is signed in, as /account and /officer show it: the number, or for the showcase officer (who
+// has none) a name that says it is a demo.
+export const SHOWCASE_NAME = 'ডেমো কর্মকর্তা'
+
+export function viewerLabel(user: { phoneNumber: string | null }, showcase: boolean): string {
+  return showcase ? SHOWCASE_NAME : formatBdPhone(user.phoneNumber)
 }

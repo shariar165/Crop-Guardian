@@ -14,6 +14,7 @@ This project uses Next.js 16 / React 19, which have breaking changes compared wi
 npm run dev          # http://localhost:3000 (predev copies the ORT wasm, see below)
 npm run build && npm start   # needed to test the service worker / offline mode
 npm test             # all src/**/*.test.ts with node:test via tsx
+npm run test:e2e     # Playwright smoke test (e2e/), installed Chrome, 360×640, production build in showcase mode
 npm run typecheck    # next typegen && tsc --noEmit
 npm run lint
 
