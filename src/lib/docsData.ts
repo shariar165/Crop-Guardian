@@ -55,3 +55,17 @@ export function parseLeaveOneOut(md: string): HeldOutRow[] {
     unknown === undefined ? [] : [{ dataset, photos, accuracy, misleading, unknown }],
   )
 }
+
+// docs/field-photo-test.md's "## Headline": | Measure | Result ("12 of 120 (10%)") |
+export function parseFieldPhotoHeadline(md: string): { measure: string; result: string }[] {
+  const section = md.split('## Headline')[1]?.split('\n## ')[0] ?? ''
+  return tableRows(section).flatMap(([measure, result]) => (result === undefined ? [] : [{ measure, result }]))
+}
+
+// The first paragraph of its "## Photos" (where the photos came from), as plain text: the headline
+// means little without it.
+export function parseFieldPhotoAbout(md: string): string {
+  const section = md.split('## Photos')[1]?.split('\n## ')[0] ?? ''
+  const first = section.trim().split(/\n\s*\n/)[0] ?? ''
+  return first.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\*\*|`/g, '').replace(/\s+/g, ' ').trim()
+}
