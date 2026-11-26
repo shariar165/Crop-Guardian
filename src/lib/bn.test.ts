@@ -1,10 +1,26 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { bnDate, bnWeekday } from '@/lib/bn'
+import { bnDate, bnDateRange, bnDayMonth, bnGenitive, bnWeekday } from '@/lib/bn'
 
 describe('bnDate', () => {
   it('writes a date in Bangla without a leading zero', () => {
     assert.equal(bnDate('2026-01-04'), '৪ জানুয়ারি ২০২৬')
+    assert.equal(bnDayMonth('2026-11-14'), '১৪ নভেম্বর')
+  })
+
+  it('writes a span of days, naming the month once when it can', () => {
+    assert.equal(bnDateRange('2026-11-12', '2026-11-18'), '১২–১৮ নভেম্বর')
+    assert.equal(bnDateRange('2026-11-28', '2026-12-04'), '২৮ নভেম্বর–৪ ডিসেম্বর')
+    assert.equal(bnDateRange('2026-12-29', '2027-01-04'), '২৯ ডিসেম্বর–৪ জানুয়ারি')
+    assert.equal(bnDateRange('2026-11-12', '2026-11-12'), '১২ নভেম্বর')
+  })
+
+  it('makes the possessive of every diagnosis label', () => {
+    const cases: [string, string][] = [
+      ['নাবি ধসা', 'নাবি ধসার'], ['সুস্থ', 'সুস্থের'], ['ব্লাস্ট', 'ব্লাস্টের'], ['অন্য রোগ', 'অন্য রোগের'],
+      ['বাদামি দাগ', 'বাদামি দাগের'], ['খোল পোড়া', 'খোল পোড়ার'], ['টুংরো', 'টুংরোর'],
+    ]
+    for (const [word, genitive] of cases) assert.equal(bnGenitive(word), genitive)
     assert.equal(bnDate('2025-12-25'), '২৫ ডিসেম্বর ২০২৫')
   })
 })

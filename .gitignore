@@ -21,3 +21,7 @@ next-env.d.ts
 
 # Datasets for scripts/eval-field-photos.ts, downloaded by hand (not ours to redistribute)
 /data/
+
+# Playwright
+/test-results/
+/playwright-report/

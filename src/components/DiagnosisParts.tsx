@@ -18,12 +18,12 @@ import { useTodayRisk } from '@/lib/diagnosis/useDiagnosis'
 export function ValidationBadge({ crop, sample, className = '' }: { crop: CropId; sample?: string; className?: string }) {
   return (
     <>
-      <span className={`flex items-center gap-1.5 self-start rounded-lg bg-sand px-2.5 py-1 text-[12px] font-semibold text-muted ${className}`}>
+      <span className={`flex items-center gap-1.5 self-start rounded-lg bg-sand px-2.5 py-1 text-sm font-semibold text-muted ${className}`}>
         <SearchIcon size={14} weight={2.2} />
         {PHOTO_SPECS[crop].validation}
       </span>
       {sampleById(sample) && (
-        <span className={`self-start rounded-lg bg-sun px-2.5 py-1 text-[12px] font-bold text-ink ${className}`}>{SAMPLE_NOTE}</span>
+        <span className={`self-start rounded-lg bg-sun px-2.5 py-1 text-sm font-bold text-ink ${className}`}>{SAMPLE_NOTE}</span>
       )}
     </>
   )

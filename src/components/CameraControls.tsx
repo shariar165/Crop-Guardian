@@ -1,18 +1,39 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { CameraIcon, FlashIcon, GalleryIcon } from './icons'
 
+// `torch` isn't in the DOM types yet; Chrome on Android has it on the back camera.
+type TorchCapabilities = MediaTrackCapabilities & { torch?: boolean }
+
+function hasTorch(track: MediaStreamTrack | null): track is MediaStreamTrack {
+  return (track?.getCapabilities?.() as TorchCapabilities | undefined)?.torch === true
+}
+
+// `track` is the live video track, or null while there is none. Give the component a new key per
+// track, so the flash state starts off with each stream (stopping a track turns its torch off).
 export default function CameraControls({
   onShutter,
   onPickFile,
+  track,
   busy = false,
 }: {
   onShutter: () => void
   onPickFile: (file: File) => void
+  track: MediaStreamTrack | null
   busy?: boolean
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [torch, setTorch] = useState(false)
+
+  function toggleTorch() {
+    if (!hasTorch(track)) return
+    const on = !torch
+    track
+      .applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] })
+      .then(() => setTorch(on))
+      .catch((err) => console.error('Could not switch the flash', err))
+  }
 
   return (
     <div className="flex items-center justify-between">
@@ -47,13 +68,22 @@ export default function CameraControls({
           <CameraIcon size={28} weight={2.2} />
         </span>
       </button>
-      <button
-        type="button"
-        aria-label="ফ্ল্যাশ চালু করুন"
-        className="flex size-[58px] items-center justify-center rounded-[18px] border-2 border-white/25 bg-transparent text-cream"
-      >
-        <FlashIcon size={26} />
-      </button>
+      {hasTorch(track) ? (
+        <button
+          type="button"
+          aria-label={torch ? 'ফ্ল্যাশ বন্ধ করুন' : 'ফ্ল্যাশ চালু করুন'}
+          aria-pressed={torch}
+          onClick={toggleTorch}
+          className={`flex size-[58px] items-center justify-center rounded-[18px] border-2 ${
+            torch ? 'border-sun bg-sun text-ink' : 'border-white/25 bg-transparent text-cream'
+          }`}
+        >
+          <FlashIcon size={26} />
+        </button>
+      ) : (
+        // Keeps the shutter centred on phones without a flash.
+        <span aria-hidden="true" className="size-[58px]" />
+      )}
     </div>
   )
 }

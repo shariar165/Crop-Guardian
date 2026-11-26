@@ -10,7 +10,10 @@ import { canDiagnose } from '@/lib/diagnosis/crops'
 import { chooseSeason, type Field, mainField, useChosenSeason, useFields } from '@/lib/fields'
 import { rememberPlaceName } from '@/lib/placeCookies'
 import { offSeasonMessage, riskActive, seasonFor } from '@/lib/season'
+import FollowUpCard from './FollowUpCard'
+import { PrimaryLink } from './Buttons'
 import HomeHeader from './HomeHeader'
+import { CameraIcon, PinIcon } from './icons'
 import LedgerPill from './LedgerPill'
 
 // Home's parts for one crop, rendered on the server from that crop's rule.
@@ -23,6 +26,37 @@ export const useShownSeason = () => useContext(ShownSeason)
 type Candidate = { season: SeasonId; planted: string | null }
 
 const RANK: Record<Risk, number> = { safe: 0, watch: 1, danger: 2 }
+
+const riskOfCrop = (panels: Record<CropId, CropPanels>) =>
+  Object.fromEntries(Object.entries(panels).map(([c, p]) => [c, p.risk])) as Record<CropId, Risk>
+
+// The fields in the field today, and the one Home shows: the farmer's last choice, else the
+// riskiest. None in season means Home shows the off-season header. Shared with HomeCameraButton,
+// so both agree on which risk is on screen.
+function useShown(today: string, risks: Record<CropId, Risk>) {
+  const fields = useFields()
+  const chosen = useChosenSeason()
+  const candidates: Candidate[] = fields.length ? fields : [{ season: 'potato', planted: null }]
+  const active = candidates.filter((f) => riskActive(seasonFor(today, f.planted, f.season)))
+  const riskOf = (f: Candidate) => RANK[risks[SEASONS[f.season].crop]]
+  const shown: Candidate | undefined = active.find((f) => f.season === chosen) ?? [...active].sort((a, b) => riskOf(b) - riskOf(a))[0]
+  return { candidates, active, shown }
+}
+
+/**
+ * Home's big «পাতার ছবি তুলুন» under the decision. Hidden on a danger day, when the decision card
+ * has its own camera button right above it; the nav's is always there too.
+ */
+export function HomeCameraButton({ today, risks }: { today: string; risks: Record<CropId, Risk> | null }) {
+  const { shown } = useShown(today, risks ?? { potato: 'safe', paddy: 'safe' })
+  if (risks && shown && risks[SEASONS[shown.season].crop] === 'danger') return null
+  return (
+    <PrimaryLink href="/camera" className="h-[70px] gap-3">
+      <CameraIcon size={30} weight={2.2} />
+      <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
+    </PrimaryLink>
+  )
+}
 
 /*
  * Shows Home's risk (rendered on the server for every crop) for the fields on this device that are
@@ -48,10 +82,7 @@ export default function FieldsGate({
     if (hasUnion) rememberPlaceName(place)
   }, [hasUnion, place])
   const chosen = useChosenSeason()
-  const candidates: Candidate[] = fields.length ? fields : [{ season: 'potato', planted: null }]
-  const active = candidates.filter((f) => riskActive(seasonFor(today, f.planted, f.season)))
-  const riskOf = (f: Candidate) => RANK[panels[SEASONS[f.season].crop].risk]
-  const shown = active.find((f) => f.season === chosen) ?? [...active].sort((a, b) => riskOf(b) - riskOf(a))[0]
+  const { candidates, active, shown } = useShown(today, riskOfCrop(panels))
 
   if (shown) {
     const p = panels[SEASONS[shown.season].crop]
@@ -59,11 +90,13 @@ export default function FieldsGate({
     return (
       <ShownSeason.Provider value={shown.season}>
         {p.header}
+        {!hasUnion && <SetupCard hasField={field !== null} />}
+        <FollowUpCard />
         {hydrated && active.length > 1 && <FieldChips seasons={active.map((f) => f.season)} shown={shown.season} />}
         {p.strip}
-        <FieldNote field={field} many={fields.length > 1} hasUnion={hasUnion} />
+        {hasUnion && <FieldNote field={field} many={fields.length > 1} />}
         {p.decision}
-        <LedgerPill field={field} />
+        <LedgerPill field={field} hidePlantingPrompt={!hasUnion} />
       </ShownSeason.Provider>
     )
   }
@@ -72,8 +105,9 @@ export default function FieldsGate({
   return (
     <>
       <OffSeasonHeader season={off.season} planted={off.planted} today={today} place={place} />
-      <FieldNote field={main} many={fields.length > 1} hasUnion={hasUnion} />
-      <LedgerPill field={main} />
+      {hasUnion ? <FieldNote field={main} many={fields.length > 1} /> : <SetupCard hasField={main !== null} />}
+      <FollowUpCard />
+      <LedgerPill field={main} hidePlantingPrompt={!hasUnion} />
     </>
   )
 }
@@ -109,22 +143,43 @@ function OffSeasonHeader({ season: id, planted, today, place }: { season: Season
   )
 }
 
-// Asks for the place and a field, or shows the field's date with a way to change it.
-function FieldNote({ field, many, hasUnion }: { field: Field | null; many: boolean; hasUnion: boolean }) {
-  if (!field || !hasUnion) {
-    const ask = !hasUnion && !field ? 'জমি কোন এলাকায়, কোন ফসল কবে লাগিয়েছেন?' : !hasUnion ? 'জমি কোন এলাকায়?' : 'কোন ফসল কবে লাগিয়েছেন?'
+// Until a union is chosen, the one prompt for setup, right under the header: the risk above it is
+// only the default upazila's, shown as an example.
+function SetupCard({ hasField }: { hasField: boolean }) {
+  return (
+    <Link
+      href="/planting"
+      className="mx-4 mt-3 flex shrink-0 items-center gap-3 rounded-[18px] border-2 border-sun bg-sun-soft px-4 py-3 text-ink no-underline"
+    >
+      <PinIcon size={28} weight={2.2} />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-display text-[17px] leading-[1.3] font-extrabold">
+          {hasField ? 'আপনার এলাকা জানান' : 'আপনার এলাকা আর ফসল জানান'} <span className="whitespace-nowrap">— ১ মিনিট</span>
+        </span>
+        <span className="text-[14px] leading-[1.35] font-medium">ওপরের ঝুঁকি শুধু উদাহরণ</span>
+      </span>
+      <span aria-hidden="true" className="shrink-0 text-2xl font-bold text-teal">
+        ›
+      </span>
+    </Link>
+  )
+}
+
+// Asks for a field, or shows the field's date with a way to change it.
+function FieldNote({ field, many }: { field: Field | null; many: boolean }) {
+  if (!field) {
     return (
       <Link
         href="/planting"
-        className="mx-4 mt-2 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-[14px] leading-[1.35] font-semibold text-ink no-underline"
+        className="mx-4 mt-2 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-base leading-[1.35] font-semibold text-ink no-underline"
       >
-        {ask} জানালে ঝুঁকি আরও ঠিক হবে
+        কোন ফসল কবে লাগিয়েছেন? জানালে ঝুঁকি আরও ঠিক হবে
         <span className="shrink-0 text-teal">জানান</span>
       </Link>
     )
   }
   return (
-    <Link href="/planting" className="mx-4 mt-2 shrink-0 self-center text-[13px] font-semibold text-muted no-underline">
+    <Link href="/planting" className="mx-4 mt-2 shrink-0 self-center text-base font-semibold text-muted no-underline">
       {many ? `${SEASONS[field.season].nameBn} ` : ''}রোপণ: {bnDate(field.planted)} · <span className="text-teal underline">বদলান</span>
     </Link>
   )
@@ -137,7 +192,7 @@ export function ExperimentalNote({ crop }: { crop: CropId }) {
   const photoNote = canDiagnose(crop) ? null : CROPS[crop].photoNote
   if (!experimental && !photoNote) return null
   return (
-    <p className="m-0 text-[13px] leading-[1.4] font-semibold text-amber">
+    <p className="m-0 text-sm leading-[1.4] font-semibold text-amber">
       {experimental && `পরীক্ষামূলক: ${diseaseOfBn} এই হিসাব এখনো মাঠে যাচাই হয়নি। `}
       {photoNote}
     </p>

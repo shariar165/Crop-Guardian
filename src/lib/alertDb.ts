@@ -40,16 +40,18 @@ export async function signedInUserId(): Promise<string | null> {
   return (await getSession())?.user.id ?? null
 }
 
-// Whether Home may promise an SMS: the viewer is signed in with alerts on. Any failure is "no".
-export async function viewerHasAlerts(): Promise<boolean> {
+// Whether the viewer is signed in, and has alerts on: Home may promise an SMS only then, and the
+// SMS offer shows until then. Any failure is "no" (the offer then asks them to sign in again).
+export async function viewerAlerts(): Promise<{ signedIn: boolean; enabled: boolean }> {
   try {
     const userId = await signedInUserId()
-    return userId !== null && (await getAlert(userId))?.enabled === true
+    if (userId === null) return { signedIn: false, enabled: false }
+    return { signedIn: true, enabled: (await getAlert(userId))?.enabled === true }
   } catch (err) {
     // Next's own signals (e.g. that the page is dynamic) must pass through.
     unstable_rethrow(err)
     console.error('Alert check failed', err)
-    return false
+    return { signedIn: false, enabled: false }
   }
 }
 

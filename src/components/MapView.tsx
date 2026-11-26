@@ -7,7 +7,8 @@ import { type CropId, CROP_IDS, CROPS, SEASONS } from '@/lib/crops'
 import { DAY_STATE, type Risk } from '@/lib/data'
 import { todayIn } from '@/lib/dates'
 import { mainField, useChosenSeason, useFields } from '@/lib/fields'
-import { SyncIcon } from './icons'
+import { chooseUnion } from '@/app/planting/actions'
+import { CheckIcon, SyncIcon } from './icons'
 
 export type UnionRisk = { id: string; risk: Risk }
 // The upazila on the map: its name and its unions in the map's SVG coordinates.
@@ -87,6 +88,9 @@ export default function MapView({
   })
   const ariaLabel = risks ? `ইউনিয়নভিত্তিক আজকের ঝুঁকির ম্যাপ: ${groups.join('; ')}` : `${area.name} উপজেলার ইউনিয়নের ম্যাপ, ঝুঁকির তথ্য নেই`
   const mineUnion = unions.find((u) => u.id === mine)
+  // The union whose sheet is open, from a tap on the map.
+  const [open, setOpen] = useState<string | null>(null)
+  const openUnion = unions.find((u) => u.id === open)
 
   return (
     <>
@@ -106,33 +110,13 @@ export default function MapView({
         ))}
       </div>
 
-      <div role="tablist" aria-label="নিশ্চিত কেসের সময়" className="mx-4 mt-3 grid shrink-0 grid-cols-2 gap-1 rounded-2xl bg-sand p-1">
-        {(Object.keys(PERIODS) as Period[]).map((t) => {
-          const selected = t === period
-          return (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => setPeriod(t)}
-              className={`h-10 rounded-xl border-0 text-[15px] ${
-                selected ? 'bg-paper font-bold text-ink' : 'bg-transparent font-semibold text-muted-2'
-              }`}
-            >
-              {PERIODS[t].tab}
-            </button>
-          )
-        })}
-      </div>
-
       {!risks && (
         <p role="alert" className="mx-4 mt-3 mb-0 shrink-0 rounded-[16px] bg-amber-soft px-4 py-2.5 text-[15px] leading-[1.4] font-semibold text-[#6B4A00]">
           আবহাওয়ার তথ্য আনা যায়নি — নেট নেই? ঝুঁকির রং দেখানো যাচ্ছে না।
         </p>
       )}
 
-      <div role="tabpanel" className="stitch mx-4 mt-3 shrink-0 rounded-[20px] p-2.5">
+      <div className="stitch mx-4 mt-3 shrink-0 rounded-[20px] p-2.5">
         <svg role="img" aria-label={ariaLabel} viewBox={area.viewBox} className="block h-auto w-full rounded-xl bg-[#F3EEE2]">
           <defs>
             <pattern id={hatch} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -154,10 +138,22 @@ export default function MapView({
               strokeWidth={u.id === mine ? 3 : 1.2}
               strokeDasharray={u.id === mine ? undefined : '4 3'}
               strokeLinejoin="round"
+              role="button"
+              tabIndex={0}
+              aria-label={u.nameBn}
+              className="cursor-pointer outline-none focus-visible:stroke-ink"
+              onClick={() => setOpen(u.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setOpen(u.id)
+                }
+              }}
             />
           ))}
 
-          <g fontFamily="var(--font-hind), sans-serif" fontSize="11" fontWeight="700" fill="#2B1E16" textAnchor="middle">
+          {/* Labels let taps through to the union under them. */}
+          <g pointerEvents="none" fontFamily="var(--font-hind), sans-serif" fontSize="11" fontWeight="700" fill="#2B1E16" textAnchor="middle">
             {unions.map((u) => {
               const lines = u.nameBn.split(' ')
               const [x, y] = u.label
@@ -173,7 +169,7 @@ export default function MapView({
             })}
           </g>
 
-          <g fontFamily="var(--font-baloo), sans-serif" fontSize="12" fontWeight="800" textAnchor="middle">
+          <g pointerEvents="none" fontFamily="var(--font-baloo), sans-serif" fontSize="12" fontWeight="800" textAnchor="middle">
             {unions.map((u) => {
               const n = caseCount(u.id)
               if (!n) return null
@@ -190,7 +186,7 @@ export default function MapView({
           </g>
 
           {mineUnion && (
-            <g fontFamily="var(--font-hind), sans-serif" fontSize="11" fontWeight="700" textAnchor="middle">
+            <g pointerEvents="none" fontFamily="var(--font-hind), sans-serif" fontSize="11" fontWeight="700" textAnchor="middle">
               <rect x={mineUnion.label[0] - 22} y={mineUnion.label[1] - 30} width="44" height="18" rx="9" fill="#E8B931" stroke="#2B1E16" strokeWidth="2" />
               <text x={mineUnion.label[0]} y={mineUnion.label[1] - 17.5} fill="#2B1E16">
                 আপনি
@@ -200,7 +196,7 @@ export default function MapView({
         </svg>
       </div>
 
-      <div className="mx-[18px] mt-2.5 flex shrink-0 flex-wrap gap-3 text-[13px] font-semibold">
+      <div className="mx-[18px] mt-2.5 flex shrink-0 flex-wrap gap-3 text-sm font-semibold">
         <span className="text-muted">
           আজকের {CROPS[crop].diseaseBn} ঝুঁকি{CROPS[crop].experimental ? ' (পরীক্ষামূলক)' : ''}:
         </span>
@@ -224,6 +220,22 @@ export default function MapView({
           <span className="text-sm leading-[1.35]">
             {!casesShown ? 'ধানের কেস এখনো গোনা হয় না' : totalCases === null ? 'কেসের তথ্য এখন আনা যায়নি' : PERIODS[period].caseLabel}
           </span>
+          {/* Only the case count depends on the period; the map's colours are today's forecast. */}
+          {casesShown && counts && (
+            <div role="group" aria-label="কেস গোনার সময়" className="mt-1.5 grid grid-cols-2 gap-1 rounded-xl bg-sand p-0.5">
+              {(Object.keys(PERIODS) as Period[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={t === period}
+                  onClick={() => setPeriod(t)}
+                  className={`min-h-9 rounded-[10px] border-0 px-1 text-sm ${t === period ? 'bg-paper font-bold text-ink' : 'bg-transparent font-semibold text-muted-2'}`}
+                >
+                  {PERIODS[t].tab}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-0.5 rounded-[18px] border-[1.5px] border-line bg-paper px-3.5 py-3">
           <span className="font-display text-[30px] leading-[1.1] font-extrabold text-danger-deep">
@@ -236,11 +248,23 @@ export default function MapView({
       {!mineUnion && (
         <Link
           href="/planting"
-          className="mx-4 mt-2.5 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-[14px] leading-[1.35] font-semibold text-ink no-underline"
+          className="mx-4 mt-2.5 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-base leading-[1.35] font-semibold text-ink no-underline"
         >
           আপনার ইউনিয়ন বেছে নিন, ম্যাপে দেখাব
           <span className="shrink-0 text-teal">বেছে নিন</span>
         </Link>
+      )}
+
+      {openUnion && (
+        <UnionSheet
+          name={openUnion.nameBn}
+          id={openUnion.id}
+          risk={riskOf(openUnion.id)}
+          disease={CROPS[crop].diseaseBn}
+          cases={caseCount(openUnion.id)}
+          mine={openUnion.id === mine}
+          onClose={() => setOpen(null)}
+        />
       )}
 
       <div className="mx-4 mt-2.5 flex shrink-0 items-start gap-2.5 rounded-2xl bg-mist px-3.5 py-2.5 text-teal-deep">
@@ -250,5 +274,67 @@ export default function MapView({
         </span>
       </div>
     </>
+  )
+}
+
+// A tapped union: its name, today's risk, and a way to make it the farmer's own (saved like a tap
+// on /planting's list, after which the page shows it as "আপনি").
+function UnionSheet({
+  name,
+  id,
+  risk,
+  disease,
+  cases,
+  mine,
+  onClose,
+}: {
+  name: string
+  id: string
+  risk: Risk | null
+  disease: string
+  cases: number
+  mine: boolean
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-30 mx-auto flex max-w-[390px] items-end bg-black/45 p-3" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="union-sheet-title"
+        onClick={(e) => e.stopPropagation()}
+        className="flex w-full flex-col gap-2.5 rounded-[20px] bg-cream p-4 text-ink"
+      >
+        <h2 id="union-sheet-title" className="m-0 font-display text-2xl leading-[1.2] font-extrabold">
+          {name}
+        </h2>
+        <p className="m-0 flex items-center gap-2 text-base font-semibold">
+          {risk ? (
+            <>
+              <LegendSwatch risk={risk} />
+              আজ {disease} ঝুঁকি: <span style={{ color: DAY_STATE[risk].color }}>{DAY_STATE[risk].word}</span>
+            </>
+          ) : (
+            'আজকের ঝুঁকি জানা যায়নি'
+          )}
+        </p>
+        {cases > 0 && <p className="m-0 text-[15px]">কর্মকর্তার নিশ্চিত কেস: {toBnDigits(cases)}টা</p>}
+        {mine ? (
+          <p className="m-0 flex items-center gap-1.5 text-base font-bold text-leaf">
+            <CheckIcon size={20} weight={2.6} />
+            এটাই আপনার ইউনিয়ন
+          </p>
+        ) : (
+          <form action={chooseUnion}>
+            <button type="submit" name="union" value={id} className="h-12 w-full rounded-full border-0 bg-sun text-base font-bold text-ink">
+              এটা আমার ইউনিয়ন
+            </button>
+          </form>
+        )}
+        <button type="button" autoFocus onClick={onClose} className="h-12 rounded-full border-2 border-ink bg-transparent text-base font-bold text-ink">
+          বন্ধ করুন
+        </button>
+      </div>
+    </div>
   )
 }

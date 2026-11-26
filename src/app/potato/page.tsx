@@ -18,7 +18,7 @@ export default function PotatoPage() {
 
       <nav aria-label="পরামর্শের অংশ" className="mx-4 flex shrink-0 flex-wrap gap-1.5">
         {POTATO_GUIDE.map((s, i) => (
-          <a key={s.id} href={`#${s.id}`} className="rounded-full bg-sand px-3 py-1 text-[13px] font-semibold text-muted-2 no-underline">
+          <a key={s.id} href={`#${s.id}`} className="rounded-full bg-sand px-3 py-1 text-base font-semibold text-muted-2 no-underline">
             {toBnDigits(i + 1)}. {s.title.split(':')[0]}
           </a>
         ))}
@@ -40,12 +40,12 @@ export default function PotatoPage() {
               ))}
             </ul>
 
-            <p className="m-0 text-[13px] text-muted">সূত্র: {s.source}</p>
+            <p className="m-0 text-sm text-muted">সূত্র: {s.source}</p>
 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <ListenButton text={speechOf(s)} label={`${s.title} পড়ে শোনান`} />
               {s.link && (
-                <Link href={s.link.href} className="text-[15px] font-bold text-teal">
+                <Link href={s.link.href} className="text-base font-bold text-teal">
                   {s.link.label} →
                 </Link>
               )}

@@ -1,5 +1,6 @@
 // The words on the result screens, from real inputs only: the model's decisions, today's weather risk,
 // and the farmer's answers.
+import { bnGenitive } from '@/lib/bn'
 import type { CropId } from '@/lib/crops'
 import { DAY_STATE, type Risk } from '@/lib/data'
 import type { CombinedResult } from './combine'
@@ -7,7 +8,8 @@ import type { DiagnosisConfig } from './config'
 import { PHOTO_SPECS } from './crops'
 import type { PhotoResult } from './decide'
 
-export const CONFIDENCE_WORD = { confident: 'নিশ্চিত', uncertain: 'নিশ্চিত নই', unknown: 'চিনতে পারিনি' } as const
+// "ছবিতে মিলেছে", not "নিশ্চিত": it sits next to "পরীক্ষামূলক", and the model can be wrong.
+export const CONFIDENCE_WORD = { confident: 'ছবিতে মিলেছে', uncertain: 'নিশ্চিত নই', unknown: 'চিনতে পারিনি' } as const
 
 type Labels = Pick<DiagnosisConfig, 'labelsBn'>
 
@@ -22,12 +24,20 @@ function photoWord(photo: PhotoResult, config: DiagnosisConfig): string {
   return `${labelOf(photo.candidates[0], config)} (${CONFIDENCE_WORD.confident})`
 }
 
-// What each photo showed, e.g. "দুই ছবিতেই একই ফল: নাবি ধসা (নিশ্চিত)".
+// One photo's result inside a sentence: "নাবি ধসার মতো".
+function photoPhrase(photo: PhotoResult, config: DiagnosisConfig): string {
+  if (photo.decision === 'unknown') return 'কিছু চেনা যায়নি'
+  if (photo.decision === 'uncertain') return `${orList(photo.candidates, config)} (${CONFIDENCE_WORD.uncertain})`
+  return `${bnGenitive(labelOf(photo.candidates[0], config))} মতো`
+}
+
+// What each photo showed: "দুই ছবিতেই একই ফল: নাবি ধসা (ছবিতে মিলেছে)", or when they differ
+// "উপরের ছবিতে নাবি ধসার মতো, নিচেরটায় সুস্থের মতো".
 export function photoLine(result: CombinedResult, config: DiagnosisConfig, crop: CropId): string {
   const { top, under } = result.photos
-  const [a, b] = [photoWord(top, config), photoWord(under, config)]
+  if (photoWord(top, config) === photoWord(under, config)) return `দুই ছবিতেই একই ফল: ${photoWord(top, config)}`
   const names = PHOTO_SPECS[crop].photos
-  return a === b ? `দুই ছবিতেই একই ফল: ${a}` : `${names.top.name}: ${a} · ${names.under.name}: ${b}`
+  return `${names.top.inPhoto} ${photoPhrase(top, config)}, ${names.under.inPhoto} ${photoPhrase(under, config)}`
 }
 
 export type TodayRisk = { today: Risk; reason: string } | 'unavailable'
