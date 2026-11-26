@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { audioSrc, type SpeechPart } from '@/lib/audioKeys'
-import { store } from '@/lib/deviceStore'
-import { BENGALI_VOICE_STEPS } from '@/lib/guide'
+import { audioSrc, RECORDED, type SpeechPart } from '@/lib/audioKeys'
+import { store, useStored } from '@/lib/deviceStore'
+import { BENGALI_VOICE_STEPS, SPEECH_ENGINE_STEPS } from '@/lib/guide'
+import { bengaliVoice, loadedVoices, rateOf, SPEECH_CRASHED_KEY, SPEECH_RATE_KEY, speechChunks, speechEnded, speechStarted } from '@/lib/speech'
 import { SpeakerIcon, StopIcon } from './icons'
 
 const TIP_SEEN_KEY = 'crop-guardian:voice-tip-seen'
@@ -12,18 +13,13 @@ const TIP_SEEN_KEY = 'crop-guardian:voice-tip-seen'
 type Variant = 'sand' | 'glass' | 'sky' | 'outline'
 
 const VARIANT: Record<Variant, string> = {
-  sand: 'h-11 px-3.5 rounded-full bg-sand text-ink text-[15px] font-semibold gap-1.5',
-  glass: 'h-11 px-3.5 rounded-full bg-white/12 text-cream text-[15px] font-semibold gap-1.5',
-  sky: 'h-11 px-3 rounded-full bg-white/78 text-ink text-[15px] font-semibold gap-1.5',
+  sand: 'h-11 px-3.5 rounded-full bg-sand text-ink text-[0.9375rem] font-semibold gap-1.5',
+  glass: 'h-11 px-3.5 rounded-full bg-white/12 text-cream text-[0.9375rem] font-semibold gap-1.5',
+  sky: 'h-11 px-3 rounded-full bg-white/78 text-ink text-[0.9375rem] font-semibold gap-1.5',
   outline: 'min-h-[66px] rounded-[20px] border-2 border-ink bg-transparent text-ink text-lg font-bold gap-2 justify-center',
 }
 
-export const bengaliVoice = (synth: SpeechSynthesis) => synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('bn'))
-
-// Recordings found missing on this page load, so a missing file costs one request, not one per tap.
-const MISSING = new Set<string>()
-
-// Plays a recording to the end. Rejects if it can't be played (missing, offline, unsupported).
+// Plays a recording to the end. Rejects if it can't be played (offline, unsupported).
 function playFile(audio: HTMLAudioElement, src: string): Promise<void> {
   return new Promise((resolve, reject) => {
     audio.onended = () => resolve()
@@ -34,30 +30,42 @@ function playFile(audio: HTMLAudioElement, src: string): Promise<void> {
 }
 
 // Resolves when the text has been read, or couldn't be: a failure must not leave the button on থামান.
-function speak(synth: SpeechSynthesis, text: string, voice: SpeechSynthesisVoice | undefined): Promise<void> {
+function speak(synth: SpeechSynthesis, text: string, voice: SpeechSynthesisVoice | undefined, rate: number): Promise<void> {
   return new Promise((resolve) => {
+    const done = () => {
+      speechEnded()
+      resolve()
+    }
     try {
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = 'bn-BD'
       if (voice) utterance.voice = voice
-      utterance.rate = 0.9
-      utterance.onend = () => resolve()
-      utterance.onerror = () => resolve()
+      utterance.rate = rate
+      utterance.onend = done
+      utterance.onerror = done
+      speechStarted()
       synth.speak(utterance)
     } catch (err) {
       console.error('Speech failed', err)
-      resolve()
+      done()
     }
   })
 }
 
+// Some engines misbehave when cancel() comes with nothing to cancel, right before speak().
+function quiet(synth: SpeechSynthesis | undefined) {
+  if (synth && (synth.speaking || synth.pending)) synth.cancel()
+  speechEnded()
+}
+
 /**
  * Reads `text` aloud in Bengali, part by part: a part with a recording (`audio`, see
- * src/lib/audioKeys.ts) plays it when the file is there, and anything else uses the browser's
- * speech synthesis. `audio` on its own is the recording for the whole `text`.
- * With `requireVoice`, synthesis stays silent when no Bengali voice is installed (recordings still
- * play). With `voiceTip`, the first tap on a phone without one shows how to install it instead of
- * reading with a voice that can't say Bengali; later taps read with whatever voice there is.
+ * src/lib/audioKeys.ts) plays it when the file exists, and anything else uses the phone's speech
+ * engine, in short pieces, at the speed chosen in /settings. `audio` on its own is the recording
+ * for the whole `text`. With `requireVoice`, the engine stays silent when no Bengali voice is
+ * installed (recordings still play). With `voiceTip`, the first tap on a phone without one shows
+ * how to install it instead of reading with a voice that can't say Bengali. If the tab died while
+ * reading last time, a tap explains that and offers to try again rather than crashing again.
  */
 export default function ListenButton({
   text,
@@ -77,7 +85,9 @@ export default function ListenButton({
   voiceTip?: boolean
 }) {
   const [speaking, setSpeaking] = useState(false)
-  const [tip, setTip] = useState(false)
+  const [sheet, setSheet] = useState<'voice' | 'crashed' | null>(null)
+  const crashed = useStored(SPEECH_CRASHED_KEY) === '1'
+  const rate = rateOf(useStored(SPEECH_RATE_KEY))
   // Bumped to stop a reading in progress: each part checks it before starting.
   const run = useRef(0)
   const player = useRef<HTMLAudioElement | null>(null)
@@ -90,51 +100,63 @@ export default function ListenButton({
       // A counter, not a node: the latest value is the one to bump.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       run.current++
-      synth?.cancel()
+      quiet(synth)
       player.current?.pause()
     }
   }, [])
 
   function stop() {
     run.current++
-    window.speechSynthesis?.cancel()
+    quiet(window.speechSynthesis)
     player.current?.pause()
     setSpeaking(false)
   }
 
-  async function play(parts: SpeechPart[], voice: SpeechSynthesisVoice | undefined) {
+  async function play() {
     const id = ++run.current
-    const synth = window.speechSynthesis
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
+    const parts = typeof text === 'string' ? [{ text, audio }] : text
     setSpeaking(true)
+    const voices = synth ? await loadedVoices(synth) : []
+    const voice = bengaliVoice(voices)
+    if (run.current !== id) return
+    if (synth && !voice && voiceTip && voices.length > 0 && localStorage.getItem(TIP_SEEN_KEY) !== '1') {
+      store(TIP_SEEN_KEY, '1')
+      setSpeaking(false)
+      setSheet('voice')
+      return
+    }
+    quiet(synth)
     for (const part of parts) {
       if (run.current !== id) return
-      if (part.audio && !MISSING.has(part.audio)) {
+      if (part.audio && RECORDED.has(part.audio)) {
         player.current ??= new Audio()
         try {
           await playFile(player.current, audioSrc(part.audio))
           continue
         } catch {
-          MISSING.add(part.audio)
           if (run.current !== id) return
         }
       }
-      if (synth && (voice || !requireVoice)) await speak(synth, part.text, voice)
+      if (!synth || (!voice && requireVoice)) continue
+      for (const chunk of speechChunks(part.text)) {
+        if (run.current !== id) return
+        await speak(synth, chunk, voice, rate)
+      }
     }
     if (run.current === id) setSpeaking(false)
   }
 
   function toggle() {
     if (speaking) return stop()
-    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
-    const voice = synth ? bengaliVoice(synth) : undefined
-    // An empty list means the voices haven't loaded yet, not that there is no Bengali one.
-    if (synth && !voice && voiceTip && synth.getVoices().length > 0 && localStorage.getItem(TIP_SEEN_KEY) !== '1') {
-      store(TIP_SEEN_KEY, '1')
-      setTip(true)
-      return
-    }
-    synth?.cancel()
-    play(typeof text === 'string' ? [{ text, audio }] : text, voice)
+    if (crashed) return setSheet('crashed')
+    play()
+  }
+
+  function retry() {
+    store(SPEECH_CRASHED_KEY, null)
+    setSheet(null)
+    play()
   }
 
   const Glyph = speaking ? StopIcon : SpeakerIcon
@@ -150,27 +172,57 @@ export default function ListenButton({
         <Glyph size={variant === 'outline' ? 24 : 22} weight={variant === 'outline' ? 2.2 : 2} />
         {speaking ? 'থামান' : 'শুনুন'}
       </button>
-      {tip && <VoiceTip onClose={() => setTip(false)} />}
+      {sheet === 'voice' && (
+        <Sheet title="ফোনে বাংলা কণ্ঠ নেই" intro="একবার নামিয়ে নিলে «শুনুন» বাংলায় পড়বে:" steps={BENGALI_VOICE_STEPS} onClose={() => setSheet(null)}>
+          <Link href="/guide#listen" className="text-base font-bold text-teal">
+            নির্দেশিকায় দেখুন
+          </Link>
+        </Sheet>
+      )}
+      {sheet === 'crashed' && (
+        <Sheet
+          title="আগেরবার পড়তে গিয়ে পাতা বন্ধ হয়েছিল"
+          intro="ফোনের কণ্ঠ-ইঞ্জিনে সমস্যা হতে পারে। Google-এর ইঞ্জিন বেছে নিলে সাধারণত ঠিক হয়:"
+          steps={SPEECH_ENGINE_STEPS}
+          onClose={() => setSheet(null)}
+        >
+          <button type="button" onClick={retry} className="min-h-12 border-0 bg-transparent px-1 text-base font-bold text-teal">
+            আবার চেষ্টা করুন
+          </button>
+        </Sheet>
+      )}
     </>
   )
 }
 
-function VoiceTip({ onClose }: { onClose: () => void }) {
+function Sheet({
+  title,
+  intro,
+  steps,
+  onClose,
+  children,
+}: {
+  title: string
+  intro: string
+  steps: string[]
+  onClose: () => void
+  children: React.ReactNode
+}) {
   return (
     <div className="fixed inset-0 z-30 mx-auto flex max-w-[390px] items-end bg-black/50 p-3" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="voice-tip-title"
+        aria-labelledby="listen-sheet-title"
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full flex-col gap-3 rounded-[20px] bg-cream p-4 text-ink"
+        className="flex max-h-full w-full flex-col gap-3 overflow-y-auto rounded-[20px] bg-cream p-4 text-ink"
       >
-        <h2 id="voice-tip-title" className="m-0 font-display text-xl leading-[1.3] font-extrabold">
-          ফোনে বাংলা কণ্ঠ নেই
+        <h2 id="listen-sheet-title" className="m-0 font-display text-xl leading-[1.3] font-extrabold">
+          {title}
         </h2>
-        <p className="m-0 text-[15px] leading-[1.45]">একবার নামিয়ে নিলে «শুনুন» বাংলায় পড়বে:</p>
-        <ol className="m-0 flex flex-col gap-1.5 pl-5 text-[15px] leading-[1.45]">
-          {BENGALI_VOICE_STEPS.map((step) => (
+        <p className="m-0 text-[0.9375rem] leading-[1.45]">{intro}</p>
+        <ol className="m-0 flex flex-col gap-1.5 pl-5 text-[0.9375rem] leading-[1.45]">
+          {steps.map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
@@ -178,9 +230,7 @@ function VoiceTip({ onClose }: { onClose: () => void }) {
           <button type="button" autoFocus onClick={onClose} className="h-12 flex-1 rounded-full border-0 bg-sun text-base font-bold text-ink">
             ঠিক আছে
           </button>
-          <Link href="/guide#listen" className="text-base font-bold text-teal">
-            নির্দেশিকায় দেখুন
-          </Link>
+          {children}
         </div>
       </div>
     </div>

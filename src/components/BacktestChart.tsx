@@ -23,7 +23,7 @@ export default function BacktestChart({ data, calendarSprays }: { data: Backtest
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <figcaption className="text-[12px] leading-[1.4] text-muted">
+      <figcaption className="text-[0.75rem] leading-[1.4] text-muted">
         Shibganj, Bogura, Dec–Feb, from docs/risk-backtest.md. Weather-only alert counts, not sprays avoided: the rule is not validated against outbreaks, so fewer alerts than weekly sprays is no evidence of a saving.
       </figcaption>
     </figure>

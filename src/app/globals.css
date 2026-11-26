@@ -23,6 +23,8 @@
   --color-muted: #6b5a4a;
   --color-muted-2: #5a4a3c;
   --color-night: #17120e;
+  /* In px, not Tailwind's rem: «লেখার আকার: বড়» raises the root font size, and only text may grow. */
+  --spacing: 4px;
 }
 
 @theme inline {
@@ -33,6 +35,11 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Set from /settings (src/lib/textSize.ts). Font sizes are in rem, so they all follow. */
+  html[data-text='large'] {
+    font-size: 112.5%;
   }
 
   body {

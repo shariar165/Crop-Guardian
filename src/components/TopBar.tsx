@@ -44,7 +44,7 @@ export default function TopBar({
         <BackIcon />
       </RoundLink>
       {typeof title === 'string' ? (
-        <h1 className="m-0 font-display text-[21px] font-bold">{title}</h1>
+        <h1 className="m-0 font-display text-[1.3125rem] font-bold">{title}</h1>
       ) : (
         title
       )}

@@ -65,6 +65,14 @@ export const BENGALI_VOICE_STEPS = [
   'সার্চ না পেলে: সেটিংস → System বা General management → Language & input → Text-to-speech।',
 ]
 
+// After the tab died while reading aloud (src/lib/speech.ts): the phone's own engine is the
+// likely cause, and Google's is the one known to read Bengali.
+export const SPEECH_ENGINE_STEPS = [
+  BENGALI_VOICE_STEPS[0],
+  '‘Preferred engine’ বা ‘পছন্দের ইঞ্জিন’-এ ‘Speech Services by Google’ বেছে নিন।',
+  BENGALI_VOICE_STEPS[2],
+]
+
 export const GUIDE: GuideSection[] = [
   {
     id: 'start',
@@ -85,7 +93,7 @@ export const GUIDE: GuideSection[] = [
     lines: [
       RISK_RULE.potato,
       'নিচে ৫ দিনের পূর্বাভাস থাকে। সামনে বিপদ আসলে আগেই জানিয়ে দিই।',
-      'মোবাইল নম্বর দিয়ে ঢুকে «আমার অ্যাকাউন্ট»-এ SMS চালু করলে বিপদের আগের দিন বিকেলে ফোনে SMS পাবেন, অ্যাপ না খুললেও।',
+      'মোবাইল নম্বর দিয়ে ঢুকে «সেটিংস» → «আমার অ্যাকাউন্ট ও SMS»-এ SMS চালু করলে বিপদের আগের দিন বিকেলে ফোনে SMS পাবেন, অ্যাপ না খুললেও।',
       'মৌসুম না থাকলে (চারা গজানোর আগে বা ফসল তোলার পরে) ঝুঁকি দেখাই না।',
     ],
   },

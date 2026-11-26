@@ -26,7 +26,7 @@ export default function AlertToggle({ enabled, place }: { enabled: boolean; plac
   return (
     <section className="stitch-lg flex flex-col gap-2 rounded-[20px] p-4">
       <h2 className="m-0 text-lg font-bold">SMS-এ ঝুঁকির খবর</h2>
-      <p className="m-0 text-[15px] leading-[1.45]">
+      <p className="m-0 text-[0.9375rem] leading-[1.45]">
         {enabled
           ? `চালু আছে। ${place ?? 'আপনার'} এলাকায় রোগের বিপদ এলে আগের দিন বিকেলে SMS পাবেন।`
           : 'বিপদের আগের দিন বিকেলে আপনার ফোনে SMS যাবে। অ্যাপ না খুললেও জানবেন।'}
@@ -47,7 +47,7 @@ export default function AlertToggle({ enabled, place }: { enabled: boolean; plac
         </button>
       )}
       {error && (
-        <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
+        <p role="alert" className="m-0 text-[0.9375rem] font-semibold text-danger">
           {error}
         </p>
       )}

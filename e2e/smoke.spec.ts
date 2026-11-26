@@ -62,3 +62,36 @@ test('Home has one «পাতার ছবি তুলুন» besides the nav
   await expect(page.getByRole('link', { name: 'পাতার ছবি তুলুন' })).toHaveCount(1)
   test.info().annotations.push({ type: 'weather', description: danger ? 'danger day: checked the card button' : 'not a danger day' })
 })
+
+test('the gear opens Settings, and «বড়» text grows the text and stays after a reload', async ({ page }) => {
+  await page.addInitScript(INTRO_SEEN)
+  await page.goto('/')
+  await page.getByRole('link', { name: 'সেটিংস' }).click()
+  await expect(page.getByRole('heading', { name: 'সেটিংস', level: 1 })).toBeVisible()
+  const size = () => page.getByRole('radiogroup', { name: 'লেখার আকার' })
+  await size().getByRole('radio', { name: 'বড়' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-text', 'large')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-text', 'large')
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe('18px')
+  // Only text grows: the page still fits the 360px screen.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
+  await size().getByRole('radio', { name: 'স্বাভাবিক' }).click()
+  await expect(page.locator('html')).not.toHaveAttribute('data-text', 'large')
+})
+
+test('«সব মুছুন» in Settings clears the phone, and the intro shows again', async ({ page }) => {
+  await page.goto('/settings')
+  await page.evaluate(() => {
+    localStorage.setItem('crop-guardian:intro-seen', '1')
+    localStorage.setItem('crop-guardian:fields', JSON.stringify([{ season: 'potato', planted: '2026-11-01' }]))
+    localStorage.setItem('cg-ask', '[]')
+    localStorage.setItem('other-site', 'kept')
+  })
+  await page.getByRole('button', { name: 'সব মুছুন' }).click()
+  await page.getByRole('button', { name: 'হ্যাঁ, মুছুন' }).click()
+  await page.waitForURL((url) => url.pathname === '/')
+  await expect(page.getByRole('button', { name: 'পরের' })).toBeVisible()
+  const left = await page.evaluate(() => Object.keys(localStorage).sort())
+  expect(left).toEqual(['other-site'])
+})

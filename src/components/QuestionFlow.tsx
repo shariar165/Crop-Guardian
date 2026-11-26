@@ -9,10 +9,11 @@ import { type Answer, saveDiagnosis } from '@/lib/captureStore'
 import { labelOf } from '@/lib/diagnosis/explain'
 import { nextQuestion, questionCount, remainingAfter } from '@/lib/diagnosis/questions'
 import { useDiagnosisState } from '@/lib/diagnosis/useDiagnosis'
+import { bengaliVoice, rateOf, SPEECH_CRASHED_KEY, SPEECH_RATE_KEY, speechEnded, speechStarted } from '@/lib/speech'
 import { primaryClass, tealClass } from './Buttons'
 import { AnswerArt } from './illustrations'
 import { BackIcon, CheckIcon, QuestionIcon, RestartIcon, WarnIcon, WaveIcon } from './icons'
-import ListenButton, { bengaliVoice } from './ListenButton'
+import ListenButton from './ListenButton'
 import OfficerShareButton from './OfficerShareButton'
 import { RoundLink } from './TopBar'
 
@@ -25,20 +26,26 @@ function ReadAloud({ text }: { text: string }) {
 
   useEffect(() => {
     const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined
-    if (!synth) return
+    // Not on a phone whose tab died while reading: the farmer can still tap শুনুন, which explains.
+    if (!synth || localStorage.getItem(SPEECH_CRASHED_KEY) === '1') return
     let started = false
     const speak = () => {
-      const voice = bengaliVoice(synth)
+      const voice = bengaliVoice(synth.getVoices())
       if (!voice || started) return
       started = true
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = 'bn-BD'
       utterance.voice = voice
-      utterance.rate = 0.9
+      utterance.rate = rateOf(localStorage.getItem(SPEECH_RATE_KEY))
       utterance.onstart = () => setState('speaking')
-      utterance.onend = () => setState('done')
-      utterance.onerror = () => setState('done')
-      synth.cancel()
+      const done = () => {
+        speechEnded()
+        setState('done')
+      }
+      utterance.onend = done
+      utterance.onerror = done
+      if (synth.speaking || synth.pending) synth.cancel()
+      speechStarted()
       synth.speak(utterance)
     }
     speak()
@@ -46,7 +53,8 @@ function ReadAloud({ text }: { text: string }) {
     synth.addEventListener('voiceschanged', speak)
     return () => {
       synth.removeEventListener('voiceschanged', speak)
-      synth.cancel()
+      if (synth.speaking || synth.pending) synth.cancel()
+      speechEnded()
     }
   }, [text])
 
@@ -98,7 +106,7 @@ export default function QuestionFlow() {
           <BackIcon />
         </RoundLink>
         <div className="flex flex-col items-center gap-1">
-          <h1 className="m-0 font-display text-[19px] font-bold" aria-live="polite">
+          <h1 className="m-0 font-display text-[1.1875rem] font-bold" aria-live="polite">
             {stepLabel}
           </h1>
           <div className="flex gap-1.5" aria-hidden="true">
@@ -138,7 +146,7 @@ export default function QuestionFlow() {
       {q ? (
         <div key={q.id} className="flex flex-1 flex-col gap-3.5 px-4 py-[18px]">
           <ReadAloud text={q.text} />
-          <h2 className="m-0 font-display text-[27px] leading-[1.2] font-extrabold">{q.text}</h2>
+          <h2 className="m-0 font-display text-[1.6875rem] leading-[1.2] font-extrabold">{q.text}</h2>
           <div className="grid grid-cols-2 gap-3">
             {(
               [
@@ -153,7 +161,7 @@ export default function QuestionFlow() {
                 className="flex flex-col items-center gap-2.5 rounded-[20px] border-2 border-ink bg-paper px-2.5 pt-2.5 pb-3.5 text-ink active:bg-sun-soft"
               >
                 <AnswerArt kind={art} />
-                <span className="font-display text-[21px] font-extrabold">{label}</span>
+                <span className="font-display text-[1.3125rem] font-extrabold">{label}</span>
               </button>
             ))}
           </div>
@@ -174,25 +182,25 @@ export default function QuestionFlow() {
                   <CheckIcon size={40} weight={2.6} />
                 </span>
                 <span className="text-base font-semibold text-muted">তালিকা ছোট হয়ে একটায় এসেছে</span>
-                <span className="font-display text-[40px] leading-[1.1] font-extrabold">{name}</span>
-                <span className="max-w-[280px] text-[15px] leading-[1.45]">ছবি আর আপনার উত্তর মিলিয়ে বাছাই করলাম।</span>
+                <span className="font-display text-[2.5rem] leading-[1.1] font-extrabold">{name}</span>
+                <span className="max-w-[280px] text-[0.9375rem] leading-[1.45]">ছবি আর আপনার উত্তর মিলিয়ে বাছাই করলাম।</span>
               </>
             ) : (
               <>
                 <span className="flex size-[72px] items-center justify-center rounded-full bg-amber-soft text-amber">
                   {outcome === 'none' ? <WarnIcon size={40} weight={2.2} /> : <QuestionIcon size={40} weight={2.2} />}
                 </span>
-                <span className="font-display text-[30px] leading-[1.15] font-extrabold">
+                <span className="font-display text-[1.875rem] leading-[1.15] font-extrabold">
                   {outcome === 'none' ? 'উত্তর ছবির সাথে মিলছে না' : 'এখনও নিশ্চিত নই'}
                 </span>
-                <span className="max-w-[290px] text-[15px] leading-[1.45]">আন্দাজে ওষুধ না দিয়ে কৃষি কর্মকর্তাকে দেখানোই ভালো।</span>
+                <span className="max-w-[290px] text-[0.9375rem] leading-[1.45]">আন্দাজে ওষুধ না দিয়ে কৃষি কর্মকর্তাকে দেখানোই ভালো।</span>
               </>
             )}
           </div>
           {outcome === 'one' ? (
             <Link
               href="/result"
-              className={`${primaryClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}
+              className={`${primaryClass} min-h-[70px] gap-2.5 font-display text-[1.375rem] font-extrabold`}
             >
               ফলাফল ও করণীয় দেখুন
             </Link>
@@ -200,7 +208,7 @@ export default function QuestionFlow() {
             <OfficerShareButton
               record={record}
               config={config}
-              className={`${tealClass} min-h-[70px] gap-2.5 font-display text-[22px] font-extrabold`}
+              className={`${tealClass} min-h-[70px] gap-2.5 font-display text-[1.375rem] font-extrabold`}
             >
               কৃষি কর্মকর্তাকে পাঠান
             </OfficerShareButton>

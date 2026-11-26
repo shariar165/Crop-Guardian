@@ -47,7 +47,7 @@ export default function LocateUnion({ next }: { next: string }) {
     return (
       <form action={chooseUnion} className="flex flex-col gap-2.5 rounded-[16px] border-2 border-ink bg-sun-soft p-3.5">
         <input type="hidden" name="next" value={next} />
-        <span className="text-[15px] font-semibold">আপনার অবস্থানের সবচেয়ে কাছের ইউনিয়ন:</span>
+        <span className="text-[0.9375rem] font-semibold">আপনার অবস্থানের সবচেয়ে কাছের ইউনিয়ন:</span>
         <span className="font-display text-xl leading-[1.3] font-extrabold">{state.name}</span>
         <span className="text-base font-bold">এটাই?</span>
         <div className="flex gap-2.5">
@@ -72,13 +72,13 @@ export default function LocateUnion({ next }: { next: string }) {
         type="button"
         onClick={locate}
         disabled={state.step === 'locating'}
-        className="flex min-h-14 items-center justify-center gap-2 rounded-[16px] border-2 border-ink bg-sun px-4 text-[17px] font-bold text-ink disabled:opacity-70"
+        className="flex min-h-14 items-center justify-center gap-2 rounded-[16px] border-2 border-ink bg-sun px-4 text-[1.0625rem] font-bold text-ink disabled:opacity-70"
       >
         <PinIcon size={24} weight={2.2} />
         {state.step === 'locating' ? 'অবস্থান খুঁজছি…' : 'আমার অবস্থান থেকে বেছে নিন'}
       </button>
       {state.step === 'error' && (
-        <p role="alert" className="m-0 text-[15px] leading-[1.45] font-semibold text-[#8A3424]">
+        <p role="alert" className="m-0 text-[0.9375rem] leading-[1.45] font-semibold text-[#8A3424]">
           {state.message}
         </p>
       )}

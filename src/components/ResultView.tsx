@@ -74,18 +74,18 @@ export default function ResultView() {
 
       <div className="flex shrink-0 flex-col gap-1.5 px-[18px]">
         <span
-          className={`flex h-8 items-center gap-1.5 self-start rounded-2xl px-3 text-[15px] font-bold ${
+          className={`flex h-8 items-center gap-1.5 self-start rounded-2xl px-3 text-[0.9375rem] font-bold ${
             final.via === 'model' ? 'bg-leaf text-white' : 'bg-sun text-ink'
           }`}
         >
           <CheckIcon size={18} weight={2.8} />
           {word}
         </span>
-        <h1 className="m-0 font-display text-[42px] leading-[1.05] font-extrabold">{name}</h1>
-        <span className="text-[15px] font-medium text-muted">{content.en} · {CROPS[crop].nameBn}</span>
+        <h1 className="m-0 font-display text-[2.625rem] leading-[1.05] font-extrabold">{name}</h1>
+        <span className="text-[0.9375rem] font-medium text-muted">{content.en} · {CROPS[crop].nameBn}</span>
         <div
           role={content.banner.tone === 'ok' ? 'status' : 'alert'}
-          className={`mt-1 flex items-center gap-2 rounded-[14px] px-3 py-[9px] text-[15px] font-bold ${BANNER[content.banner.tone]}`}
+          className={`mt-1 flex items-center gap-2 rounded-[14px] px-3 py-[9px] text-[0.9375rem] font-bold ${BANNER[content.banner.tone]}`}
         >
           {content.banner.tone === 'ok' ? <CheckIcon size={22} weight={2.4} /> : <WarnIcon size={22} weight={2.2} />}
           {content.banner.text}
@@ -107,7 +107,7 @@ export default function ResultView() {
             <figcaption className="text-sm font-semibold text-muted">আঁকা ছবি: {name}</figcaption>
           </figure>
         </div>
-        <p className="m-0 text-[15px] leading-[1.4]">{content.sign}</p>
+        <p className="m-0 text-[0.9375rem] leading-[1.4]">{content.sign}</p>
       </section>
 
       <WhyCard
@@ -122,14 +122,14 @@ export default function ResultView() {
         <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
           {content.steps.map((s, i) => (
             <li key={s} className="flex items-start gap-3">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sun font-display text-[17px] font-extrabold">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sun font-display text-[1.0625rem] font-extrabold">
                 {toBnDigits(i + 1)}
               </span>
               <span className="pt-[3px] text-base leading-[1.4]">{s}</span>
             </li>
           ))}
         </ol>
-        {followUp && <p className="m-0 text-[15px] font-semibold text-teal">৫ দিন পর হোমে মনে করিয়ে দেব।</p>}
+        {followUp && <p className="m-0 text-[0.9375rem] font-semibold text-teal">৫ দিন পর হোমে মনে করিয়ে দেব।</p>}
       </section>
 
       <a
@@ -149,7 +149,7 @@ export default function ResultView() {
         <div className="flex shrink-0 flex-col gap-2 px-4 pb-[18px]">
           <div className="grid grid-cols-[2fr_3fr] gap-2.5">
             <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
-            <PrimaryLink href={`/camera?crop=${crop}`} className="min-h-[66px] gap-2 px-2.5 text-[17px] font-bold">
+            <PrimaryLink href={`/camera?crop=${crop}`} className="min-h-[66px] gap-2 px-2.5 text-[1.0625rem] font-bold">
               <CameraIcon size={24} weight={2.2} />
               আরেকটা পাতা দেখুন
             </PrimaryLink>
@@ -169,7 +169,7 @@ export default function ResultView() {
           <OfficerShareButton
             record={record}
             config={config}
-            className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}
+            className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[1.0625rem] font-bold`}
           >
             <PersonIcon size={24} />
             কৃষি কর্মকর্তাকে দেখান

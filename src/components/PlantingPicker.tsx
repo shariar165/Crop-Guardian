@@ -149,7 +149,7 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
 
   return (
     <>
-      <p className="m-0 text-[15px] leading-[1.45]">
+      <p className="m-0 text-[0.9375rem] leading-[1.45]">
         {crop.plantedQuestion} তারিখ দিলে চারা থেকে ফসল তোলা পর্যন্ত ঠিক সময়ে {crop.diseaseBn} রোগের ঝুঁকির খবর পাবেন, আর মৌসুমের হিসাব শুরু হবে।
       </p>
 
@@ -222,18 +222,18 @@ function DateForm({ season, field, back }: { season: SeasonId; field: Field | nu
 
       {/* Only the dropdowns can reach a future date; the chips show their dates themselves. */}
       {future && (
-        <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
+        <p role="alert" className="m-0 text-[0.9375rem] font-semibold text-danger">
           ভবিষ্যতের তারিখ দেওয়া যাবে না।
         </p>
       )}
 
       {error && (
-        <p role="alert" className="m-0 text-[15px] font-semibold text-danger">
+        <p role="alert" className="m-0 text-[0.9375rem] font-semibold text-danger">
           {error}
         </p>
       )}
 
-      <button type="button" disabled={future} onClick={() => save(date)} className={`${primaryClass} h-[64px] font-display text-[22px] font-extrabold disabled:opacity-50`}>
+      <button type="button" disabled={future} onClick={() => save(date)} className={`${primaryClass} h-[64px] font-display text-[1.375rem] font-extrabold disabled:opacity-50`}>
         তারিখ রাখুন
       </button>
       {field &&

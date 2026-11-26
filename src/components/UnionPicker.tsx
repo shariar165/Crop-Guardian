@@ -84,7 +84,7 @@ export default function UnionPicker({
       <LocateUnion next={base} />
       {DIVISIONS.map((v) => (
         <section key={v.id} className="flex flex-col gap-2">
-          <h3 className="m-0 text-[15px] font-bold text-muted-2">{v.nameBn}</h3>
+          <h3 className="m-0 text-[0.9375rem] font-bold text-muted-2">{v.nameBn}</h3>
           <div className="grid grid-cols-2 gap-2">
             {byName(v.districts).map((x) => (
               <Link key={x.id} href={href('d', x.id)} className={`${BUTTON} ${current && upazilaById(current.upazilaId)?.districtId === x.id ? ON : OFF}`}>
@@ -104,7 +104,7 @@ function StepBack({ href, label }: { href: string; label: string }) {
       <Link href={href} aria-label="আগের ধাপ" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-sand text-ink">
         <BackIcon size={20} />
       </Link>
-      <span className="text-[15px] leading-[1.3] font-bold">{label}</span>
+      <span className="text-[0.9375rem] leading-[1.3] font-bold">{label}</span>
     </div>
   )
 }

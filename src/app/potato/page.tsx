@@ -29,12 +29,12 @@ export default function PotatoPage() {
           <li key={s.id} id={s.id} className="stitch-lg flex scroll-mt-4 flex-col gap-2.5 rounded-[20px] p-4">
             <div className="flex items-center gap-3">
               <GuideIcon kind={s.icon} />
-              <h2 className="m-0 flex-1 font-display text-[19px] leading-[1.2] font-extrabold">
+              <h2 className="m-0 flex-1 font-display text-[1.1875rem] leading-[1.2] font-extrabold">
                 {toBnDigits(i + 1)}. {s.title}
               </h2>
             </div>
 
-            <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-[1.45]">
+            <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[0.9375rem] leading-[1.45]">
               {s.lines.map((line) => (
                 <li key={line}>{line}</li>
               ))}
@@ -56,9 +56,9 @@ export default function PotatoPage() {
         <li id="sources" className="stitch-lg flex scroll-mt-4 flex-col gap-2.5 rounded-[20px] p-4">
           <div className="flex items-center gap-3">
             <GuideIcon kind="doc" />
-            <h2 className="m-0 flex-1 font-display text-[19px] leading-[1.2] font-extrabold">সূত্র</h2>
+            <h2 className="m-0 flex-1 font-display text-[1.1875rem] leading-[1.2] font-extrabold">সূত্র</h2>
           </div>
-          <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-[1.45]">
+          <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[0.875rem] leading-[1.45]">
             {POTATO_SOURCES.map((s) =>
               s.href ? (
                 <li key={s.label}>
@@ -71,7 +71,7 @@ export default function PotatoPage() {
               ),
             )}
           </ul>
-          <p className="m-0 text-[14px] leading-[1.45]">পরামর্শগুলো পরীক্ষামূলক। ওষুধ সবসময় লেবেল অনুযায়ী দিন, সন্দেহ হলে উপসহকারী কৃষি কর্মকর্তার পরামর্শ নিন।</p>
+          <p className="m-0 text-[0.875rem] leading-[1.45]">পরামর্শগুলো পরীক্ষামূলক। ওষুধ সবসময় লেবেল অনুযায়ী দিন, সন্দেহ হলে উপসহকারী কৃষি কর্মকর্তার পরামর্শ নিন।</p>
         </li>
       </ol>
 

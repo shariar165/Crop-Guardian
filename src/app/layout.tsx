@@ -3,6 +3,7 @@ import { Baloo_Da_2, Hind_Siliguri } from 'next/font/google'
 import CaseSync from '@/components/CaseSync'
 import PhoneFrame from '@/components/PhoneFrame'
 import ServiceWorker from '@/components/ServiceWorker'
+import { TEXT_SIZE_SCRIPT } from '@/lib/textSize'
 import './globals.css'
 
 const hind = Hind_Siliguri({
@@ -30,7 +31,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="bn" className={`${hind.variable} ${baloo.variable}`}>
+    // The head script may set data-text before React hydrates, hence suppressHydrationWarning.
+    <html lang="bn" className={`${hind.variable} ${baloo.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_SCRIPT }} />
+      </head>
       <body suppressHydrationWarning>
         <PhoneFrame>{children}</PhoneFrame>
         <ServiceWorker />

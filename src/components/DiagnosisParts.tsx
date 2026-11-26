@@ -71,7 +71,7 @@ export function WhyCard({
       {rows.map((r) => (
         <div key={r.text} className="flex items-center gap-3">
           {r.icon}
-          <span className="text-[15px] leading-[1.4]" aria-live={r.text.includes('আবহাওয়া') ? 'polite' : undefined}>
+          <span className="text-[0.9375rem] leading-[1.4]" aria-live={r.text.includes('আবহাওয়া') ? 'polite' : undefined}>
             {r.text}
           </span>
         </div>
@@ -86,7 +86,7 @@ export function NoDiagnosis() {
     <div className="flex flex-1 flex-col">
       <TopBar back="/" title="ফলাফল" right={<span className="size-11" />} />
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <span className="font-display text-[26px] font-extrabold">এখনো কোনো ছবি দেখা হয়নি</span>
+        <span className="font-display text-[1.625rem] font-extrabold">এখনো কোনো ছবি দেখা হয়নি</span>
         <span className="text-base leading-[1.45] text-muted">পাতার দুটো ছবি তুললে ফলাফল এখানে দেখাব।</span>
         <Link href="/camera" className={`${primaryClass} min-h-[64px] w-full gap-2.5 font-display text-xl font-extrabold`}>
           <CameraIcon size={26} weight={2.2} />

@@ -32,7 +32,7 @@ export default async function AccountPage() {
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-sm font-semibold text-muted">{ROLE_LABEL[role]}</span>
-            <span className="font-display text-[23px] font-extrabold">{viewerLabel(user, showcase)}</span>
+            <span className="font-display text-[1.4375rem] font-extrabold">{viewerLabel(user, showcase)}</span>
           </div>
         </section>
         {place && <AlertToggle enabled={alert?.enabled === true} place={place.union ? place.name : null} />}

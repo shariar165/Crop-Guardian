@@ -568,7 +568,7 @@ export default function CameraScreen() {
 
       <div className="flex shrink-0 flex-col justify-center gap-3 px-6 pt-3 pb-2.5">
         <CropSwitch crop={crop} onPick={pickCrop} disabled={busy || analysis === 'running'} />
-        <div className="flex items-center justify-center gap-2 text-[15px] font-semibold">
+        <div className="flex items-center justify-center gap-2 text-[0.9375rem] font-semibold">
           {([1, 2] as const).map((n) => (
             <span
               key={n}
@@ -587,7 +587,7 @@ export default function CameraScreen() {
             type="button"
             onClick={() => setSamplesOpen(true)}
             disabled={busy || analysis === 'running'}
-            className="h-11 self-center rounded-full border-2 border-sun bg-transparent px-4 text-[15px] font-bold text-sun disabled:opacity-50"
+            className="h-11 self-center rounded-full border-2 border-sun bg-transparent px-4 text-[0.9375rem] font-bold text-sun disabled:opacity-50"
           >
             {SAMPLE_BUTTON}
           </button>

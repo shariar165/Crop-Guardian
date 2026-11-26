@@ -111,7 +111,7 @@ export default function MapView({
       </div>
 
       {!risks && (
-        <p role="alert" className="mx-4 mt-3 mb-0 shrink-0 rounded-[16px] bg-amber-soft px-4 py-2.5 text-[15px] leading-[1.4] font-semibold text-[#6B4A00]">
+        <p role="alert" className="mx-4 mt-3 mb-0 shrink-0 rounded-[16px] bg-amber-soft px-4 py-2.5 text-[0.9375rem] leading-[1.4] font-semibold text-[#6B4A00]">
           আবহাওয়ার তথ্য আনা যায়নি — নেট নেই? ঝুঁকির রং দেখানো যাচ্ছে না।
         </p>
       )}
@@ -216,7 +216,7 @@ export default function MapView({
 
       <div className="mx-4 mt-3 grid shrink-0 grid-cols-2 gap-2.5">
         <div className="flex flex-col gap-0.5 rounded-[18px] border-[1.5px] border-line bg-paper px-3.5 py-3">
-          <span className="font-display text-[30px] leading-[1.1] font-extrabold">{totalCases === null ? '—' : `${toBnDigits(totalCases)}টা`}</span>
+          <span className="font-display text-[1.875rem] leading-[1.1] font-extrabold">{totalCases === null ? '—' : `${toBnDigits(totalCases)}টা`}</span>
           <span className="text-sm leading-[1.35]">
             {!casesShown ? 'ধানের কেস এখনো গোনা হয় না' : totalCases === null ? 'কেসের তথ্য এখন আনা যায়নি' : PERIODS[period].caseLabel}
           </span>
@@ -238,7 +238,7 @@ export default function MapView({
           )}
         </div>
         <div className="flex flex-col gap-0.5 rounded-[18px] border-[1.5px] border-line bg-paper px-3.5 py-3">
-          <span className="font-display text-[30px] leading-[1.1] font-extrabold text-danger-deep">
+          <span className="font-display text-[1.875rem] leading-[1.1] font-extrabold text-danger-deep">
             {dangerCount === null ? '—' : `${toBnDigits(dangerCount)}টা`}
           </span>
           <span className="text-sm leading-[1.35]">ইউনিয়নে আজ বিপদ সংকেত</span>
@@ -318,7 +318,7 @@ function UnionSheet({
             'আজকের ঝুঁকি জানা যায়নি'
           )}
         </p>
-        {cases > 0 && <p className="m-0 text-[15px]">কর্মকর্তার নিশ্চিত কেস: {toBnDigits(cases)}টা</p>}
+        {cases > 0 && <p className="m-0 text-[0.9375rem]">কর্মকর্তার নিশ্চিত কেস: {toBnDigits(cases)}টা</p>}
         {mine ? (
           <p className="m-0 flex items-center gap-1.5 text-base font-bold text-leaf">
             <CheckIcon size={20} weight={2.6} />

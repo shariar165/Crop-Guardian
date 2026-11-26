@@ -46,7 +46,7 @@ export default function UnknownView() {
       </div>
 
       <div className="flex shrink-0 flex-col items-center gap-1.5 px-6 pt-2.5 text-center">
-        <h1 className="m-0 font-display text-[30px] leading-[1.15] font-extrabold">এটা আমি চিনতে পারছি না</h1>
+        <h1 className="m-0 font-display text-[1.875rem] leading-[1.15] font-extrabold">এটা আমি চিনতে পারছি না</h1>
         <p className="m-0 text-base leading-[1.45] text-[#4A3B2F]">ভুল পরামর্শ দেওয়ার চেয়ে সৎভাবে না বলা ভালো।</p>
         <ValidationBadge crop={crop} sample={record.sample} className="self-center" />
       </div>
@@ -55,7 +55,7 @@ export default function UnknownView() {
         <h2 className="m-0 font-display text-lg font-bold">কেন?</h2>
         <div className="flex items-start gap-2.5">
           <SearchIcon size={22} weight={2.2} className="mt-px text-amber" />
-          <span className="text-[15px] leading-[1.45]">{known}। ছবি এগুলোর কোনোটার সাথে যথেষ্ট মেলেনি</span>
+          <span className="text-[0.9375rem] leading-[1.45]">{known}। ছবি এগুলোর কোনোটার সাথে যথেষ্ট মেলেনি</span>
         </div>
         {photoNote && (
           <div className="flex items-start gap-2.5">
@@ -64,7 +64,7 @@ export default function UnknownView() {
             ) : (
               <WarnIcon size={22} weight={2.2} className="mt-px text-amber" />
             )}
-            <span className="text-[15px] leading-[1.45]">{photoNote}</span>
+            <span className="text-[0.9375rem] leading-[1.45]">{photoNote}</span>
           </div>
         )}
       </section>

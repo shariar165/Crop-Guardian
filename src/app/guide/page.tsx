@@ -49,7 +49,7 @@ export default function GuidePage() {
             <details id={s.id} open={i === 0} className="group stitch-lg flex scroll-mt-4 flex-col rounded-[20px] p-4">
               <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
                 <GuideIcon kind={s.icon} />
-                <h2 className="m-0 flex-1 font-display text-[19px] leading-[1.2] font-extrabold">
+                <h2 className="m-0 flex-1 font-display text-[1.1875rem] leading-[1.2] font-extrabold">
                   {toBnDigits(i + 1)}. {s.title}
                 </h2>
                 <span aria-hidden="true" className="shrink-0 text-2xl font-bold text-teal transition-transform group-open:rotate-90">
@@ -67,13 +67,13 @@ export default function GuidePage() {
                             {DAY_STATE[m.risk].word}
                           </span>
                         </span>
-                        <span className="text-[15px] leading-[1.4]">{m.text}</span>
+                        <span className="text-[0.9375rem] leading-[1.4]">{m.text}</span>
                       </li>
                     ))}
                   </ul>
                 )}
 
-                <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-[1.45]">
+                <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[0.9375rem] leading-[1.45]">
                   {s.lines.map((line) => (
                     <li key={line}>{line}</li>
                   ))}
