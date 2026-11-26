@@ -39,7 +39,7 @@ export const RISK_VIEW: Record<Risk, RiskView> = {
   },
   danger: {
     sky: '#2C4A50', ink: '#FBF6EC', word: 'বিপদ', badgeBg: '#C2412D', badgeInk: '#FFFFFF',
-    title: '২ দিনের মধ্যে স্প্রে করুন',
+    title: 'আজই পাতা দেখুন',
     accent: '#C2412D', accentSoft: '#F5D9D2', sunOp: 0, cloudOp: 1, fogOp: 1, rainOp: 1, icon: 'spray',
   },
 }

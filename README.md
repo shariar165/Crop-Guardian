@@ -58,6 +58,8 @@ On a locked-down network `npm install` can fail because `onnxruntime-node` (used
 | `/account` | The signed-in number and role, SMS risk alerts on/off, sign out (from the person button on Home) |
 | `/officer` | Agriculture officers only: where farmers' cases will be listed |
 
+Home, the map, the ledger, the guide, `/planting`, `/potato` and `/account` share a bottom nav that stays on screen: হোম · ম্যাপ · ছবি · হিসাব · প্রশ্ন. ছবি (`/camera`) is a big round button raised above the bar. The camera and `/ask` have their own layouts without it.
+
 ## Late-blight risk
 
 Home's risk is computed from the weather, with no ML. `src/lib/weather.ts` fetches a 5-day hourly forecast (temperature, relative humidity) at the centroid of the farmer's union (or Shibganj upazila, Bogura, before one is chosen) from [Open-Meteo](https://open-meteo.com/) (no API key, cached for 1 hour, 5 s timeout). `src/lib/risk.ts` applies the Hutton criteria to it:
@@ -70,7 +72,7 @@ Home's risk is computed from the weather, with no ML. `src/lib/weather.ts` fetch
 
 The same result is served as JSON at `GET /api/risk` (optional `lat`, `lon`, by default the farmer's union; optional `crop=potato|paddy`, potato by default). If the forecast can't be fetched, Home says so ("আবহাওয়ার তথ্য আনা যায়নি") and shows no risk at all, never an old or made-up one.
 
-The header line under the risk and the text under today's decision are generated from the forecast numbers. When a danger day is ahead it is named from the forecast, never as a fixed weekday, with the afternoon before it. A farmer with [SMS alerts](#sms-alerts) on is promised a text then ("বুধবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে SMS-এ জানাব।"); anyone else is asked to look again ("… কাল বিকেলে আবার দেখে নিন।"), with a link to turn alerts on. The app never promises a message it won't send. Both lines are kept to two lines on a phone; the tests guard their length.
+The header line under the risk and the text under today's decision are generated from the forecast numbers. When a danger day is ahead it is named from the forecast, never as a fixed weekday, with the afternoon before it. A farmer with [SMS alerts](#sms-alerts) on is promised a text then ("বুধবার থেকে ঝুঁকি বাড়বে। কাল বিকেলে SMS-এ জানাব।"); anyone else is asked to look again ("… কাল বিকেলে আবার দেখে নিন।"), with a link to turn alerts on. The app never promises a message it won't send. On a danger day the decision's title is "আজই পাতা দেখুন", and the text makes the spray conditional on what the farmer finds ("পাতায় দাগ পেলে ২ দিনের মধ্যে স্প্রে করুন"; for paddy, "পাতা আর শীষে দাগ পেলে দ্রুত স্প্রে করুন"), because the rule isn't field-validated. The card has a "পাতার ছবি তুলুন" button for that crop above "আজ স্প্রে করেছি". Both lines are kept to two lines on a phone; the tests guard their length.
 
 Potato risk is labelled পরীক্ষামূলক (`experimental: true` in `crops.ts`) under the decision, on the map legend, on the ledger and in the SMS, as paddy's is. No text tells a farmer that spraying isn't needed or that money is saved by not spraying: a quiet day says the weather is drier and to keep checking the leaves («কয়েক দিন আবহাওয়া তুলনায় শুকনো। তবু নিয়মিত পাতা দেখতে থাকুন।»). `saysNoNeed` in `src/lib/assistant/guard.ts` recognises such text; the tests run it over every screen text, card, result, SMS and knowledge-base chunk, and the assistant drops any sentence it matches (as it drops a dose) and says to keep checking instead.
 
@@ -135,6 +137,8 @@ Risk is shown only while a crop is in the field (`src/lib/season.ts`, windows in
 The paddy windows are drafts for common BRRI varieties; harvest varies by variety.
 
 The farmer's fields are set on `/planting` and kept on the device in localStorage (`src/lib/fields.ts`): at most one per season, so the season is the field's id. The union stays one per phone. A phone from before fields had one potato date (`crop-guardian:planting-date`); it becomes the potato field, and is kept in step with it so an older version still finds it. Without any field, Home assumes the usual potato season, as before, and asks for the union and a field.
+
+Until the farmer chooses a union, Home shows the default upazila's risk with the place line "উদাহরণ: শিবগঞ্জ, বগুড়া", and one setup card under the header ("আপনার এলাকা আর ফসল জানান — ১ মিনিট", or just the place if a field is set) links to `/planting`. While it shows, the ledger pill doesn't ask for the planting date too. Once a union is chosen, a missing field is asked for by a smaller line under the 5-day strip.
 
 When several fields are in season, Home shows a chip for each. The server renders every crop's header, strip and decision from the one forecast, and `FieldsGate` shows the farmer's last chip, else the riskiest. Outside every window Home shows the crop's off-season title (e.g. "এখন ধসা রোগের মৌসুম নয়") and the date alerts start, instead of a risk.
 
@@ -273,11 +277,11 @@ npm run db:migrate
 
 ## Guide
 
-`/guide` explains each part of the app in short Bengali, with a read-aloud button per section (`src/lib/guide.ts` holds the text; keep it in step with the screens). Home's "কীভাবে ব্যবহার করবেন" button opens it, "কেন এই পরামর্শ?" links to its risk section, and it is cached for offline use. The first time the app opens, `FirstRunIntro` shows four cards (risk colours, leaf photos, spray log, set up) and ends on `/planting`. It is not shown again on that phone.
+`/guide` explains each part of the app in short Bengali, with a read-aloud button per section (`src/lib/guide.ts` holds the text; keep it in step with the screens). The round "?" in Home's header opens it, "কেন এই পরামর্শ?" links to its risk section, and it is cached for offline use. The first time the app opens, `FirstRunIntro` shows four cards (risk colours, leaf photos, spray log, set up) and ends on `/planting`. It is not shown again on that phone.
 
 ## Assistant (কৃষি সহায়ক)
 
-`/ask` answers a farmer's typed question in Bengali, **only from the advice the app already shows** (`src/lib/assistant/kb.ts`: the potato advice, the guide, the diagnosis advice, the risk colours and each crop's photo steps, 31 passages). It is a faster way to find that advice, not a new source of it. It needs the network, so it is not cached offline. It is linked from Home.
+`/ask` answers a farmer's typed question in Bengali, **only from the advice the app already shows** (`src/lib/assistant/kb.ts`: the potato advice, the guide, the diagnosis advice, the risk colours and each crop's photo steps, 31 passages). It is a faster way to find that advice, not a new source of it. It needs the network, so it is not cached offline. It is the প্রশ্ন tab in the bottom nav.
 
 How a question is answered (`src/lib/assistant/answer.ts`). The models are called directly with free API keys that need no card (`src/lib/assistant/models.ts`). A first question already answered comes from the cache (`cache.ts`, the `ask_cache` table) with no model call: the key is a hash of the question in a normal form, the crop, the advice's version and `PROMPT_VERSION`, so a change to the advice or the prompts starts afresh, and the question's words are never stored. Follow-ups, today's forecast, passages shown in place of an answer and «আলু না ধান?» are never kept, and without the table the app works as if the cache were empty:
 

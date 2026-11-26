@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import BottomNav from '@/components/BottomNav'
-import { outlineClass, PrimaryLink } from '@/components/Buttons'
+import { PrimaryLink } from '@/components/Buttons'
 import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
-import { BookIcon, CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
+import { CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
 import SprayButton from '@/components/SprayButton'
@@ -122,7 +122,16 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
           <Link href="/guide#risk" className="mt-0.5 text-[15px] font-semibold text-teal">
             কেন এই পরামর্শ?
           </Link>
-          {risk === 'danger' && <SprayButton className="mt-1.5 self-start" />}
+          {risk === 'danger' && (
+            <>
+              {/* The title asks the farmer to look at the leaves today; the camera is how. */}
+              <PrimaryLink href={`/camera?crop=${crop}`} className="mt-1.5 min-h-12 gap-2 self-start px-4 text-base font-bold">
+                <CameraIcon size={22} weight={2.2} />
+                পাতার ছবি তুলুন
+              </PrimaryLink>
+              <SprayButton className="mt-1 self-start" />
+            </>
+          )}
         </div>
       </section>
     ),
@@ -133,6 +142,8 @@ function cropPanels(crop: CropId, live: RiskAssessment, place: string, alerts: b
 export default async function Home() {
   const [place, alerts] = await Promise.all([getPlace(), viewerHasAlerts()])
   const hourly = await loadForecast(place.lat, place.lon)
+  // Until the farmer picks a union, the default upazila's risk is an example, not theirs.
+  const placeLabel = place.union ? place.name : `উদাহরণ: ${place.name}`
   const live = hourly && assessAll(hourly)
   const showcase = showcaseActive()
 
@@ -140,13 +151,13 @@ export default async function Home() {
   if (!live) {
     gate = (
       <>
-        <NoForecast place={place.name} />
+        <NoForecast place={placeLabel} />
         <LedgerPill />
       </>
     )
   } else {
-    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], place.name, alerts)])) as Record<CropId, CropPanels>
-    gate = <FieldsGate today={todayIn()} place={place.name} hasUnion={place.union !== null} panels={panels} />
+    const panels = Object.fromEntries(CROP_IDS.map((c) => [c, cropPanels(c, live[c], placeLabel, alerts)])) as Record<CropId, CropPanels>
+    gate = <FieldsGate today={todayIn()} place={placeLabel} hasUnion={place.union !== null} panels={panels} />
   }
 
   return (
@@ -160,18 +171,9 @@ export default async function Home() {
           <CameraIcon size={30} weight={2.2} />
           <span className="font-display text-[23px] font-extrabold">পাতার ছবি তুলুন</span>
         </PrimaryLink>
-        <Link href="/guide" className={`${outlineClass} h-[58px] gap-2.5 text-lg font-bold`}>
-          <BookIcon size={24} weight={2.2} />
-          কীভাবে ব্যবহার করবেন
+        <Link href="/potato" className="self-center text-[15px] font-bold text-teal">
+          আলু চাষের পরামর্শ →
         </Link>
-        <div className="flex justify-center gap-5">
-          <Link href="/potato" className="text-[15px] font-bold text-teal">
-            আলু চাষের পরামর্শ →
-          </Link>
-          <Link href="/ask" className="text-[15px] font-bold text-teal">
-            প্রশ্ন করুন →
-          </Link>
-        </div>
         {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}
         {showcase && (
           <Link href="/docs" lang="en" className="self-center text-[15px] font-bold text-teal">

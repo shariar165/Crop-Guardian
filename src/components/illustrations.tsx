@@ -3,9 +3,11 @@ import type { AnswerArtKind } from '@/lib/diagnosis/questions'
 import type { RiskView } from '@/lib/data'
 
 /* Weather scene in the home header; layer opacities come from the risk state. */
+// HomeHeader's text column ends 202px from the left, so on narrow phones the drawing shrinks to
+// start right of it (6px gap) and never sits under the risk text.
 export function SkyScene({ view }: { view: RiskView }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 170 130" className="absolute top-[70px] right-1.5 h-[130px] w-[170px]">
+    <svg aria-hidden="true" viewBox="0 0 170 130" className="absolute top-[70px] right-1.5 h-auto w-[min(170px,calc(100%-214px))]">
       <circle cx="112" cy="44" r="26" fill="#E8B931" opacity={view.sunOp} className="transition-opacity duration-500" />
       <g opacity={view.cloudOp} className="transition-opacity duration-500">
         <path d="M38 86h86a20 20 0 0 0 2-40 30 30 0 0 0-56-4 22 22 0 0 0-32 44z" fill="#F3EFE6" />

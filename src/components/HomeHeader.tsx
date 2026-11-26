@@ -28,14 +28,22 @@ export default function HomeHeader({
             <span className="text-[13px] font-medium">মাঠের সৎ ডাক্তার</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
+          <Link
+            href="/guide"
+            aria-label="কীভাবে ব্যবহার করবেন"
+            className="flex size-11 items-center justify-center rounded-full bg-white/78 font-display text-[22px] font-extrabold text-ink no-underline"
+          >
+            ?
+          </Link>
           <Link href="/account" aria-label="আমার অ্যাকাউন্ট" className="flex size-11 items-center justify-center rounded-full bg-white/78 text-ink">
             <PersonIcon size={22} />
           </Link>
         </div>
       </div>
 
+      {/* Text ends 202px from the left; SkyScene sizes itself to stay right of that. */}
       <div className="relative flex max-w-[220px] flex-col gap-2 px-[18px] pt-3.5">
         {/* Kept on one line; it may run past the column into empty sky rather than push the text down. */}
         <div className="flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
