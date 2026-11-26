@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { signedInUserId, updateAlert } from '@/lib/alertDb'
-import { placeOf, unionById } from '@/lib/areas'
+import { fullName, nearestUnion, placeOf, unionById } from '@/lib/areas'
 import { PLACE_COOKIE, PLACE_COOKIE_MAX_AGE_S, UNION_COOKIE } from '@/lib/placeCookies'
 
 // Saves the farmer's union for Home's forecast, the map and the cases they send.
@@ -25,4 +25,12 @@ export async function chooseUnion(formData: FormData) {
   // Back to /planting without the picker's steps, so it shows the place just chosen.
   const next = String(formData.get('next') ?? '')
   if (/^\/planting(\?|$)/.test(next)) redirect(next)
+}
+
+// The union nearest the phone's location, for the farmer to confirm; null outside the covered areas.
+// Nothing is saved here and the coordinates are neither stored nor logged: the farmer's answer goes
+// through chooseUnion like a tap on the list.
+export async function findUnionNear(lat: number, lon: number): Promise<{ id: string; name: string } | null> {
+  const union = nearestUnion(Number(lat), Number(lon))
+  return union && { id: union.id, name: fullName(union) }
 }

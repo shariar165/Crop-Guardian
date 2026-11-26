@@ -18,6 +18,12 @@ export function bnWeekday(isoDate: string): string {
 
 export const BN_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর']
 
+// "2026-01-14" → "১৪ জানুয়ারি", where the year is plain from context.
+export function bnDayMonth(isoDate: string): string {
+  const [, m, d] = isoDate.split('-').map(Number)
+  return `${toBnDigits(d)} ${BN_MONTHS[m - 1]}`
+}
+
 // "2026-01-14" → "১৪ জানুয়ারি ২০২৬"
 export function bnDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number)
