@@ -39,24 +39,24 @@ describe('class content', () => {
 describe('photoLine', () => {
   it('says once when both photos agree', () => {
     const r = fixtureDiagnosis('confident', realConfig).result
-    assert.equal(photoLine(r, realConfig, 'potato'), 'দুই ছবিতেই একই ফল: নাবি ধসা (নিশ্চিত)')
+    assert.equal(photoLine(r, realConfig, 'potato'), 'দুই ছবিতেই একই ফল: নাবি ধসা (ছবিতে মিলেছে)')
   })
 
   it('names each photo when they differ', () => {
     assert.equal(
       photoLine(fixtureDiagnosis('uncertain', realConfig).result, realConfig, 'potato'),
-      'পাতার উপরের দিক: আগাম ধসা (নিশ্চিত) · নিচের দিক: নাবি ধসা (নিশ্চিত)',
+      'উপরের ছবিতে আগাম ধসার মতো, নিচেরটায় নাবি ধসার মতো',
     )
     assert.equal(
       photoLine(fixtureDiagnosis('unknown', realConfig).result, realConfig, 'potato'),
-      'পাতার উপরের দিক: নাবি ধসা (নিশ্চিত) · নিচের দিক: চিনতে পারিনি',
+      'উপরের ছবিতে নাবি ধসার মতো, নিচেরটায় কিছু চেনা যায়নি',
     )
   })
 })
 
 it('names the paddy photos as two leaves, not top and underside', () => {
   const r = fixtureDiagnosis('uncertain', realConfig).result
-  assert.match(photoLine(r, realConfig, 'paddy'), /^প্রথম পাতা: .* · দ্বিতীয় পাতা: /)
+  assert.match(photoLine(r, realConfig, 'paddy'), /^প্রথম ছবিতে .*, দ্বিতীয়টায় /)
 })
 
 describe('riskLine', () => {

@@ -200,7 +200,7 @@ export default function MapView({
         </svg>
       </div>
 
-      <div className="mx-[18px] mt-2.5 flex shrink-0 flex-wrap gap-3 text-[13px] font-semibold">
+      <div className="mx-[18px] mt-2.5 flex shrink-0 flex-wrap gap-3 text-sm font-semibold">
         <span className="text-muted">
           আজকের {CROPS[crop].diseaseBn} ঝুঁকি{CROPS[crop].experimental ? ' (পরীক্ষামূলক)' : ''}:
         </span>
@@ -236,7 +236,7 @@ export default function MapView({
       {!mineUnion && (
         <Link
           href="/planting"
-          className="mx-4 mt-2.5 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-[14px] leading-[1.35] font-semibold text-ink no-underline"
+          className="mx-4 mt-2.5 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-base leading-[1.35] font-semibold text-ink no-underline"
         >
           আপনার ইউনিয়ন বেছে নিন, ম্যাপে দেখাব
           <span className="shrink-0 text-teal">বেছে নিন</span>

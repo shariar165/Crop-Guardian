@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { SpeechPart } from '@/lib/audioKeys'
 import type { RiskView } from '@/lib/data'
 import { PersonIcon, PinIcon } from './icons'
 import { FieldStrip, LogoMark, SkyScene } from './illustrations'
@@ -13,7 +14,7 @@ export default function HomeHeader({
 }: {
   view: RiskView
   place: string
-  speech: string
+  speech: string | SpeechPart[]
   children: React.ReactNode
 }) {
   return (
@@ -25,11 +26,11 @@ export default function HomeHeader({
           <LogoMark />
           <div className="flex flex-col leading-[1.1]">
             <span className="font-display text-[19px] font-extrabold">সবুজবিধি</span>
-            <span className="text-[13px] font-medium">মাঠের সৎ ডাক্তার</span>
+            <span className="text-sm font-medium">মাঠের সৎ ডাক্তার</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" />
+          <ListenButton text={speech} label="পুরো স্ক্রিন পড়ে শোনান" variant="sky" voiceTip />
           <Link
             href="/guide"
             aria-label="কীভাবে ব্যবহার করবেন"

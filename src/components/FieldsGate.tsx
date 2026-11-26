@@ -139,7 +139,7 @@ function FieldNote({ field, many }: { field: Field | null; many: boolean }) {
     return (
       <Link
         href="/planting"
-        className="mx-4 mt-2 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-[14px] leading-[1.35] font-semibold text-ink no-underline"
+        className="mx-4 mt-2 flex shrink-0 items-center justify-between gap-2 rounded-[14px] bg-sun-soft px-3.5 py-2 text-base leading-[1.35] font-semibold text-ink no-underline"
       >
         কোন ফসল কবে লাগিয়েছেন? জানালে ঝুঁকি আরও ঠিক হবে
         <span className="shrink-0 text-teal">জানান</span>
@@ -147,7 +147,7 @@ function FieldNote({ field, many }: { field: Field | null; many: boolean }) {
     )
   }
   return (
-    <Link href="/planting" className="mx-4 mt-2 shrink-0 self-center text-[13px] font-semibold text-muted no-underline">
+    <Link href="/planting" className="mx-4 mt-2 shrink-0 self-center text-base font-semibold text-muted no-underline">
       {many ? `${SEASONS[field.season].nameBn} ` : ''}রোপণ: {bnDate(field.planted)} · <span className="text-teal underline">বদলান</span>
     </Link>
   )
@@ -160,7 +160,7 @@ export function ExperimentalNote({ crop }: { crop: CropId }) {
   const photoNote = canDiagnose(crop) ? null : CROPS[crop].photoNote
   if (!experimental && !photoNote) return null
   return (
-    <p className="m-0 text-[13px] leading-[1.4] font-semibold text-amber">
+    <p className="m-0 text-sm leading-[1.4] font-semibold text-amber">
       {experimental && `পরীক্ষামূলক: ${diseaseOfBn} এই হিসাব এখনো মাঠে যাচাই হয়নি। `}
       {photoNote}
     </p>

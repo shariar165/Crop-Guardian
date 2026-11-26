@@ -140,6 +140,14 @@ export const ChatCheckIcon = (p: IconProps) => (
   </Icon>
 )
 
+export const MicIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0" />
+    <path d="M12 17.5V21" />
+  </Icon>
+)
+
 export const SendIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M4 12l16-8-6 16-2.5-6.5z" />

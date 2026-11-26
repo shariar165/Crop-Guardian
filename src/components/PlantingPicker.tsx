@@ -55,11 +55,11 @@ function FieldList({ fields, onPick }: { fields: Field[]; onPick: (s: SeasonId) 
                 <span className="text-base font-bold">
                   {SEASONS[f.season].nameBn} · রোপণ {bnDate(f.planted)}
                 </span>
-                <span className="text-[13px] text-muted">
+                <span className="text-sm text-muted">
                   ঝুঁকির খবর: {bnDate(s.start)} থেকে {bnDate(s.end)}
                 </span>
               </span>
-              <span className="shrink-0 text-[15px] font-semibold text-teal">বদলান</span>
+              <span className="shrink-0 text-base font-semibold text-teal">বদলান</span>
             </button>
           </li>
         )

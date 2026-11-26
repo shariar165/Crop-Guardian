@@ -27,6 +27,7 @@ npx tsx scripts/find-hutton-periods.ts [--write]  # replay dates; --write update
 npx tsx scripts/compare-blight-rules.ts [--write] # app rule vs ≥ 10 h vs JHULSACAST; --write updates docs/rule-comparison.md
 npx tsx scripts/find-blast-periods.ts [--write]   # paddy blast; --write updates docs/blast-backtest.md
 npx tsx scripts/eval-field-photos.ts <dir> [--write]  # labelled photo folders through the real model; --write updates docs/field-photo-test.md
+npx tsx scripts/audio-script.ts [--write]         # keys + exact Bengali for recorded audio; --write updates docs/audio-script.md
 npm run db:migrate                                # the app's own tables (cases, SMS alerts, assistant, answer cache)
 npx tsx scripts/build-kb.ts                       # embed the assistant's knowledge base into kb_chunk
 npx tsx scripts/eval-assistant.ts [--write]       # assistant regression set; --write updates docs/assistant-eval.md
@@ -65,5 +66,6 @@ Tests use `node:test` + `node:assert/strict`, not Jest or Vitest. `@/` resolves 
 - All user-facing text is Bengali, except `/docs`, which is in English for judges and partners and is built from the reports in `docs/` (`src/lib/docsData.ts`). Use `src/lib/bn.ts` for digits (`toBnDigits`, and `fromBnDigits` for input), weekdays and dates. Dates are handled as `YYYY-MM-DD` strings in a time-zone-independent way (`src/lib/dates.ts`).
 - Generated risk text must fit in two lines on a phone, and the tests guard its length. Danger days are named from the forecast, never as fixed weekdays.
 - Diagnosis advice in `content.ts` never gives a dose (it always says "লেবেল অনুযায়ী") and never names a brand (`hasBrand` in `guard.ts`, tested); the officer chooses the medicine. No text anywhere tells a farmer that spraying isn't needed or that money is saved by not spraying (`saysNoNeed` in `guard.ts`, tested over every screen text, SMS and KB chunk), because the risk rule isn't validated. Results answered through questions are labelled differently from model-confident ones, and every result carries the "পরীক্ষামূলক" (experimental) note.
+- Farmer-facing text is at least 14px (`text-sm`), and anything a farmer taps at least 16px (`text-base`); `/docs` and `/officer` are exempt.
 - The UI is phone-sized (`PhoneFrame`, max 390px) and styled with Tailwind v4 (`src/app/globals.css`). The camera and the service worker need a secure context, so use `localhost` or `next dev --experimental-https` on a phone.
 - Code style: no semicolons, single quotes, and short comments that explain *why*.

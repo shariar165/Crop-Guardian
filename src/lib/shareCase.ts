@@ -14,7 +14,7 @@ import { clientPlace } from '@/lib/placeCookies'
 // "সবুজবিধি — আলুর পাতা"
 export const shareTitle = (crop: CropId) => `সবুজবিধি — ${CROPS[crop].ofBn} পাতা`
 
-// The app's result in a few words, e.g. "নিশ্চিত — নাবি ধসা".
+// The app's result in a few words, e.g. "ছবিতে মিলেছে — নাবি ধসা".
 export function caseVerdict({ result }: DiagnosisRecord, config: Pick<DiagnosisConfig, 'labelsBn'>): string {
   return result.decision === 'confident'
     ? `${CONFIDENCE_WORD.confident} — ${labelOf(result.candidates[0], config)}`

@@ -84,7 +84,7 @@ function CropSwitch({ crop, onPick, disabled }: { crop: CropId; onPick: (c: Crop
 function ModelStatus({ state, onRetry }: { state: ModelState; onRetry: () => void }) {
   if (state.phase === 'ready') {
     return (
-      <div className="flex items-center justify-center gap-1.5 text-[13px] font-medium text-[#CDBFA9]">
+      <div className="flex items-center justify-center gap-1.5 text-sm font-medium text-[#CDBFA9]">
         <OfflineIcon size={16} />
         নেট ছাড়াও চলবে
       </div>
@@ -92,10 +92,10 @@ function ModelStatus({ state, onRetry }: { state: ModelState; onRetry: () => voi
   }
   if (state.phase === 'error') {
     return (
-      <div role="alert" className="flex items-center justify-center gap-2 text-[13px] font-semibold text-[#F3CE5B]">
+      <div role="alert" className="flex items-center justify-center gap-2 text-sm font-semibold text-[#F3CE5B]">
         <WarnIcon size={16} />
         {state.offline ? 'প্রথমবার মডেল নামাতে নেট লাগবে' : 'মডেল চালু হলো না'}
-        <button type="button" onClick={onRetry} className="h-8 rounded-full border-0 bg-sun px-3 text-[13px] font-bold text-ink">
+        <button type="button" onClick={onRetry} className="h-8 rounded-full border-0 bg-sun px-3 text-base font-bold text-ink">
           আবার চেষ্টা
         </button>
       </div>
@@ -105,7 +105,7 @@ function ModelStatus({ state, onRetry }: { state: ModelState; onRetry: () => voi
   const size = state.phase === 'downloading' && state.total === 0 ? ` · ${toBnDigits(Math.round(state.loaded / 1e6))} MB` : ''
   return (
     <div className="flex flex-col items-center gap-1.5" aria-live="polite">
-      <span className="text-[13px] font-medium text-[#CDBFA9]">
+      <span className="text-sm font-medium text-[#CDBFA9]">
         {state.phase === 'downloading'
           ? `মডেল নামাচ্ছি… একবারই লাগবে${pct === null ? size : ` · ${toBnDigits(pct)}%`}`
           : 'মডেল চালু হচ্ছে…'}
@@ -508,7 +508,7 @@ export default function CameraScreen() {
                     key={s.id}
                     type="button"
                     onClick={() => trySample(s)}
-                    className="flex flex-col items-center gap-1 rounded-xl border-2 border-line bg-paper p-1.5 text-[12px] leading-[1.25] font-semibold text-ink"
+                    className="flex flex-col items-center gap-1 rounded-xl border-2 border-line bg-paper p-1.5 text-sm leading-[1.25] font-semibold text-ink"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local sample, decoded by the model as is */}
                     <img src={s.src} alt="" className="aspect-square w-full rounded-lg object-cover" />
