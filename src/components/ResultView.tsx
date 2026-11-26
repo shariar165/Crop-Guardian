@@ -1,18 +1,24 @@
 'use client'
 
-import { tealClass } from '@/components/Buttons'
+import { PrimaryLink, SectionRule, tealClass } from '@/components/Buttons'
+import CapturedThumb from '@/components/CapturedThumb'
 import { Loading, NoDiagnosis, ValidationBadge, WhyCard } from '@/components/DiagnosisParts'
-import { CheckIcon, DocIcon, HomeIcon, PersonIcon, WarnIcon } from '@/components/icons'
+import { CameraIcon, CheckIcon, DocIcon, HomeIcon, PersonIcon, WarnIcon } from '@/components/icons'
+import { CandidateThumb } from '@/components/illustrations'
 import ListenButton from '@/components/ListenButton'
 import OfficerShareButton from '@/components/OfficerShareButton'
 import TopBar, { RoundLink } from '@/components/TopBar'
 import { toBnDigits } from '@/lib/bn'
+import { useEffect } from 'react'
 import { CROPS } from '@/lib/crops'
+import { dateOf } from '@/lib/dates'
+import { store } from '@/lib/deviceStore'
 import { contentOf, sourceOf } from '@/lib/diagnosis/content'
 import { CONFIDENCE_WORD, labelOf } from '@/lib/diagnosis/explain'
 import { finalOf } from '@/lib/diagnosis/flow'
 import { answerLine } from '@/lib/diagnosis/questions'
 import { useDiagnosis } from '@/lib/diagnosis/useDiagnosis'
+import { FOLLOW_UP_KEY } from '@/lib/followUp'
 
 const BANNER = {
   danger: 'bg-danger-soft text-[#7E2A1C]',
@@ -20,8 +26,22 @@ const BANNER = {
   ok: 'bg-leaf-soft text-[#24502C]',
 }
 
+// A result that isn't healthy asks Home to remind the farmer to look again (src/lib/followUp.ts),
+// dated from the diagnosis, so opening the result again later doesn't move the reminder.
+function useFollowUp(view: ReturnType<typeof useDiagnosis>) {
+  const ready = view.status === 'ready' ? view : null
+  const final = ready ? finalOf(ready.record) : null
+  const due = ready && final && contentOf(ready.crop, final.id)?.banner.tone !== 'ok'
+  const value = due ? JSON.stringify({ crop: ready.crop, id: final.id, date: dateOf(ready.record.createdAt) }) : null
+  useEffect(() => {
+    if (value) store(FOLLOW_UP_KEY, value)
+  }, [value])
+  return due
+}
+
 export default function ResultView() {
   const view = useDiagnosis()
+  const followUp = useFollowUp(view)
   if (view.status === 'loading') return <Loading />
   if (view.status === 'empty') return <NoDiagnosis />
 
@@ -32,6 +52,7 @@ export default function ResultView() {
   // The tests check every class of every diagnosable crop has advice.
   const content = contentOf(crop, final.id)!
   const source = sourceOf(crop, final.id)
+  const healthy = final.id === 'healthy'
   // Narrowing by the farmer's answers isn't calibrated like the model, so it isn't called "sure".
   const word = final.via === 'model' ? CONFIDENCE_WORD.confident : 'ছবি আর আপনার উত্তর মিলিয়ে'
   const speech =
@@ -72,6 +93,23 @@ export default function ResultView() {
         <ValidationBadge crop={crop} sample={record.sample} className="mt-1" />
       </div>
 
+      {/* The farmer's leaf next to a drawing of the disease, so they can compare for themselves. */}
+      <section className="mx-4 mt-4 flex shrink-0 flex-col gap-2">
+        <SectionRule label="এমন দেখায়" />
+        <div className="flex items-start gap-3">
+          <figure className="m-0 flex flex-col items-center gap-1">
+            <div className="stitch relative flex size-24 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[18px] bg-[#1F2A17]!">
+              <CapturedThumb />
+            </div>
+          </figure>
+          <figure className="m-0 flex flex-col items-center gap-1">
+            <CandidateThumb crop={crop} id={final.id} className="size-24" />
+            <figcaption className="text-sm font-semibold text-muted">আঁকা ছবি: {name}</figcaption>
+          </figure>
+        </div>
+        <p className="m-0 text-[15px] leading-[1.4]">{content.sign}</p>
+      </section>
+
       <WhyCard
         crop={crop}
         record={record}
@@ -91,6 +129,7 @@ export default function ResultView() {
             </li>
           ))}
         </ol>
+        {followUp && <p className="m-0 text-[15px] font-semibold text-teal">৫ দিন পর হোমে মনে করিয়ে দেব।</p>}
       </section>
 
       <a
@@ -105,17 +144,38 @@ export default function ResultView() {
 
       <div className="min-h-4 flex-1" />
 
-      <div className="grid shrink-0 grid-cols-[2fr_3fr] gap-2.5 px-4 pb-[18px]">
-        <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
-        <OfficerShareButton
-          record={record}
-          config={config}
-          className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}
-        >
-          <PersonIcon size={24} />
-          কৃষি কর্মকর্তাকে দেখান
-        </OfficerShareButton>
-      </div>
+      {healthy ? (
+        // Nothing to treat: the next useful step is another leaf, so that leads; the officer stays a tap away.
+        <div className="flex shrink-0 flex-col gap-2 px-4 pb-[18px]">
+          <div className="grid grid-cols-[2fr_3fr] gap-2.5">
+            <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
+            <PrimaryLink href={`/camera?crop=${crop}`} className="min-h-[66px] gap-2 px-2.5 text-[17px] font-bold">
+              <CameraIcon size={24} weight={2.2} />
+              আরেকটা পাতা দেখুন
+            </PrimaryLink>
+          </div>
+          <OfficerShareButton
+            record={record}
+            config={config}
+            className="flex min-h-11 items-center justify-center gap-1.5 self-center border-0 bg-transparent px-2 text-base font-bold text-teal underline"
+          >
+            <PersonIcon size={20} />
+            কৃষি কর্মকর্তাকে দেখান
+          </OfficerShareButton>
+        </div>
+      ) : (
+        <div className="grid shrink-0 grid-cols-[2fr_3fr] gap-2.5 px-4 pb-[18px]">
+          <ListenButton text={speech} label="ফলাফল পড়ে শোনান" variant="outline" />
+          <OfficerShareButton
+            record={record}
+            config={config}
+            className={`${tealClass} min-h-[66px] gap-2 px-2.5 text-[17px] font-bold`}
+          >
+            <PersonIcon size={24} />
+            কৃষি কর্মকর্তাকে দেখান
+          </OfficerShareButton>
+        </div>
+      )}
     </div>
   )
 }

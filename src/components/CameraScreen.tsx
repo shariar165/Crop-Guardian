@@ -12,6 +12,7 @@ import { clearCaptures, saveCapture, saveDiagnosis } from '@/lib/captureStore'
 import type { Capture, DiagnosisRecord } from '@/lib/captureStore'
 import { type CropId, CROPS } from '@/lib/crops'
 import { todayIn } from '@/lib/dates'
+import { store } from '@/lib/deviceStore'
 import { diagnose, loadModel, type ModelState, whenReady } from '@/lib/diagnosis/client'
 import { type CombinedResult, combine } from '@/lib/diagnosis/combine'
 import { configUrlOf, PHOTO_CROPS, PHOTO_SPECS } from '@/lib/diagnosis/crops'
@@ -19,6 +20,7 @@ import { RESULT_PATH } from '@/lib/diagnosis/flow'
 import { cropFromParam, defaultPhotoCrop } from '@/lib/diagnosis/pickCrop'
 import { SAMPLE_BUTTON, type SampleLeaf, samplesFor } from '@/lib/diagnosis/samples'
 import { useChosenSeason, useFields } from '@/lib/fields'
+import { FOLLOW_UP_KEY } from '@/lib/followUp'
 import { ANALYSIS_WIDTH, assessQuality, confirmText, coverSourceRect, isAcceptable, topHint } from '@/lib/imageQuality'
 import type { QualityReport } from '@/lib/imageQuality'
 
@@ -276,6 +278,8 @@ export default function CameraScreen() {
       const config = await whenReady(configUrl)
       const result = combine(await diagnose(configUrl, top.blob), await diagnose(configUrl, under.blob), config)
       await saveDiagnosis(newRecord(crop, result, sampleId.current))
+      // A new look at the leaves answers the last reminder; the new result sets its own.
+      store(FOLLOW_UP_KEY, null)
       router.push(RESULT_PATH[result.decision])
     } catch (err) {
       console.error('Diagnosis failed', err)

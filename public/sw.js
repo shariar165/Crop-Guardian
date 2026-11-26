@@ -2,7 +2,7 @@
 // The model, its config and the wasm runtime are cached by the model worker itself (Cache API
 // 'crop-guardian-model'), so this worker leaves /model/ and /ort/ alone.
 
-const SHELL = 'crop-guardian-shell-v4'
+const SHELL = 'crop-guardian-shell-v5'
 // Hashed build files never change, so they are kept across versions.
 const STATIC = 'crop-guardian-static'
 const KEEP = [SHELL, STATIC, 'crop-guardian-model']

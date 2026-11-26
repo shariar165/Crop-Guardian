@@ -26,7 +26,7 @@ export type WeekKind =
 export type LedgerWeek = {
   start: string
   end: string
-  // Days since planting, for the timeline label.
+  // Days since planting (the timeline is labelled by date instead).
   dayFrom: number
   dayTo: number
   worst: Risk | null

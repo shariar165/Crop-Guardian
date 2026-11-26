@@ -7,6 +7,11 @@ export function todayIn(timeZone: string = LOCAL_TZ): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date())
 }
 
+// The calendar date of a moment (ms since the epoch) in the given time zone.
+export function dateOf(ms: number, timeZone: string = LOCAL_TZ): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(ms))
+}
+
 export function addDays(isoDate: string, n: number): string {
   const d = new Date(isoDate + 'T00:00:00Z')
   d.setUTCDate(d.getUTCDate() + n)

@@ -28,6 +28,7 @@ npx tsx scripts/compare-blight-rules.ts [--write] # app rule vs ≥ 10 h vs JHUL
 npx tsx scripts/find-blast-periods.ts [--write]   # paddy blast; --write updates docs/blast-backtest.md
 npx tsx scripts/eval-field-photos.ts <dir> [--write]  # labelled photo folders through the real model; --write updates docs/field-photo-test.md
 npx tsx scripts/audio-script.ts [--write]         # keys + exact Bengali for recorded audio; --write updates docs/audio-script.md
+npx tsx scripts/make-icons.ts                     # the install icons in public/icons/ from src/app/icon.svg
 npm run db:migrate                                # the app's own tables (cases, SMS alerts, assistant, answer cache)
 npx tsx scripts/build-kb.ts                       # embed the assistant's knowledge base into kb_chunk
 npx tsx scripts/eval-assistant.ts [--write]       # assistant regression set; --write updates docs/assistant-eval.md

@@ -4,6 +4,7 @@ import { PrimaryLink } from '@/components/Buttons'
 import FieldsGate, { type CropPanels, ExperimentalNote } from '@/components/FieldsGate'
 import FirstRunIntro from '@/components/FirstRunIntro'
 import HomeHeader from '@/components/HomeHeader'
+import InstallButton from '@/components/InstallButton'
 import { CameraIcon, CheckIcon, OfflineIcon, SearchIcon, SprayIcon, SproutIcon, WarnIcon } from '@/components/icons'
 import { DayGlyph } from '@/components/illustrations'
 import LedgerPill from '@/components/LedgerPill'
@@ -183,6 +184,7 @@ export default async function Home() {
         <Link href="/potato" className="self-center text-base font-bold text-teal">
           আলু চাষের পরামর্শ →
         </Link>
+        <InstallButton />
         {/* Showcase mode only (src/lib/showcase.ts): the English page for a competition's judges. */}
         {showcase && (
           <Link href="/docs" lang="en" className="self-center text-[15px] font-bold text-teal">

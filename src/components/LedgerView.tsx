@@ -7,7 +7,7 @@ import { CameraIcon, CheckIcon, ClockIcon, OfflineIcon, SprayBottleIcon, WarnIco
 import ListenButton from '@/components/ListenButton'
 import PlantingDays from '@/components/PlantingDays'
 import SprayButton from '@/components/SprayButton'
-import { bnDate, toBnDigits } from '@/lib/bn'
+import { bnDate, bnDateRange, toBnDigits } from '@/lib/bn'
 import { getCases } from '@/lib/captureStore'
 import { cropOf, isSeasonId, SEASONS, type SeasonId } from '@/lib/crops'
 import { DAY_STATE, formatTaka } from '@/lib/data'
@@ -172,7 +172,7 @@ function Weeks({ ledger }: { ledger: Ledger }) {
               <div className={`flex flex-1 justify-between gap-2 ${last ? 'pb-1.5' : 'pb-3'}`}>
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold text-muted">
-                    দিন {toBnDigits(w.dayFrom)}–{toBnDigits(w.dayTo)} · {note}
+                    {bnDateRange(w.start, w.end)} · {note}
                   </span>
                   <span className="text-base font-bold">{action}</span>
                 </div>
